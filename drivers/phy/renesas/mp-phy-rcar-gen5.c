@@ -332,50 +332,23 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 
 static int mp_phy_init_usb(struct mp_phy_priv *priv, u32 channel_id)
 {
+	u32 data;
+
 	dev_info(priv->dev, "USB PHY initialization requested on channel %d\n", channel_id);
+	while (1) {
+		data = readl(priv->base + MPPHY_PXSRAMCNT(channel_id));
+		if (data & BIT(5))
+			break;
+	}
+	mp_phy_update_firmware(priv, channel_id);
 
-	u32 cntxt2_val;
-
-	cntxt2_val = (channel_id == 0) ? MPPHY_CNTXT2_CH0_VALUE : MPPHY_CNTXT2_VALUE;
-
-	dev_info(priv->dev, "MP-PHY for USB initialization on channel %d\n", channel_id);
-	/* Step 1: Reset once and release the reset */
-
-	/* Step 2: Set PHY rx/tx reset and sram bypass mode. */
-	pr_info("%s %d: Before: MPPHY_P3RXCNT:0x%08x,MPPHY_P3SRAMCNT:0x%08x\n",
-		__func__, __LINE__, readl(priv->base + MPPHY_PXRXCNT(channel_id)),
-		readl(priv->base + MPPHY_PXSRAMCNT(channel_id)));
-	mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(channel_id), MPPHY_PXRXCNT_RESET_VAL,
-			   MPPHY_PXRXCNT_RESET_VAL);
-	mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(channel_id), 0xF, 0xF);
-
-	pr_info("%s %d: After: MPPHY_P3RXCNT:0x%08x,MPPHY_P3SRAMCNT:0x%08x\n",
-		__func__, __LINE__, readl(priv->base + MPPHY_PXRXCNT(channel_id)),
-		readl(priv->base + MPPHY_PXSRAMCNT(channel_id)));
-
-	/* Step 3: Clock supply settings */
-	mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(channel_id),
-			   MPPHY_PXREFCLK_VAL, MPPHY_PXREFCLK_VAL);
-
-	/* Step 4: Release PHY rx/tx reset. */
-	mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(channel_id), MPPHY_PXRXCNT_RESET_VAL, 0x0);
-	pr_info("%s %d: After: MPPHY_P3RXCNT: 0x%08x\n", __func__, __LINE__,
-		readl(priv->base + MPPHY_PXRXCNT(channel_id)));
-
-	/* Step 5: Setting Context Restore Registers. */
-	pr_info("%s %d: Before:MPPHY_P3CNTXT1:0x%08x,MPPHY_P3CNTXT2:0x%08x,
-	       MPPHY_P3TXREQ:0x%08x\n", __func__, __LINE__,
-	       readl(priv->base + MPPHY_PXCNTXT1(channel_id)),
-	       readl(priv->base + MPPHY_PXCNTXT2(channel_id)),
-	       readl(priv->base + MPPHY_PXTXREQ(channel_id)));
-	mp_phy_update_bits(priv->base, MPPHY_PXCNTXT1(channel_id), 0x2010002, 0x2010002);
-	mp_phy_update_bits(priv->base, MPPHY_PXCNTXT2(channel_id), cntxt2_val, cntxt2_val);
-	mp_phy_update_bits(priv->base, MPPHY_PXTXREQ(channel_id), 0x8, 0x8);
-	pr_info("%s %d: After:MPPHY_P3CNTXT1: 0x%08x,MPPHY_P3CNTXT2:0x%08x,
-	       MPPHY_P3TXREQ:0x%08x\n", __func__, __LINE__,
-	       readl(priv->base + MPPHY_PXCNTXT1(channel_id)),
-	       readl(priv->base + MPPHY_PXCNTXT2(channel_id)),
-	       readl(priv->base + MPPHY_PXTXREQ(channel_id)));
+	mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(channel_id), SRAM_EXT_LD_DONE,
+			   SRAM_EXT_LD_DONE);
+	while (1) {
+		data = readl(priv->base + MPPHY_PXRXREQ1(channel_id));
+		if (!(data & BIT(1)))
+			break;
+	}
 
 	return 0;
 }
@@ -637,8 +610,9 @@ static int mp_phy_config_usb(struct phy *phy, int speed)
 		pr_info("%s %d: TCA_INTR_OFFSET(%d): 0x%x\n", __func__, __LINE__, chan->lane_id,
 			readl(priv->base + TCA_INTR_OFFSET(chan->lane_id)));
 
-		data = mp_phy_reg_wait(priv->base,
-				       TCA_INTR_STS_OFFSET(chan->lane_id), 0x00000001, 0x00000001);
+		mp_phy_update_bits(priv->base, TCA_TCPC_OFFSET(chan->lane_id), 0x10, 0x10);
+		data = mp_phy_reg_wait(priv->base, TCA_INTR_STS_OFFSET(chan->lane_id),
+				       0x00000001, 0x00000001);
 		if (data) {
 			pr_err("%s: Timeout waiting for TCA_INTR_STS_OFFSET(%d)\n", __func__,
 			       chan->lane_id);
