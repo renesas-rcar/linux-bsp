@@ -15,7 +15,6 @@
 #include <linux/of_pci.h>
 #include <linux/pci_regs.h>
 #include <linux/platform_device.h>
-#include <linux/soc/renesas/rcar-rgid.h>
 
 #include "pcie-designware.h"
 
@@ -381,16 +380,12 @@ static int dw_pcie_msi_host_init(struct dw_pcie_rp *pp)
 	 * done by allocating from the artificially limited DMA-coherent
 	 * memory.
 	 */
-	ret = dma_set_coherent_mask(dev, DMA_BIT_MASK(40));
+	ret = dma_set_coherent_mask(dev, DMA_BIT_MASK(32));
 	if (ret)
-		dev_warn(dev, "Failed to set DMA mask to 40-bit. Devices with only 40-bit MSI support may not work properly\n");
+		dev_warn(dev, "Failed to set DMA mask to 32-bit. Devices with only 32-bit MSI support may not work properly\n");
 
 	msi_vaddr = dmam_alloc_coherent(dev, sizeof(u64), &pp->msi_data,
 					GFP_KERNEL);
-
-	/* Remove RGID from descriptor base  */
-	REMOVE_RGID(pp->msi_data);
-
 	if (!msi_vaddr) {
 		dev_err(dev, "Failed to alloc and map MSI data\n");
 		dw_pcie_free_msi(pp);
@@ -422,9 +417,6 @@ int dw_pcie_host_init(struct dw_pcie_rp *pp)
 		pp->cfg0_size = resource_size(res);
 		pp->cfg0_base = res->start;
 
-		/* Remove RGID from descriptor base */
-		REMOVE_RGID(pp->cfg0_base);
-
 		pp->va_cfg0_base = devm_pci_remap_cfg_resource(dev, res);
 		if (IS_ERR(pp->va_cfg0_base))
 			return PTR_ERR(pp->va_cfg0_base);
@@ -445,9 +437,6 @@ int dw_pcie_host_init(struct dw_pcie_rp *pp)
 		pp->io_size = resource_size(win->res);
 		pp->io_bus_addr = win->res->start - win->offset;
 		pp->io_base = pci_pio_to_address(win->res->start);
-
-		/* Remove RGID from descriptor base */
-		REMOVE_RGID(pp->io_base);
 	}
 
 	/* Set default bus ops */
@@ -668,6 +657,7 @@ static int dw_pcie_iatu_setup(struct dw_pcie_rp *pp)
 		dev_err(pci->dev, "No outbound iATU found\n");
 		return -EINVAL;
 	}
+
 	/*
 	 * Ensure all out/inbound windows are disabled before proceeding with
 	 * the MEM/IO (dma-)ranges setups.
@@ -696,6 +686,7 @@ static int dw_pcie_iatu_setup(struct dw_pcie_rp *pp)
 			return ret;
 		}
 	}
+
 	if (pp->io_size) {
 		if (pci->num_ob_windows > ++i) {
 			ret = dw_pcie_prog_outbound_atu(pci, i, PCIE_ATU_TYPE_IO,
@@ -711,6 +702,7 @@ static int dw_pcie_iatu_setup(struct dw_pcie_rp *pp)
 			pp->cfg0_io_shared = true;
 		}
 	}
+
 	if (pci->num_ob_windows <= i)
 		dev_warn(pci->dev, "Ranges exceed outbound iATU size (%d)\n",
 			 pci->num_ob_windows);
