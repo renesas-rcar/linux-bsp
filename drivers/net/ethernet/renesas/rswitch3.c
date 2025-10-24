@@ -1368,14 +1368,14 @@ static int rsw3_etha_get_params(struct rsw3_device *rdev)
 	if (err)
 		return err;
 
+	rdev->etha->connect_to_xpcs =
+		of_property_read_bool(rdev->np_port, "renesas,connect_to_xpcs");
+
 	err = of_property_read_u32(rdev->np_port, "max-speed", &max_speed);
 	if (!err) {
 		rdev->etha->speed = max_speed;
 		return 0;
 	}
-
-	rdev->etha->connect_to_xpcs = of_property_read_bool(rdev->np_port,
-							    "renesas,connect_to_xpcs");
 
 	/* if no "max-speed" property, let's use default speed */
 	switch (rdev->etha->phy_interface) {
