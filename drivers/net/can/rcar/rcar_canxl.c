@@ -33,71 +33,6 @@
 
 #define RCANXL_DRV_NAME		"rcar_canxl"
 
-/* Hardcoded for enable module clock */
-#define MDLC_BASE		0xC1330000
-#define R8A78000_CANXL_PDID		(0)
-#define R8A78000_CANXL_CLK_MASK(n)	GENMASK((n) + 1, n)
-#define R8A78000_CANXL_CLK_SHIFT(n)	(n)
-
-#define MDLC_PKCPROT0		(MDLC_BASE + 0x0cf0)
-#define MDLC_PKCPROT1		(MDLC_BASE + 0x0cf4)
-
-#define _MDLC_MPDG(k)		(MDLC_BASE + 0x0200 + (k) * 4)
-#define _MDLC_MPDGS(k)		(MDLC_BASE + 0x0300 + (k) * 4)
-#define MDLC_MPIER0		(MDLC_BASE + 0x0110)
-#define MDLC_MPIMR0		(MDLC_BASE + 0x0120)
-
-#define MDLC_MSRES(i)		(MDLC_BASE + 0x0900 + (i) * 4)
-#define MDLC_MSRESS(i)	(	MDLC_BASE + 0x0960 + (i) * 4)
-
-static bool check = true;
-static void r8a78000_canxl_module_standby_set(u8 clk_reg_no, u8 pos, u8 mode)
-{
-	void __iomem *unlock = ioremap(MDLC_PKCPROT1, 4);
-	void __iomem *msress = ioremap(MDLC_MSRESS(clk_reg_no), 4);
-	void __iomem *msres = ioremap(MDLC_MSRES(clk_reg_no), 4);
-	u32 val;
-
-	writel(0xA5A5A501, unlock);
-	if ((readl(msress) & R8A78000_CANXL_CLK_MASK(pos)) == (mode <<
-								 R8A78000_CANXL_CLK_SHIFT(pos)))
-			goto unmap;
-
-	while ((readl(msress) & R8A78000_CANXL_CLK_MASK(pos)) != (readl(msres) &
-								    R8A78000_CANXL_CLK_MASK(pos)))
-			udelay(1000);
-
-	val = readl(msres);
-	val &= ~R8A78000_CANXL_CLK_MASK(pos);
-	val |= mode << R8A78000_CANXL_CLK_SHIFT(pos);
-	writel(val, msres);
-
-	while ((readl(msress) & R8A78000_CANXL_CLK_MASK(pos)) != (readl(msres) &
-		   R8A78000_CANXL_CLK_MASK(pos)))
-			udelay(1000);
-
-	writel(0xA5A5A500, unlock);
-	check = false;
-unmap:
-	iounmap(unlock);
-	iounmap(msress);
-	iounmap(msres);
-}
-
-static void r8a78000_canxl_module_run(void)
-{
-	if (check == true) {
-		r8a78000_canxl_module_standby_set(6, 0, 0x01);
-		r8a78000_canxl_module_standby_set(6, 2, 0x01);
-		mdelay(100);
-		r8a78000_canxl_module_standby_set(6, 0, 0x03);
-		r8a78000_canxl_module_standby_set(6, 2, 0x03);
-		mdelay(100);
-	}
-}
-
-//--------------------------------------------------
-
 /* CAN-XL register bits */
 
 /* CXLGIPV */
@@ -750,7 +685,6 @@ static void r8a78000_canxl_module_run(void)
 
 #define QUEUE(x)			BIT(x)
 
-#define CFG_CLK_IGNORE
 /* fCAN clock select register settings */
 enum rcar_canxl_fcanclk {
 	RCANXL_CANXLCLK = 0,		/* CANXL clock */
@@ -1834,14 +1768,12 @@ static int rcar_canxl_open(struct net_device *ndev)
 	struct rcar_canxl_global *gpriv = priv->gpriv;
 	int err;
 
-#if !defined(CFG_CLK_IGNORE)
 	/* Clock is already enabled in probe */
 	err = clk_prepare_enable(gpriv->can_clk);
 	if (err) {
 		netdev_err(ndev, "failed to enable CAN clock, error %d\n", err);
-		goto out_clock;
+		goto out_can_clock;
 	}
-#endif
 
 	err = open_candev(ndev);
 	if (err) {
@@ -2338,9 +2270,6 @@ static int rcar_canxl_probe(struct platform_device *pdev)
 	bool xlmode = true;	/* CAN XL normal mode - default */
 	const struct rcar_canxl_of_data *of_data;
 
-	/* Clock enable */
-	r8a78000_canxl_module_run();
-
 	if (of_property_read_bool(pdev->dev.of_node, "channel0"))
 		ch = 0;
 	else
@@ -2376,13 +2305,10 @@ static int rcar_canxl_probe(struct platform_device *pdev)
 	gpriv->chip_id = of_data->chip_id;
 	gpriv->channel = ch;
 
-#if !defined(CFG_CLK_IGNORE)
 	/* Peripheral clock */
 	gpriv->clkp = devm_clk_get(&pdev->dev, "fck");
 	if (IS_ERR(gpriv->clkp)) {
 		err = PTR_ERR(gpriv->clkp);
-		dev_err(&pdev->dev, "cannot get peripheral clock, error %d\n",
-			err);
 		goto fail_dev;
 	}
 
@@ -2403,11 +2329,9 @@ static int rcar_canxl_probe(struct platform_device *pdev)
 	} else {
 		gpriv->fcan = RCANXL_EXTCLK;
 	}
-	fcan_freq = clk_get_rate(gpriv->can_clk);
-#else
 	gpriv->fcan = RCANXL_CANXLCLK;
-	fcan_freq =  160000000;
-#endif
+	fcan_freq = 160000000;
+
 	addr = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(addr)) {
 		err = PTR_ERR(addr);
@@ -2443,7 +2367,6 @@ static int rcar_canxl_probe(struct platform_device *pdev)
 		goto fail_dev;
 	}
 
-#if !defined(CFG_CLK_IGNORE)
 	/* Enable peripheral clock for register access */
 	err = clk_prepare_enable(gpriv->clkp);
 	if (err) {
@@ -2451,7 +2374,7 @@ static int rcar_canxl_probe(struct platform_device *pdev)
 			"failed to enable peripheral clock, error %d\n", err);
 		goto fail_dev;
 	}
-#endif
+
 	err = rcar_canxl_local_ram_init(gpriv);
 	if (err) {
 		dev_dbg(&pdev->dev, "Local RAM initialization failed\n");
@@ -2509,9 +2432,7 @@ static int rcar_canxl_remove(struct platform_device *pdev)
 	rcar_canxl_reset_controller(gpriv);
 	rcar_canxl_disable_interrupts(gpriv);
 	rcar_canxl_channel_remove(gpriv);
-#if !defined(CFG_CLK_IGNORE)
 	clk_disable_unprepare(gpriv->clkp);
-#endif
 	kfree(gpriv->sys_base);
 	return 0;
 }
