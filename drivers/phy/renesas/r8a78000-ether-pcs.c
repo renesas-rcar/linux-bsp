@@ -183,7 +183,7 @@ r8a78000_eth_pcs_init_ram(struct r8a78000_eth_pcs_channel *channel, struct phy *
 	if (ret)
 		return ret;
 
-	r8a78000_eth_pcs_write32(channel, 0x026c, 0x180, 0x03);
+	r8a78000_eth_pcs_write32(channel->addr, 0x026c, 0x180, 0x03);
 
 	ret = phy_power_on(mpphy);
 	udelay(1000);
