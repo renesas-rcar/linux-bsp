@@ -387,9 +387,6 @@ static int renesas_sdhi_internal_dmac_probe(struct platform_device *pdev)
 
 	/* value is max of SD_SECCNT. Confirmed by HW engineers */
 	dma_set_max_seg_size(dev, 0xffffffff);
-#if CONFIG_RCAR_RGID
-	dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(40));
-#endif
 
 #ifndef CONFIG_MMC_SDHI_PIO
 	return renesas_sdhi_probe(pdev, &renesas_sdhi_internal_dmac_dma_ops);
