@@ -18,7 +18,13 @@
 
 /* Hardcoded for enable module clock */
 #define MDLC_BASE		0xc9c90000
-#define R8A78000_ETH_PCS_PDID		(0)
+/*
+ * PDIDs per HW UM Rev.0.52:
+ *  - RSW3 (Ethernet Switch3 / PCS domain) : PDID = 1
+ *  - MPPHY                                : PDID = 3..6
+ * PCS control here targets the RSW3 power domain.
+ */
+#define R8A78000_ETH_PCS_PDID		(1)
 #define R8A78000_ETH_PCS_CLK_MASK(n)	GENMASK((n) + 1, n)
 #define R8A78000_ETH_PCS_CLK_SHIFT(n)	(n)
 
