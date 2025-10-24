@@ -17,6 +17,7 @@
 
 #include <asm/fixmap.h>
 #include <asm/tlbflush.h>
+#include <linux/soc/renesas/rcar-rgid.h>
 
 static void __iomem *__ioremap_caller(phys_addr_t phys_addr, size_t size,
 				      pgprot_t prot, void *caller)
@@ -26,6 +27,11 @@ static void __iomem *__ioremap_caller(phys_addr_t phys_addr, size_t size,
 	int err;
 	unsigned long addr;
 	struct vm_struct *area;
+
+#if CONFIG_RCAR_RGID
+	if ((phys_addr & ADDR_RGID_MASK) == 0)
+		phys_addr = ADDR_ASSIGN_RGID(phys_addr, CONFIG_RCAR_RGID);
+#endif /* CONFIG_RCAR_RGID */
 
 	/*
 	 * Page align the mapping address and size, taking account of any
