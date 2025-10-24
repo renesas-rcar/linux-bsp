@@ -121,8 +121,6 @@
 #define ID_P_PM_BLOCKED		BIT(31)
 #define ID_P_MASK		GENMASK(31, 28)
 
-#define CFG_CLK_IGNORE
-
 enum rcar_i2c_type {
 	I2C_RCAR_GEN1,
 	I2C_RCAR_GEN2,
@@ -338,11 +336,7 @@ static int rcar_i2c_clock_calculate(struct rcar_i2c_priv *priv)
 	 * SCL	= clkp / (8 + SMD * 2 + SCLD + SCHD +F[(ticf + tr + intd) * clkp])
 	 *
 	 */
-#if !defined(CFG_CLK_IGNORE)
-	rate = clk_get_rate(priv->clk);
-#else
 	rate = (priv->io == (void __iomem *)0xc11d0000) ? 150000000 : 133333333;
-#endif
 
 	if (!priv->fast_mode_plus) {
 		cdf = rate / 20000000;
@@ -1140,13 +1134,16 @@ static int rcar_i2c_probe(struct platform_device *pdev)
 	if (!priv)
 		return -ENOMEM;
 
-#if !defined(CFG_CLK_IGNORE)
 	priv->clk = devm_clk_get(dev, NULL);
 	if (IS_ERR(priv->clk)) {
-		dev_err(dev, "cannot get clock\n");
 		return PTR_ERR(priv->clk);
 	}
-#endif
+
+	ret = clk_prepare_enable(priv->clk);
+	if (ret) {
+		dev_err(dev, "failed to enable peripheral clock, error %d\n", ret);
+		return ret;
+	}
 
 	priv->io = devm_platform_get_and_ioremap_resource(pdev, 0, &priv->res);
 	if (IS_ERR(priv->io))
