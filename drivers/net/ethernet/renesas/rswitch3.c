@@ -33,6 +33,9 @@
 
 #include "rswitch3.h"
 
+static u8 cached_mac_addresses[RSWITCH3_NUM_PORTS][ETH_ALEN];
+static bool mac_cache_valid[RSWITCH3_NUM_PORTS];
+
 static int rsw3_reg_wait(void __iomem *addr, u32 offs, u32 mask, u32 expected)
 {
 	u32 val;
@@ -346,7 +349,6 @@ static void rsw3_gwca_queue_free(struct net_device *ndev,
 {
 	unsigned int i;
 
-	return;
 	if (!gq->dir_tx) {
 		dma_free_coherent(ndev->dev.parent,
 				  sizeof(struct rsw3_ext_ts_desc) *
@@ -1083,6 +1085,17 @@ static void rsw3_etha_read_mac_address(struct rsw3_etha *etha)
 	mac[3] = (mrmac1 >> 16) & 0xFF;
 	mac[4] = (mrmac1 >>  8) & 0xFF;
 	mac[5] = (mrmac1 >>  0) & 0xFF;
+
+	/* Cache valid MAC addresses for deferred probe scenarios */
+	if (is_valid_ether_addr(mac) && etha->index < RSWITCH3_NUM_PORTS) {
+		memcpy(cached_mac_addresses[etha->index], mac, ETH_ALEN);
+		mac_cache_valid[etha->index] = true;
+	}
+	/* Restore from cache if current read is invalid but cache has valid MAC */
+	else if (!is_valid_ether_addr(mac) && etha->index < RSWITCH3_NUM_PORTS &&
+			mac_cache_valid[etha->index]) {
+		memcpy(mac, cached_mac_addresses[etha->index], ETH_ALEN);
+	}
 }
 
 static void rsw3_etha_write_mac_address(struct rsw3_etha *etha, const u8 *mac)
@@ -1356,13 +1369,14 @@ static int rsw3_etha_get_params(struct rsw3_device *rdev)
 	if (err)
 		return err;
 
+	rdev->etha->connect_to_xpcs =
+		of_property_read_bool(rdev->np_port, "renesas,connect_to_xpcs");
+
 	err = of_property_read_u32(rdev->np_port, "max-speed", &max_speed);
 	if (!err) {
 		rdev->etha->speed = max_speed;
 		return 0;
 	}
-
-	rdev->etha->connect_to_xpcs = of_property_read_bool(rdev->np_port, "renesas,connect_to_xpcs");
 
 	/* if no "max-speed" property, let's use default speed */
 	switch (rdev->etha->phy_interface) {
@@ -1504,9 +1518,16 @@ static int rsw3_phy_device_init(struct rsw3_device *rdev)
 	if (!rdev->np_port)
 		return -ENODEV;
 
-	phy = of_parse_phandle(rdev->np_port, "phy-handle", 0);
-	if (!phy)
+	if (of_phy_is_fixed_link(rdev->np_port)) {
+		err = of_phy_register_fixed_link(rdev->np_port);
+		if (err && err != -EEXIST)
+			return err;
+		phy = rdev->np_port;
+	} else {
+		phy = of_parse_phandle(rdev->np_port, "phy-handle", 0);
+		if (!phy)
 		return -ENODEV;
+	}
 
 	/* Set phydev->host_interfaces before calling of_phy_connect() to
 	 * configure the PHY with the information of host_interfaces.
@@ -1533,7 +1554,8 @@ static int rsw3_phy_device_init(struct rsw3_device *rdev)
 
 	err = 0;
 out:
-	of_node_put(phy);
+	if (phy != rdev->np_port)
+		of_node_put(phy);
 
 	return err;
 }
