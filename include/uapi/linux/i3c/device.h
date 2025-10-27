@@ -55,9 +55,9 @@ enum i3c_hdr_mode {
  * @err: I3C error code
  */
 struct i3c_priv_xfer {
-	u8 rnw;
-	u16 len;
-	u16 actual_len;
+	__u8 rnw;
+	__u16 len;
+	__u16 actual_len;
 	union {
 		void *in;
 		const void *out;
