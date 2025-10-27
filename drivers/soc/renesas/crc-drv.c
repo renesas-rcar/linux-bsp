@@ -229,6 +229,7 @@ static int crc_probe(struct platform_device *pdev)
 	struct crc_device *priv;
 	struct device *dev;
 	struct resource *res;
+	int ret;
 
 	dev = &pdev->dev;
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
@@ -242,20 +243,17 @@ static int crc_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->base))
 		return PTR_ERR(priv->base);
 
-	///* Look up and obtains to a clock node */
-	//priv->clk = devm_clk_get(dev, "fck");
-	//if (IS_ERR(priv->clk)) {
-	//	dev_err(dev, "Failed to get crc clock: %ld\n",
-	//	PTR_ERR(priv->clk));
-	//	return PTR_ERR(priv->clk);
-	//}
+	/* Look up and obtains to a clock node */
+	priv->clk = devm_clk_get(dev, "fck");
+	if (IS_ERR(priv->clk))
+		return PTR_ERR(priv->clk);
 
-	///* Enable peripheral clock for register access */
-	//ret = clk_prepare_enable(priv->clk);
-	//if (ret) {
-	//	dev_err(dev, "failed to enable peripheral clock, error %d\n", ret);
-	//	return ret;
-	//}
+	/* Enable peripheral clock for register access */
+	ret = clk_prepare_enable(priv->clk);
+	if (ret) {
+		dev_err(dev, "failed to enable peripheral clock, error %d\n", ret);
+		return ret;
+	}
 
 	platform_set_drvdata(pdev, priv);
 
