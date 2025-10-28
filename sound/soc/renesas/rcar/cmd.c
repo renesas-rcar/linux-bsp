@@ -41,48 +41,72 @@ static int rsnd_cmd_init(struct rsnd_mod *mod,
 	if (ARRAY_SIZE(path) < rsnd_mod_id(mod) + 1)
 		return -ENXIO;
 
-	if (mix) {
-		struct rsnd_dai *rdai;
-		int i;
+	if (rsnd_is_gen5(priv)) {
+		if (!mix) {
+			/* Now, there is no limitation of what cmd input
+			 * will be used for each SRC
+			 * e.g. On gen3:
+			 *	cmdin_ctu0 for SRC3/6
+			 *	cmdin_ctu1 for SRC4/9
+			 *	...
+			 * On gen5, each cmdin_ctux can access to SRC0-9
+			 * and CMD from the other audio subsystem.
+			 * Therefore, by default the cmdin_ctu0 will
+			 * be used if not mix case.
+			 */
 
-		/*
-		 * it is assuming that integrater is well understanding about
-		 * data path. Here doesn't check impossible connection,
-		 * like src2 + src5
-		 */
-		data = 0;
-		for_each_rsnd_dai(rdai, priv, i) {
-			struct rsnd_dai_stream *tio = &rdai->playback;
-			struct rsnd_mod *src = rsnd_io_to_mod_src(tio);
+			struct rsnd_mod *src = rsnd_io_to_mod_src(io);
 
-			if (mix == rsnd_io_to_mod_mix(tio))
-				data |= path[rsnd_mod_id(src)];
+			if (unlikely(!src))
+				return -EIO;
 
-			tio = &rdai->capture;
-			src = rsnd_io_to_mod_src(tio);
-			if (mix == rsnd_io_to_mod_mix(tio))
-				data |= path[rsnd_mod_id(src)];
+			data = rsnd_mod_id(src) << 0 |
+				0x1 << 16;
 		}
-
 	} else {
-		struct rsnd_mod *src = rsnd_io_to_mod_src(io);
+		if (mix) {
+			struct rsnd_dai *rdai;
+			int i;
 
-		static const u8 cmd_case[] = {
-			[0] = 0x3,
-			[1] = 0x3,
-			[2] = 0x4,
-			[3] = 0x1,
-			[4] = 0x2,
-			[5] = 0x4,
-			[6] = 0x1,
-			[9] = 0x2,
-		};
+			/*
+			 * it is assuming that integrater is well understanding about
+			 * data path. Here doesn't check impossible connection,
+			 * like src2 + src5
+			 */
+			data = 0;
+			for_each_rsnd_dai(rdai, priv, i) {
+				struct rsnd_dai_stream *tio = &rdai->playback;
+				struct rsnd_mod *src = rsnd_io_to_mod_src(tio);
 
-		if (unlikely(!src))
-			return -EIO;
+				if (mix == rsnd_io_to_mod_mix(tio))
+					data |= path[rsnd_mod_id(src)];
 
-		data = path[rsnd_mod_id(src)] |
-			cmd_case[rsnd_mod_id(src)] << 16;
+				tio = &rdai->capture;
+				src = rsnd_io_to_mod_src(tio);
+				if (mix == rsnd_io_to_mod_mix(tio))
+					data |= path[rsnd_mod_id(src)];
+			}
+
+		} else {
+			struct rsnd_mod *src = rsnd_io_to_mod_src(io);
+
+			static const u8 cmd_case[] = {
+				[0] = 0x3,
+				[1] = 0x3,
+				[2] = 0x4,
+				[3] = 0x1,
+				[4] = 0x2,
+				[5] = 0x4,
+				[6] = 0x1,
+				[9] = 0x2,
+			};
+
+			if (unlikely(!src))
+				return -EIO;
+
+			data = path[rsnd_mod_id(src)] |
+				cmd_case[rsnd_mod_id(src)] << 16;
+		}
 	}
 
 	dev_dbg(dev, "ctu/mix path = 0x%08x\n", data);
@@ -91,7 +115,10 @@ static int rsnd_cmd_init(struct rsnd_mod *mod,
 	rsnd_mod_write(mod, CMD_BUSIF_MODE, rsnd_get_busif_shift(io, mod) | 1);
 	rsnd_mod_write(mod, CMD_BUSIF_DALIGN, rsnd_get_dalign(mod, io));
 
-	rsnd_adg_set_cmd_timsel_gen2(mod, io);
+	if (rsnd_is_gen5(priv))
+		rsnd_adg_set_cmd_timsel_gen5(mod, io);
+	else
+		rsnd_adg_set_cmd_timsel_gen2(mod, io);
 
 	return 0;
 }

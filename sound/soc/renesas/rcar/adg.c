@@ -251,6 +251,22 @@ int rsnd_adg_set_cmd_timsel_gen2(struct rsnd_mod *cmd_mod,
 	return 0;
 }
 
+int rsnd_adg_set_cmd_timsel_gen5(struct rsnd_mod *cmd_mod,
+				 struct rsnd_dai_stream *io)
+{
+	struct rsnd_priv *priv = rsnd_mod_to_priv(cmd_mod);
+	u32 val;
+
+	rsnd_adg_get_timesel_ratio(priv, io,
+				   rsnd_src_get_in_rate(priv, io),
+				   rsnd_src_get_out_rate(priv, io),
+				   NULL, &val, NULL);
+
+	rsnd_mod_write(cmd_mod, CMDOUT_TIMSEL, val);
+
+	return 0;
+}
+
 int rsnd_adg_set_src_timesel_gen2(struct rsnd_mod *src_mod,
 				  struct rsnd_dai_stream *io,
 				  unsigned int in_rate,
@@ -276,6 +292,32 @@ int rsnd_adg_set_src_timesel_gen2(struct rsnd_mod *src_mod,
 
 	rsnd_mod_bset(adg_mod, SRCIN_TIMSEL(id / 2),  mask, in);
 	rsnd_mod_bset(adg_mod, SRCOUT_TIMSEL(id / 2), mask, out);
+
+	if (en)
+		rsnd_mod_bset(adg_mod, DIV_EN, en, en);
+
+	return 0;
+}
+
+int rsnd_adg_set_src_timesel_gen5(struct rsnd_mod *src_mod,
+				  struct rsnd_dai_stream *io,
+				  unsigned int in_rate,
+				  unsigned int out_rate)
+{
+	struct rsnd_priv *priv = rsnd_mod_to_priv(src_mod);
+	struct rsnd_adg *adg = rsnd_priv_to_adg(priv);
+	struct rsnd_mod *adg_mod = rsnd_mod_get(adg);
+	u32 in, out;
+	u32 en;
+
+	rsnd_mod_make_sure(src_mod, RSND_MOD_SRC);
+
+	rsnd_adg_get_timesel_ratio(priv, io,
+				   in_rate, out_rate,
+				   &in, &out, &en);
+
+	rsnd_mod_write(src_mod, SRC_IN_TIMSEL, in);
+	rsnd_mod_write(src_mod, SRC_OUT_TIMSEL, out);
 
 	if (en)
 		rsnd_mod_bset(adg_mod, DIV_EN, en, en);

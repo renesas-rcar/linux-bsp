@@ -381,6 +381,12 @@ static void rsnd_src_init_convert_rate(struct rsnd_dai_stream *io,
 	o_busif = (!is_play ? tmp : 0) | 1;
 
 	rsnd_mod_write(mod, SRC_ROUTE_MODE0, route);
+	if (rsnd_is_gen5(priv)) {
+		/* Bypass SRC_DVC by default */
+		rsnd_mod_write(mod, SRC_DVC_DVUCR2, 0x1);
+		rsnd_mod_write(mod, SRC_DVC_DVUIR, 1);
+		rsnd_mod_write(mod, SRC_DVC_DVUIR, 0);
+	}
 
 	rsnd_mod_write(mod, SRC_SRCIR, 1);	/* initialize */
 	rsnd_mod_write(mod, SRC_ADINR, adinr);
@@ -395,7 +401,11 @@ static void rsnd_src_init_convert_rate(struct rsnd_dai_stream *io,
 
 	rsnd_mod_write(mod, SRC_BUSIF_DALIGN, rsnd_get_dalign(mod, io));
 
-	rsnd_adg_set_src_timesel_gen2(mod, io, fin, fout);
+	if (rsnd_is_gen5(priv))
+		rsnd_adg_set_src_timesel_gen5(mod, io, fin, fout);
+	else
+		rsnd_adg_set_src_timesel_gen2(mod, io, fin, fout);
+
 
 	/* update SRC_IFSVR */
 	rsnd_src_set_convert_rate(io, mod);
@@ -418,7 +428,7 @@ static int rsnd_src_irq(struct rsnd_mod *mod,
 
 	sys_int_val =
 	sys_int_mask = OUF_SRC(id);
-	int_val = 0x3300;
+	int_val = rsnd_is_gen5(priv) ? 0x10001 : 0x3300;
 
 	/*
 	 * IRQ is not supported on non-DT
@@ -435,22 +445,39 @@ static int rsnd_src_irq(struct rsnd_mod *mod,
 	 *
 	 * ignore over flow error when rsnd_src_sync_is_enabled()
 	 */
-	if (rsnd_src_sync_is_enabled(mod))
+	if (rsnd_src_sync_is_enabled(mod)) {
 		sys_int_val = sys_int_val & 0xffff;
+		int_val &= rsnd_is_gen5(priv) ? 0x1 : 0xffff;
+	}
 
-	rsnd_mod_write(mod, SRC_INT_ENABLE0, int_val);
-	rsnd_mod_bset(mod, SCU_SYS_INT_EN0, sys_int_mask, sys_int_val);
-	rsnd_mod_bset(mod, SCU_SYS_INT_EN1, sys_int_mask, sys_int_val);
+	if (rsnd_is_gen5(priv)) {
+		rsnd_mod_write(mod, SRC_INT_EN0, int_val);
+		rsnd_mod_write(mod, SRC_INT_EN1, int_val);
+	} else {
+		rsnd_mod_write(mod, SRC_INT_ENABLE0, int_val);
+		rsnd_mod_bset(mod, SCU_SYS_INT_EN0, sys_int_mask,
+			      sys_int_val);
+		rsnd_mod_bset(mod, SCU_SYS_INT_EN1, sys_int_mask,
+			      sys_int_val);
+	}
 
 	return 0;
 }
 
 static void rsnd_src_status_clear(struct rsnd_mod *mod)
 {
-	u32 val = OUF_SRC(rsnd_mod_id(mod));
+	u32 val;
+	struct rsnd_priv *priv = rsnd_mod_to_priv(mod);
 
-	rsnd_mod_write(mod, SCU_SYS_STATUS0, val);
-	rsnd_mod_write(mod, SCU_SYS_STATUS1, val);
+	if (rsnd_is_gen5(priv)) {
+		val = 0x10001;
+		rsnd_mod_write(mod, SRC_STATUS0, val);
+		rsnd_mod_write(mod, SRC_STATUS1, val);
+	} else {
+		val = OUF_SRC(rsnd_mod_id(mod));
+		rsnd_mod_write(mod, SCU_SYS_STATUS0, val);
+		rsnd_mod_write(mod, SCU_SYS_STATUS1, val);
+	}
 }
 
 static bool rsnd_src_error_occurred(struct rsnd_mod *mod)
@@ -461,7 +488,7 @@ static bool rsnd_src_error_occurred(struct rsnd_mod *mod)
 	u32 status0, status1;
 	bool ret = false;
 
-	val0 = val1 = OUF_SRC(rsnd_mod_id(mod));
+	val0 = val1 = rsnd_is_gen5(priv) ? 0x10001 : OUF_SRC(rsnd_mod_id(mod));
 
 	/*
 	 * WORKAROUND
@@ -469,10 +496,10 @@ static bool rsnd_src_error_occurred(struct rsnd_mod *mod)
 	 * ignore over flow error when rsnd_src_sync_is_enabled()
 	 */
 	if (rsnd_src_sync_is_enabled(mod))
-		val0 = val0 & 0xffff;
+		val0 = val0 & (rsnd_is_gen5(priv) ? 0x1 :  0xffff);
 
-	status0 = rsnd_mod_read(mod, SCU_SYS_STATUS0);
-	status1 = rsnd_mod_read(mod, SCU_SYS_STATUS1);
+	status0 = rsnd_mod_read(mod, rsnd_is_gen5(priv) ? SRC_STATUS0 : SCU_SYS_STATUS0);
+	status1 = rsnd_mod_read(mod, rsnd_is_gen5(priv) ? SRC_STATUS1 : SCU_SYS_STATUS1);
 	if ((status0 & val0) || (status1 & val1)) {
 		rsnd_print_irq_status(dev, "%s err status : 0x%08x, 0x%08x\n",
 				      rsnd_mod_name(mod), status0, status1);

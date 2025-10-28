@@ -365,7 +365,7 @@ static u32 rsnd_dmapp_get_chcr(struct rsnd_dai_stream *io,
 
 #define rsnd_dmapp_addr(dmac, dma, reg) \
 	(dmac->ppbase + 0x20 + reg + \
-	 (0x10 * rsnd_dma_to_dmapp(dma)->dmapp_id))
+	 ((rsnd_is_gen5(priv) ? 0x1000 : 0x10) * rsnd_dma_to_dmapp(dma)->dmapp_id))
 static void rsnd_dmapp_write(struct rsnd_dma *dma, u32 data, u32 reg)
 {
 	struct rsnd_mod *mod = rsnd_mod_get(dma);
@@ -625,23 +625,32 @@ rsnd_gen4_dma_addr(struct rsnd_dai_stream *io, struct rsnd_mod *mod,
 /*
  *	Gen5 DMA read/write register offset
  *
- *	RSND_xxx_I_N_VDK	for Audio DMAC input
- *	RSND_xxx_O_N_VDK	for Audio DMAC output
- *	RSND_xxx_I_P_VDK	for Audio DMAC peri peri input
- *	RSND_xxx_O_P_VDK	for Audio DMAC peri peri output
+ *	RSND_xxx_I_N_GEN5	for Audio DMAC input
+ *	RSND_xxx_O_N_GEN5	for Audio DMAC output
+ *	RSND_xxx_I_P_GEN5	for Audio DMAC peri peri input
+ *	RSND_xxx_O_P_GEN5	for Audio DMAC peri peri output
  *
  *	ex) R-Car X5H case
  *	      mod        / DMAC in    / DMAC out   / DMAC PP in / DMAC pp out
  *	SSI : 0xec549000
  *	SSIU: 0xec540000 / 0xec100000 / 0xec100000 / 0xec400000 / 0xec400000
- *	SCU : 0xec500000 / TBU
- *	CMD : 0xec500000 / TBU
+ *	SCU : 0xec500000 / 0xec000000 / 0xec010000 / 0xec300000 / 0xec304000
+ *	CMD : 0xec500000		0xec020000		  0xec308000
  */
-#define RDMA_SSIU_I_N_VDK(addr, i, j)	(addr ##_reg - 0x00440000 + (0x8000 * (i)) + (0x1000 * (j)))
-#define RDMA_SSIU_O_N_VDK(addr, i, j)	RDMA_SSIU_I_N_VDK(addr, i, j)
+#define RDMA_SSIU_I_N_GEN5(addr, i, j)	(addr ##_reg - 0x00440000 + (0x8000 * (i)) + (0x1000 * (j)))
+#define RDMA_SSIU_O_N_GEN5(addr, i, j)	RDMA_SSIU_I_N_GEN5(addr, i, j)
 
-#define RDMA_SSIU_I_P_VDK(addr, i, j)	(addr ##_reg - 0x00441000 + (0x1000 * (i)) + (((j) / 4) * 0x9000) + (((j) % 4) * 0x400) - (0x4000 * ((i) / 9) * ((j) / 4)))
-#define RDMA_SSIU_O_P_VDK(addr, i, j)	RDMA_SSIU_I_P_VDK(addr, i, j)
+#define RDMA_SSIU_I_P_GEN5(addr, i, j)	(addr ##_reg - 0x00140000 + (0x1000 * (i)) + (((j) / 4) * 0x9000) + (((j) % 4) * 0x400) - (0x4000 * ((i) / 9) * ((j) / 4)))
+#define RDMA_SSIU_O_P_GEN5(addr, i, j)	RDMA_SSIU_I_P_GEN5(addr, i, j)
+
+#define RDMA_SRC_I_N_GEN5(addr, i)	(addr ##_reg - 0x00500000 + (0x1000 * i))
+#define RDMA_SRC_O_N_GEN5(addr, i)	(addr ##_reg - 0x004f0000 + (0x1000 * i))
+
+#define RDMA_SRC_I_P_GEN5(addr, i)	(addr ##_reg - 0x00200000 + (0x400 * i))
+#define RDMA_SRC_O_P_GEN5(addr, i)	(addr ##_reg - 0x001fc000 + (0x400 * i))
+
+#define RDMA_CMD_O_N_GEN5(addr, i)	(addr ##_reg - 0x004e0000 + (0x1000 * i))
+#define RDMA_CMD_O_P_GEN5(addr, i)	(addr ##_reg - 0x001f8000 + (0x400 * i))
 
 static dma_addr_t
 rsnd_gen5_dma_addr(struct rsnd_dai_stream *io,
@@ -667,22 +676,22 @@ rsnd_gen5_dma_addr(struct rsnd_dai_stream *io,
 		/* SRC */
 		/* Capture */
 		{{{ 0,				0 },
-		  { RDMA_SRC_O_N(src, id),	RDMA_SRC_I_P(src, id) },
-		  { RDMA_CMD_O_N(src, id),	RDMA_SRC_I_P(src, id) } },
+		  { RDMA_SRC_O_N_GEN5(src, id),	RDMA_SRC_I_P_GEN5(src, id) },
+		  { RDMA_CMD_O_N_GEN5(src, id),	RDMA_SRC_I_P_GEN5(src, id) } },
 		 /* Playback */
 		 {{ 0,				0, },
-		  { RDMA_SRC_O_P(src, id),	RDMA_SRC_I_N(src, id) },
-		  { RDMA_CMD_O_P(src, id),	RDMA_SRC_I_N(src, id) } }
+		  { RDMA_SRC_O_P_GEN5(src, id),	RDMA_SRC_I_N_GEN5(src, id) },
+		  { RDMA_CMD_O_P_GEN5(src, id),	RDMA_SRC_I_N_GEN5(src, id) } }
 		},
 		/* SSIU */
 		/* Capture */
-		{{{ RDMA_SSIU_O_N_VDK(ssiu, id, busif),	0 },
-		  { RDMA_SSIU_O_P_VDK(ssiu, id, busif),	0 },
-		  { RDMA_SSIU_O_P_VDK(ssiu, id, busif),	0 } },
+		{{{ RDMA_SSIU_O_N_GEN5(ssiu, id, busif),	0 },
+		  { RDMA_SSIU_O_P_GEN5(ssiu, id, busif),	0 },
+		  { RDMA_SSIU_O_P_GEN5(ssiu, id, busif),	0 } },
 		 /* Playback */
-		 {{ 0,			RDMA_SSIU_I_N_VDK(ssiu, id, busif) },
-		  { 0,			RDMA_SSIU_I_P_VDK(ssiu, id, busif) },
-		  { 0,			RDMA_SSIU_I_P_VDK(ssiu, id, busif) } } },
+		 {{ 0,			RDMA_SSIU_I_N_GEN5(ssiu, id, busif) },
+		  { 0,			RDMA_SSIU_I_P_GEN5(ssiu, id, busif) },
+		  { 0,			RDMA_SSIU_I_P_GEN5(ssiu, id, busif) } } },
 	};
 
 	/*
