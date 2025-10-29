@@ -71,13 +71,37 @@ enum rsnd_reg {
 	SRCIN_TIMSEL2,
 	SRCIN_TIMSEL3,
 	SRCIN_TIMSEL4,
+	SRC_IN_TIMSEL,
 	SRCOUT_TIMSEL0,
 	SRCOUT_TIMSEL1,
 	SRCOUT_TIMSEL2,
 	SRCOUT_TIMSEL3,
 	SRCOUT_TIMSEL4,
+	SRC_OUT_TIMSEL,
+	SRC_STATUS0,
+	SRC_STATUS1,
 	SCU_SYS_STATUS0,
 	SCU_SYS_STATUS1,
+	SRC_INT_EN0,
+	SRC_INT_EN1,
+	SRC_DVC_SWRSR,
+	SRC_DVC_DVUIR,
+	SRC_DVC_ADINR,
+	SRC_DVC_DVUCR,
+	SRC_DVC_DVUCR2,
+	SRC_DVC_ZCMCR,
+	SRC_DVC_VRCTR,
+	SRC_DVC_VRPDR,
+	SRC_DVC_VRDBR,
+	SRC_DVC_VOL0R,
+	SRC_DVC_VOL1R,
+	SRC_DVC_VOL2R,
+	SRC_DVC_VOL3R,
+	SRC_DVC_VOL4R,
+	SRC_DVC_VOL5R,
+	SRC_DVC_VOL6R,
+	SRC_DVC_VOL7R,
+	SRC_DVC_DVUER,
 	SCU_SYS_INT_EN0,
 	SCU_SYS_INT_EN1,
 	CMD_CTRL,
@@ -640,7 +664,13 @@ int rsnd_adg_set_src_timesel_gen2(struct rsnd_mod *src_mod,
 				  struct rsnd_dai_stream *io,
 				  unsigned int in_rate,
 				  unsigned int out_rate);
+int rsnd_adg_set_src_timesel_gen5(struct rsnd_mod *src_mod,
+				  struct rsnd_dai_stream *io,
+				  unsigned int in_rate,
+				  unsigned int out_rate);
 int rsnd_adg_set_cmd_timsel_gen2(struct rsnd_mod *cmd_mod,
+				 struct rsnd_dai_stream *io);
+int rsnd_adg_set_cmd_timsel_gen5(struct rsnd_mod *cmd_mod,
 				 struct rsnd_dai_stream *io);
 #define rsnd_adg_clk_enable(priv)	rsnd_adg_clk_control(priv, 1)
 #define rsnd_adg_clk_disable(priv)	rsnd_adg_clk_control(priv, 0)
@@ -777,7 +807,6 @@ struct rsnd_kctrl_cfg_s {
 #define rsnd_kctrl_vals(x)	((x).val)	/* = (x).cfg.val[0] */
 
 int rsnd_kctrl_accept_anytime(struct rsnd_dai_stream *io);
-int rsnd_kctrl_accept_runtime(struct rsnd_dai_stream *io);
 struct rsnd_kctrl_cfg *rsnd_kctrl_init_m(struct rsnd_kctrl_cfg_m *cfg);
 struct rsnd_kctrl_cfg *rsnd_kctrl_init_s(struct rsnd_kctrl_cfg_s *cfg);
 int rsnd_kctrl_new(struct rsnd_mod *mod,
