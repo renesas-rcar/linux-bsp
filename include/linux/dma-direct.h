@@ -88,7 +88,11 @@ static inline phys_addr_t dma_to_phys(struct device *dev, dma_addr_t dma_addr)
 		paddr = dma_addr;
 
 #if CONFIG_RCAR_RGID
-	paddr = ADDR_ASSIGN_RGID(paddr, CONFIG_RCAR_RGID);
+	if (check_cmem_others_node(dev_name(dev)))
+		paddr = ADDR_ASSIGN_RGID(paddr, CONFIG_CMEM_RGID);
+	else
+		paddr = ADDR_ASSIGN_RGID(paddr, CONFIG_RCAR_RGID);
+
 #endif /* CONFIG_RCAR_RGID */
 
 	return __sme_clr(paddr);

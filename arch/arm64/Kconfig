@@ -1983,9 +1983,25 @@ config DMI
 	  However, even with this option, the resultant kernel should
 	  continue to boot on existing non-UEFI platforms.
 
+menu "RCAR GEN4 RGID"
+
 config RCAR_RGID
 	int "RGID"
 	default 0
+
+menu "CMEM"
+
+config CMEM_NODE
+	string "Cmem node name"
+	default "qm_region"
+
+config CMEM_RGID
+	int "Others RGID"
+	default 5
+
+endmenu
+
+endmenu
 
 endmenu
 
