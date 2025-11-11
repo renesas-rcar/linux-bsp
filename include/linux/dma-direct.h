@@ -73,7 +73,10 @@ static inline dma_addr_t phys_to_dma_unencrypted(struct device *dev,
 static inline dma_addr_t phys_to_dma(struct device *dev, phys_addr_t paddr)
 {
 #if CONFIG_RCAR_RGID
-	REMOVE_RGID(paddr);
+	if (check_cmem_others_node(dev_name(dev)))
+		paddr = ADDR_ASSIGN_RGID(paddr, CONFIG_CMEM_RGID);
+	else
+		REMOVE_RGID(paddr);
 #endif /* CONFIG_RCAR_RGID */
 	return __sme_set(phys_to_dma_unencrypted(dev, paddr));
 }
