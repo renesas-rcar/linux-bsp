@@ -675,16 +675,36 @@ static int mp_phy_set_mode(struct phy *phy, enum phy_mode mode, int submode)
 
 	/* Check for protocol conflicts if initialized with another protocol */
 	if (chan->initialized && chan->current_protocol != new_protocol) {
-		dev_err(&phy->dev, "Protocol conflict on channel %d: current=%d, requested=%d\n",
-			phy->id, chan->current_protocol, new_protocol);
-		return -EINVAL;
+		if (new_protocol != PHY_MODE_USB_HOST && new_protocol != PHY_MODE_USB_DEVICE &&
+		    new_protocol != PHY_MODE_USB_OTG) {
+			dev_err(&phy->dev, "Protocol conflict on channel %d: current=%d, requested=%d\n",
+				phy->id, chan->current_protocol, new_protocol);
+			return -EINVAL;
+		}
 	}
 
 	/* If same protocol and initialized then return success*/
-	if (chan->initialized && chan->current_protocol == new_protocol) {
-		dev_info(&phy->dev, "Channel %d already configured for protocol %d\n",
-			 phy->id, new_protocol);
-		return 0;
+	if (chan->initialized) {
+		/* Skip if same protocol */
+		if (chan->current_protocol == new_protocol) {
+			dev_info(&phy->dev, "Channel %d already configured for protocol %d\n",
+				 phy->id, new_protocol);
+			return 0;
+		}
+
+		/* Also skip if switching between USB modes */
+		bool is_current_usb = (chan->current_protocol == PHY_MODE_USB_HOST ||
+					chan->current_protocol == PHY_MODE_USB_DEVICE ||
+					chan->current_protocol == PHY_MODE_USB_OTG);
+		bool is_new_usb = (new_protocol == PHY_MODE_USB_HOST ||
+				new_protocol == PHY_MODE_USB_DEVICE ||
+				new_protocol == PHY_MODE_USB_OTG);
+
+		if (is_current_usb && is_new_usb) {
+			dev_info(&phy->dev, "Channel %d switching USB mode from %d to %d, skip reconfiguration\n",
+				 phy->id, chan->current_protocol, new_protocol);
+			return 0;
+		}
 	}
 
 	chan->current_protocol = new_protocol;
