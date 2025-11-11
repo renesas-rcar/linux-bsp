@@ -5286,8 +5286,9 @@
 			compatible = "renesas,rcar-gen5-sdhi";
 			reg = <0 0xc0880000 0 0x2000>;
 			interrupts = <GIC_SPI 894 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_SDHI0>;
-			clock-names = "core";
+			clocks = <&scmi_clk X5H_CLOCK_ID_SDHI0>,
+				<&scmi_clk X5H_CLOCK_ID_CLK_SD0_PERE_MAIN>;
+			clock-names = "core", "sd_clk";
 			max-frequency = <200000000>;
 			status = "disabled";
 		};
