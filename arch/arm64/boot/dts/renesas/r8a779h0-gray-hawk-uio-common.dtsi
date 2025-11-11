@@ -63,47 +63,47 @@
 };
 
 &ipmmu_rt0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &ipmmu_rt1 {
-	status = "disabled";
+	status = "okay";
 };
 
 &ipmmu_ds0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &ipmmu_hc {
-	status = "disabled";
+	status = "okay";
 };
 
 &ipmmu_ir {
-	status = "disabled";
+	status = "okay";
 };
 
 &ipmmu_vc {
-	status = "disabled";
+	status = "okay";
 };
 
 &ipmmu_3dg {
-	status = "disabled";
+	status = "okay";
 };
 
 &ipmmu_vi0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &ipmmu_vi1 {
-	status = "disabled";
+	status = "okay";
 };
 
 &ipmmu_vip0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &ipmmu_mm {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin_00 {
