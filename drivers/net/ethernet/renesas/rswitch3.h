@@ -538,6 +538,7 @@ enum rswitch_reg {
 	EAVCC			= TARO + 0x0130,
 	EAVTC			= TARO + 0x0134,
 	EATTFC			= TARO + 0x0138,
+	EACKSC			= TARO + 0x013C,
 	EACAEC			= TARO + 0x0200,
 	EACC			= TARO + 0x0204,
 	EACAIVC0		= TARO + 0x0220,
@@ -928,6 +929,9 @@ enum rswitch_gwca_mode {
 
 /* TOP */
 #define  TPDEMIMC0(queue)		(TPDEMIMC0 + (queue) * 4)
+
+/* TARO */
+#define USMFSPE			BIT(31)
 
 /* Descriptors */
 enum RX_DS_CC_BIT {
