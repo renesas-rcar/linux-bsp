@@ -1856,100 +1856,6 @@ static int rsnd_rdai_continuance_probe(struct rsnd_priv *priv,
 	return ret;
 }
 
-/* Hardcoded for enable module clock */
-#define MDLC_BASE		0xc05d0000
-#define AUDIO_PDID		(0)
-#define AUDIO_CLK_MASK(n)	GENMASK((n) + 1, n)
-#define AUDIO_CLK_SHIFT(n)	(n)
-
-#define MDLC_PKCPROT0		(MDLC_BASE + 0x0cf0)
-#define MDLC_PKCPROT1		(MDLC_BASE + 0x0cf4)
-
-#define _MDLC_MPDG(k)		(MDLC_BASE + 0x0200 + (k) * 4)
-#define _MDLC_MPDGS(k)		(MDLC_BASE + 0x0300 + (k) * 4)
-#define MDLC_MPIER0		(MDLC_BASE + 0x0110)
-#define MDLC_MPIMR0		(MDLC_BASE + 0x0120)
-
-#define MDLC_MPDG		_MDLC_MPDG(AUDIO_PDID)
-#define MDLC_MPDGS		_MDLC_MPDGS(AUDIO_PDID)
-
-#define MDLC_MSRES(i)		(MDLC_BASE + 0x0900 + (i) * 4)
-#define MDLC_MSRESS(i)		(MDLC_BASE + 0x0960 + (i) * 4)
-
-static void audio_module_standby_set(u8 clk_reg_no, u8 pos, u8 mode)
-{
-	void __iomem *unlock = ioremap(MDLC_PKCPROT1, 4);
-	void __iomem *msress = ioremap(MDLC_MSRESS(clk_reg_no), 4);
-	void __iomem *msres = ioremap(MDLC_MSRES(clk_reg_no), 4);
-	u32 val;
-
-	writel(0xA5A5A501, unlock);
-
-	if ((readl(msress) & AUDIO_CLK_MASK(pos)) == (mode << AUDIO_CLK_SHIFT(pos)))
-		goto unmap;
-
-	while ((readl(msress) & AUDIO_CLK_MASK(pos)) != (readl(msres) & AUDIO_CLK_MASK(pos)))
-		udelay(1000);
-
-	val = readl(msres);
-	val &= ~AUDIO_CLK_MASK(pos);
-	val |= mode << AUDIO_CLK_SHIFT(pos);
-	writel(val, msres);
-
-	while ((readl(msress) & AUDIO_CLK_MASK(pos)) != (readl(msres) & AUDIO_CLK_MASK(pos)))
-		udelay(1000);
-
-unmap:
-	iounmap(unlock);
-	iounmap(msress);
-	iounmap(msres);
-}
-
-static void audio_module_power_run(void)
-{
-	/* ADG0 */
-	audio_module_standby_set(9, 0, 0x03);
-
-	/* SSI0 */
-	audio_module_standby_set(9, 4, 0x03);
-	audio_module_standby_set(9, 6, 0x03);
-	audio_module_standby_set(9, 8, 0x03);
-	audio_module_standby_set(9, 10, 0x03);
-	audio_module_standby_set(9, 12, 0x03);
-	audio_module_standby_set(9, 14, 0x03);
-	audio_module_standby_set(9, 16, 0x03);
-	audio_module_standby_set(9, 18, 0x03);
-	audio_module_standby_set(9, 20, 0x03);
-	audio_module_standby_set(9, 22, 0x03);
-	audio_module_standby_set(9, 24, 0x03);
-
-	/* SCU0 */
-	audio_module_standby_set(10, 16, 0x03);
-	audio_module_standby_set(10, 18, 0x03);
-	audio_module_standby_set(10, 20, 0x03);
-	audio_module_standby_set(10, 22, 0x03);
-	audio_module_standby_set(10, 24, 0x03);
-	audio_module_standby_set(10, 26, 0x03);
-	audio_module_standby_set(10, 28, 0x03);
-	audio_module_standby_set(10, 30, 0x03);
-	audio_module_standby_set(11, 0, 0x03);
-	audio_module_standby_set(11, 2, 0x03);
-	audio_module_standby_set(11, 4, 0x03);
-	audio_module_standby_set(11, 6, 0x03);
-	audio_module_standby_set(11, 8, 0x03);
-	audio_module_standby_set(11, 10, 0x03);
-	audio_module_standby_set(11, 12, 0x03);
-
-	/* APD */
-	audio_module_standby_set(12, 12, 0x03);
-	audio_module_standby_set(12, 14, 0x03);
-	audio_module_standby_set(12, 16, 0x03);
-	audio_module_standby_set(12, 18, 0x03);
-	audio_module_standby_set(12, 20, 0x03);
-	audio_module_standby_set(12, 22, 0x03);
-}
-//--------------------------------------------------
-
 /*
  *	rsnd probe
  */
@@ -2016,8 +1922,6 @@ static int rsnd_probe(struct platform_device *pdev)
 	}
 
 	pm_runtime_enable(dev);
-
-	audio_module_power_run();
 
 	dev_info(dev, "probed\n");
 	return ret;
