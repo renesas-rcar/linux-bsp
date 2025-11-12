@@ -1113,6 +1113,8 @@ static void rswitch_etha_enable_mii(struct rswitch_etha *etha)
 static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
 {
 	int err;
+	struct rswitch_private *priv = container_of(etha,
+			struct rswitch_private, etha[etha->index]);
 
 	err = rswitch_etha_change_mode(etha, EAMC_OPC_DISABLE);
 	if (err < 0)
@@ -1122,6 +1124,10 @@ static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
 		return err;
 
 	iowrite32(EAVCC_VEM_SC_TAG, etha->addr + EAVCC);
+
+	if (priv->vpf_mode) {
+		iowrite32(USMFSPE, etha->addr + EACKSC);
+	}
 	rswitch_rmac_setting(etha, mac);
 	rswitch_etha_enable_mii(etha);
 
