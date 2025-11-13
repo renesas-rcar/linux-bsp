@@ -5537,32 +5537,36 @@
 				<0 0xec740000 0 0x1c030>;  /* Audio DMAC peri peri*/
 			reg-names = "scu", "adg", "ssiu", "audmapp";
 
-			clocks = <&ssi_dummy_clk>,
-				 <&ssi_dummy_clk>, <&ssi_dummy_clk>,
-				 <&ssi_dummy_clk>, <&ssi_dummy_clk>,
-				 <&ssi_dummy_clk>, <&ssi_dummy_clk>,
-				 <&ssi_dummy_clk>, <&ssi_dummy_clk>,
-				 <&ssi_dummy_clk>, <&ssi_dummy_clk>, // of SSI
-				 <&scu_dummy_clk>, <&scu_dummy_clk>,
-				 <&scu_dummy_clk>, <&scu_dummy_clk>,
-				 <&scu_dummy_clk>, <&scu_dummy_clk>,
-				 <&scu_dummy_clk>, <&scu_dummy_clk>,
-				 <&scu_dummy_clk>, <&scu_dummy_clk>, // of SRC
-				 <&scu_dummy_clk>, <&scu_dummy_clk>, // of MIX
-				 <&scu_dummy_clk>, <&scu_dummy_clk>, // of CTU
-				 <&scu_dummy_clk>, <&scu_dummy_clk>, // of DVC
+			clocks = <&scmi_clk X5H_CLOCK_ID_ADG0>, <&scmi_clk X5H_CLOCK_ID_SSI0>,
+				 <&scmi_clk X5H_CLOCK_ID_SSI09>, <&scmi_clk X5H_CLOCK_ID_SSI08>,
+				 <&scmi_clk X5H_CLOCK_ID_SSI07>, <&scmi_clk X5H_CLOCK_ID_SSI06>,
+				 <&scmi_clk X5H_CLOCK_ID_SSI05>, <&scmi_clk X5H_CLOCK_ID_SSI04>,
+				 <&scmi_clk X5H_CLOCK_ID_SSI03>, <&scmi_clk X5H_CLOCK_ID_SSI02>,
+				 <&scmi_clk X5H_CLOCK_ID_SSI01>, <&scmi_clk X5H_CLOCK_ID_SSI00>,
+				 <&scmi_clk X5H_CLOCK_ID_SCU0>,
+				 <&scmi_clk X5H_CLOCK_ID_SRC09>, <&scmi_clk X5H_CLOCK_ID_SRC08>,
+				 <&scmi_clk X5H_CLOCK_ID_SRC07>, <&scmi_clk X5H_CLOCK_ID_SRC06>,
+				 <&scmi_clk X5H_CLOCK_ID_SRC05>, <&scmi_clk X5H_CLOCK_ID_SRC04>,
+				 <&scmi_clk X5H_CLOCK_ID_SRC03>, <&scmi_clk X5H_CLOCK_ID_SRC02>,
+				 <&scmi_clk X5H_CLOCK_ID_SRC01>, <&scmi_clk X5H_CLOCK_ID_SRC00>,
+				 <&scmi_clk X5H_CLOCK_ID_SCU01>, <&scmi_clk X5H_CLOCK_ID_SCU00>,
+				 <&scmi_clk X5H_CLOCK_ID_SCU01>, <&scmi_clk X5H_CLOCK_ID_SCU00>,
+				 <&scmi_clk X5H_CLOCK_ID_DVC00>, <&scmi_clk X5H_CLOCK_ID_DVC01>,
+				 <&scmi_clk X5H_CLOCK_ID_APD00>, <&scmi_clk X5H_CLOCK_ID_APD01>,
 				 <&audio_clk_a>, <&audio_clk_b>,
 				 <&audio_clk_c>;
-			clock-names = "ssi-all",
+			clock-names = "adg", "ssi-all",
 				      "ssi.9", "ssi.8", "ssi.7", "ssi.6",
 				      "ssi.5", "ssi.4", "ssi.3", "ssi.2",
 				      "ssi.1", "ssi.0",
+				      "scu-all",
 				      "src.9", "src.8", "src.7", "src.6",
 				      "src.5", "src.4", "src.3", "src.2",
 				      "src.1", "src.0",
 				      "mix.1", "mix.0",
 				      "ctu.1", "ctu.0",
 				      "dvc.0", "dvc.1",
+				      "dmapp.0", "dmapp.1",
 				      "clk_a", "clk_b", "clk_c";
 			status = "disabled";
 
