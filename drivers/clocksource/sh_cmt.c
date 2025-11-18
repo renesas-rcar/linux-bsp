@@ -30,72 +30,6 @@
 #include <asm/platform_early.h>
 #endif
 
-/* Hardcoded for enable module clock */
-#define MDLC_BASE              0xc6480000
-#define CMT_PDID               (0)
-#define CMT_CLK_MASK(n)        GENMASK((n) + 1, n)
-#define CMT_CLK_SHIFT(n)       (n)
-
-#define MDLC_PKCPROT0          (MDLC_BASE + 0x0cf0)
-#define MDLC_PKCPROT1          (MDLC_BASE + 0x0cf4)
-
-#define _MDLC_MPDG(k)          (MDLC_BASE + 0x0200 + (k) * 4)
-#define _MDLC_MPDGS(k)         (MDLC_BASE + 0x0300 + (k) * 4)
-#define MDLC_MPIER0            (MDLC_BASE + 0x0110)
-#define MDLC_MPIMR0            (MDLC_BASE + 0x0120)
-
-#define MDLC_MPDG              _MDLC_MPDG(CMT_PDID)
-#define MDLC_MPDGS             _MDLC_MPDGS(CMT_PDID)
-
-#define MDLC_MSRES(i)          (MDLC_BASE + 0x0900 + (i) * 4)
-#define MDLC_MSRESS(i) (       MDLC_BASE + 0x0960 + (i) * 4)
-
-static void cmt_module_standy_set(u8 clk_reg_no, u8 pos, u8 mode)
-{
-       void __iomem *unlock = ioremap(MDLC_PKCPROT1, 4);
-       void __iomem *msress = ioremap(MDLC_MSRESS(clk_reg_no), 4);
-       void __iomem *msres = ioremap(MDLC_MSRES(clk_reg_no), 4);
-       u32 val;
-
-       writel(0xA5A5A501, unlock);
-
-       if ((readl(msress) & CMT_CLK_MASK(pos)) == (mode << CMT_CLK_SHIFT(pos)))
-                       goto unmap;
-
-       while ((readl(msress) & CMT_CLK_MASK(pos)) != (readl(msres) & CMT_CLK_MASK(pos)))
-                       udelay(1000);
-
-       val = readl(msres);
-       val &= ~CMT_CLK_MASK(pos);
-       val |= mode << CMT_CLK_SHIFT(pos);
-       writel(val, msres);
-
-       while ((readl(msress) & CMT_CLK_MASK(pos)) != (readl(msres) & CMT_CLK_MASK(pos)))
-                       udelay(1000);
-
-unmap:
-       iounmap(unlock);
-       iounmap(msress);
-       iounmap(msres);
-}
-
-static void cmt_module_clk_disable(void)
-{
-       cmt_module_standy_set(17, 4, 0x01);
-       cmt_module_standy_set(17, 6, 0x01);
-       cmt_module_standy_set(17, 8, 0x01);
-       cmt_module_standy_set(17, 10, 0x01);
-}
-
-static void cmt_module_clk_enable(void)
-{
-       cmt_module_standy_set(17, 4, 0x03);
-       cmt_module_standy_set(17, 6, 0x03);
-       cmt_module_standy_set(17, 8, 0x03);
-       cmt_module_standy_set(17, 10, 0x03);
-}
-/* --------------------------------------------------------------------------------------- */
-
 struct sh_cmt_device;
 
 /*
@@ -447,14 +381,12 @@ static int sh_cmt_enable(struct sh_cmt_channel *ch)
 	dev_pm_syscore_device(&ch->cmt->pdev->dev, true);
 
 	/* enable clock */
-	//ret = clk_enable(ch->cmt->clk);
-	//if (ret) {
-	//	dev_err(&ch->cmt->pdev->dev, "ch%u: cannot enable clock\n",
-	//		ch->index);
-	//	goto err0;
-	//}
-
-	cmt_module_clk_enable();
+	ret = clk_enable(ch->cmt->clk);
+	if (ret) {
+		dev_err(&ch->cmt->pdev->dev, "ch%u: cannot enable clock\n",
+			ch->index);
+		goto err0;
+	}
 
 	/* make sure channel is disabled */
 	sh_cmt_start_stop_ch(ch, 0);
@@ -501,7 +433,7 @@ static void sh_cmt_disable(struct sh_cmt_channel *ch)
 	sh_cmt_write_cmcsr(ch, 0);
 
 	/* stop clock */
-	//clk_disable(ch->cmt->clk);
+	clk_disable(ch->cmt->clk);
 
 	dev_pm_syscore_device(&ch->cmt->pdev->dev, false);
 }
@@ -894,15 +826,14 @@ static void sh_cmt_clock_event_suspend(struct clock_event_device *ced)
 	struct sh_cmt_channel *ch = ced_to_sh_cmt(ced);
 
 	dev_pm_genpd_suspend(&ch->cmt->pdev->dev);
-	//clk_unprepare(ch->cmt->clk);
+	clk_unprepare(ch->cmt->clk);
 }
 
 static void sh_cmt_clock_event_resume(struct clock_event_device *ced)
 {
 	struct sh_cmt_channel *ch = ced_to_sh_cmt(ced);
 
-	//clk_prepare(ch->cmt->clk);
-	cmt_module_clk_disable();
+	clk_prepare(ch->cmt->clk);
 	dev_pm_genpd_resume(&ch->cmt->pdev->dev);
 }
 
@@ -1152,30 +1083,28 @@ static int sh_cmt_setup(struct sh_cmt_device *cmt, struct platform_device *pdev)
 		return -ENXIO;
 	}
 
-	cmt_module_clk_enable();
 	/* Get hold of clock. */
-	//cmt->clk = clk_get(&cmt->pdev->dev, "fck");
-	//if (IS_ERR(cmt->clk)) {
-	//	dev_err(&cmt->pdev->dev, "cannot get clock\n");
-	//	return PTR_ERR(cmt->clk);
-	//}
+	cmt->clk = clk_get(&cmt->pdev->dev, "fck");
+	if (IS_ERR(cmt->clk)) {
+		dev_err(&cmt->pdev->dev, "cannot get clock\n");
+		return PTR_ERR(cmt->clk);
+	}
 
-	//ret = clk_prepare(cmt->clk);
-	//if (ret < 0)
-	//	goto err_clk_put;
+	ret = clk_prepare(cmt->clk);
+	if (ret < 0)
+		goto err_clk_put;
 
 	/* Determine clock rate. */
-	//ret = clk_enable(cmt->clk);
-	//if (ret < 0)
-	//	goto err_clk_unprepare;
+	ret = clk_enable(cmt->clk);
+	if (ret < 0)
+		goto err_clk_unprepare;
 
-	//rate = clk_get_rate(cmt->clk);
-	//if (!rate) {
-	//	ret = -EINVAL;
-	//	goto err_clk_disable;
-	//}
+	rate = clk_get_rate(cmt->clk);
+	if (!rate) {
+		ret = -EINVAL;
+		goto err_clk_disable;
+	}
 
-	rate = 32768; /* Default rate for CMT */
 	/* We shall wait 2 input clks after register writes */
 	if (cmt->info->model >= SH_CMT_48BIT)
 		cmt->reg_delay = DIV_ROUND_UP(2UL * USEC_PER_SEC, rate);
@@ -1183,11 +1112,8 @@ static int sh_cmt_setup(struct sh_cmt_device *cmt, struct platform_device *pdev)
 
 	/* Map the memory resource(s). */
 	ret = sh_cmt_map_memory(cmt);
-	if (ret < 0) {
-		printk(KERN_ERR "sh_cmt: failed to map memory\n");
-		//goto err_clk_disable;
-		cmt_module_clk_disable();
-	}
+	if (ret < 0)
+		goto err_clk_disable;
 
 	/* Allocate and setup the channels. */
 	cmt->num_channels = hweight8(cmt->hw_channels);
@@ -1215,8 +1141,7 @@ static int sh_cmt_setup(struct sh_cmt_device *cmt, struct platform_device *pdev)
 		mask &= ~(1 << hwidx);
 	}
 
-	//clk_disable(cmt->clk);
-	cmt_module_clk_disable();
+	clk_disable(cmt->clk);
 
 	platform_set_drvdata(pdev, cmt);
 
@@ -1225,13 +1150,12 @@ static int sh_cmt_setup(struct sh_cmt_device *cmt, struct platform_device *pdev)
 err_unmap:
 	kfree(cmt->channels);
 	iounmap(cmt->mapbase);
-//err_clk_disable:
-//	clk_disable(cmt->clk);
-//err_clk_unprepare:
-//	clk_unprepare(cmt->clk);
-//err_clk_put:
-//	clk_put(cmt->clk);
-//	return ret;
+err_clk_disable:
+	clk_disable(cmt->clk);
+err_clk_unprepare:
+	clk_unprepare(cmt->clk);
+err_clk_put:
+	clk_put(cmt->clk);
 	return ret;
 }
 
