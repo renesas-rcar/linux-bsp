@@ -420,7 +420,7 @@ static int sh_cmt_enable(struct sh_cmt_channel *ch)
 	/* stop clock */
 	clk_disable(ch->cmt->clk);
 
- //err0:
+ err0:
 	return ret;
 }
 
