@@ -24,6 +24,7 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/sh_dma.h>
+#include <linux/reset.h>
 
 #include <linux/spi/sh_msiof.h>
 #include <linux/spi/spi.h>
@@ -49,8 +50,11 @@ struct sh_msiof_spi_priv {
 	struct spi_controller *ctlr;
 	void __iomem *mapbase;
 	struct clk *clk;
+	struct clk *mso_clk;
 	struct platform_device *pdev;
 	struct sh_msiof_spi_info *info;
+	struct reset_control *rstc;
+	unsigned long rate_clk;
 	struct completion done;
 	struct completion done_txdma;
 	unsigned int tx_fifo_size;
@@ -134,7 +138,8 @@ static void sh_msiof_spi_reset_regs(struct sh_msiof_spi_priv *p)
 static void sh_msiof_spi_set_clk_regs(struct sh_msiof_spi_priv *p,
 				      struct spi_transfer *t)
 {
-	unsigned long parent_rate = clk_get_rate(p->clk);
+	//unsigned long parent_rate = clk_get_rate(p->clk);
+	unsigned long parent_rate = p->rate_clk;
 	unsigned int div_pow = p->min_div_pow;
 	u32 spi_hz = t->speed_hz;
 	unsigned long div;
@@ -1256,22 +1261,44 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 	init_completion(&p->done);
 	init_completion(&p->done_txdma);
 
-	p->clk = devm_clk_get(dev, NULL);
-	if (IS_ERR(p->clk)) {
-		dev_err(dev, "cannot get clock\n");
-		ret = PTR_ERR(p->clk);
+	p->rstc = devm_reset_control_get_exclusive(&pdev->dev, NULL);
+	if (IS_ERR(p->rstc)) {
+		ret = PTR_ERR(p->rstc);
+		if (ret != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "cannot get reset control\n");
 		goto err1;
 	}
 
-	/* MSIOF module clock setup */
-	ref_clk = devm_clk_get(&pdev->dev, "mso");
-	if (!IS_ERR(ref_clk)) {
-		clksrc = clk_get_rate(ref_clk);
-		if (clksrc) {
-			clk_prepare_enable(p->clk);
-			clk_set_rate(p->clk, clksrc);
-			clk_disable_unprepare(p->clk);
+	ret = reset_control_deassert(p->rstc);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to deassert reset\n");
+		goto err1;
+	}
+
+	p->clk = devm_clk_get(&pdev->dev, "fck");
+	if (IS_ERR(p->clk)) {
+		ret = PTR_ERR(p->clk);
+		if (ret == -EPROBE_DEFER) {
+			dev_dbg(&pdev->dev, "clock not ready, deferring probe\n");
+		} else {
+			dev_err(&pdev->dev, "cannot get clock\n");
+			goto err1;
 		}
+	}
+
+	ref_clk = devm_clk_get(&pdev->dev, "msiof_clk");
+	if (IS_ERR(ref_clk)) {
+		dev_err(&pdev->dev, "cannot get msiof_clk\n");
+		ret = PTR_ERR(ref_clk);
+		return ret;
+	}
+	p->rate_clk = clk_get_rate(ref_clk);
+
+	p->mso_clk = devm_clk_get(&pdev->dev, "mso");
+	if (!IS_ERR(p->mso_clk) && clk_get_rate(p->mso_clk) == 0) {
+		clk_prepare_enable(p->mso_clk);
+		clk_set_rate(p->mso_clk, p->rate_clk);
+		clk_disable_unprepare(p->mso_clk);
 	}
 
 	i = platform_get_irq(pdev, 0);
@@ -1287,6 +1314,7 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 	}
 
 	ret = devm_request_irq(dev, i, sh_msiof_spi_irq, 0, dev_name(dev), p);
+
 	if (ret) {
 		dev_err(dev, "unable to request irq\n");
 		goto err1;
@@ -1306,7 +1334,9 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 	/* init controller code */
 	ctlr->mode_bits = SPI_CPOL | SPI_CPHA | SPI_CS_HIGH;
 	ctlr->mode_bits |= SPI_LSB_FIRST | SPI_3WIRE;
-	clksrc = clk_get_rate(p->clk);
+	clksrc = clk_get_rate(p->mso_clk);
+	if (clksrc == 0)
+		clksrc = p->rate_clk;
 	ctlr->min_speed_hz = DIV_ROUND_UP(clksrc, 1024);
 	ctlr->max_speed_hz = DIV_ROUND_UP(clksrc, 1 << p->min_div_pow);
 	ctlr->flags = chipdata->ctlr_flags;
@@ -1348,6 +1378,7 @@ static void sh_msiof_spi_remove(struct platform_device *pdev)
 
 	sh_msiof_release_dma(p);
 	pm_runtime_disable(&pdev->dev);
+	reset_control_assert(p->rstc);
 }
 
 static const struct platform_device_id spi_driver_ids[] = {
