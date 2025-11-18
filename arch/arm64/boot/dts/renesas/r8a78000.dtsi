@@ -4669,6 +4669,8 @@
 			dmas = <&scp_dmac0 0x41>, <&scp_dmac0 0x40>,
 				<&scp_dmac1 0x41>, <&scp_dmac1 0x40>;
 			dma-names = "tx", "rx", "tx", "rx";
+			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>;
+			clock-names = "mso";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
@@ -4682,6 +4684,8 @@
 			dmas = <&scp_dmac0 0x43>, <&scp_dmac0 0x42>,
 				<&scp_dmac1 0x43>, <&scp_dmac1 0x42>;
 			dma-names = "tx", "rx", "tx", "rx";
+			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>;
+			clock-names = "mso";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
@@ -4695,6 +4699,8 @@
 			dmas = <&scp_dmac0 0x45>, <&scp_dmac0 0x44>,
 				<&scp_dmac1 0x45>, <&scp_dmac1 0x44>;
 			dma-names = "tx", "rx", "tx", "rx";
+			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>;
+			clock-names = "mso";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
@@ -4708,6 +4714,8 @@
 			dmas = <&scp_dmac0 0x47>, <&scp_dmac0 0x46>,
 				<&scp_dmac1 0x47>, <&scp_dmac1 0x46>;
 			dma-names = "tx", "rx", "tx", "rx";
+			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>;
+			clock-names = "mso";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
@@ -4723,6 +4731,8 @@
 				<&sys_dmac12 0x49>, <&sys_dmac12 0x48>;
 			dma-names = "tx", "rx", "tx", "rx",
 				    "tx", "rx";
+			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>;
+			clock-names = "mso";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
@@ -4738,6 +4748,8 @@
 				<&sys_dmac12 0x4B>, <&sys_dmac12 0x4A>;
 			dma-names = "tx", "rx", "tx", "rx",
 				    "tx", "rx";
+			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>;
+			clock-names = "mso";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
@@ -4753,6 +4765,8 @@
 				<&sys_dmac12 0x4D>, <&sys_dmac12 0x4C>;
 			dma-names = "tx", "rx", "tx", "rx",
 				    "tx", "rx";
+			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>;
+			clock-names = "mso";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
@@ -4768,6 +4782,8 @@
 				<&sys_dmac12 0x4F>, <&sys_dmac12 0x4E>;
 			dma-names = "tx", "rx", "tx", "rx",
 				    "tx", "rx";
+			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>;
+			clock-names = "mso";
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
