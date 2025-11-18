@@ -4658,6 +4658,16 @@
 				     <&scmi_clk X5H_CLOCK_ID_XPCS7>;
 			clock-names = "xpcs0", "xpcs1", "xpcs2", "xpcs3",
 						  "xpcs4", "xpcs5", "xpcs6", "xpcs7";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_XPCS0>,
+				<&scmi_reset X5H_RESET_DOMAIN_ID_XPCS1>,
+				<&scmi_reset X5H_RESET_DOMAIN_ID_XPCS2>,
+				<&scmi_reset X5H_RESET_DOMAIN_ID_XPCS3>,
+				<&scmi_reset X5H_RESET_DOMAIN_ID_XPCS4>,
+				<&scmi_reset X5H_RESET_DOMAIN_ID_XPCS5>,
+				<&scmi_reset X5H_RESET_DOMAIN_ID_XPCS6>,
+				<&scmi_reset X5H_RESET_DOMAIN_ID_XPCS7>;
+			reset-names = "pcs0", "pcs1", "pcs2","pcs3",
+				      "pcs4", "pcs5", "pcs6", "pcs7";
 			status = "disabled";
 		};
 
