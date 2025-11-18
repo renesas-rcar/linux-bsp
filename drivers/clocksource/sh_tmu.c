@@ -610,7 +610,8 @@ static int sh_tmu_probe(struct platform_device *pdev)
 
 	if (!is_sh_early_platform_device(pdev)) {
 		pm_runtime_set_active(&pdev->dev);
-		pm_runtime_enable(&pdev->dev);
+		if (!pm_runtime_enabled(&pdev->dev))
+			pm_runtime_enable(&pdev->dev);
 	}
 
 	if (tmu) {
