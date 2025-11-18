@@ -65,6 +65,7 @@ struct sh_tmu_device {
 
 	bool has_clockevent;
 	bool has_clocksource;
+	bool clk_rate_channel0;
 };
 
 #define TSTR -1 /* shared register */
@@ -537,8 +538,12 @@ static int sh_tmu_setup(struct sh_tmu_device *tmu, struct platform_device *pdev)
 	/* Get hold of clock. */
 	tmu->clk = clk_get(&tmu->pdev->dev, "fck");
 	if (IS_ERR(tmu->clk)) {
-		dev_err(&tmu->pdev->dev, "cannot get clock\n");
-		return PTR_ERR(tmu->clk);
+		ret = PTR_ERR(tmu->clk);
+		if (ret == -EPROBE_DEFER)
+			dev_dbg(&tmu->pdev->dev, "clock not ready, deferring probe\n");
+		else
+			dev_err(&tmu->pdev->dev, "cannot get clock\n");
+		return ret;
 	}
 
 	ret = clk_prepare(tmu->clk);
@@ -550,7 +555,11 @@ static int sh_tmu_setup(struct sh_tmu_device *tmu, struct platform_device *pdev)
 	if (ret < 0)
 		goto err_clk_unprepare;
 
-	tmu->rate = clk_get_rate(tmu->clk) / 4;
+	//tmu->rate = clk_get_rate(tmu->clk) / 4;
+	if (tmu->clk_rate_channel0)
+		tmu->rate = 16666666 / 4;
+	else
+		tmu->rate = 133333333 / 4;
 
 	/* Map the memory resource. */
 	ret = sh_tmu_map_memory(tmu);
@@ -595,7 +604,9 @@ err_clk_put:
 static int sh_tmu_probe(struct platform_device *pdev)
 {
 	struct sh_tmu_device *tmu = platform_get_drvdata(pdev);
+	struct device_node *np = pdev->dev.of_node;
 	int ret;
+	int clk_channel0;
 
 	if (!is_sh_early_platform_device(pdev)) {
 		pm_runtime_set_active(&pdev->dev);
@@ -610,6 +621,9 @@ static int sh_tmu_probe(struct platform_device *pdev)
 	tmu = kzalloc(sizeof(*tmu), GFP_KERNEL);
 	if (tmu == NULL)
 		return -ENOMEM;
+
+	clk_channel0 = of_property_read_bool(np, "renesas,clk-rate-channel0");
+	tmu->clk_rate_channel0 = clk_channel0 ? true : false;
 
 	ret = sh_tmu_setup(tmu, pdev);
 	if (ret) {
