@@ -2664,7 +2664,9 @@
 			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
 			reg = <0 0xc0740000 0 0x10>;
 			#pwm-cells = <2>;
-			clocks = <&dummy_clk_sgasyncd16>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_PWM0>,
+				 <&dummy_clk_sgasyncd16>;
+			clock-names = "bus_clk", "counter_clk";
 			status = "disabled";
 		};
 
@@ -2672,7 +2674,9 @@
 			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
 			reg = <0 0xc0741000 0 0x10>;
 			#pwm-cells = <2>;
-			clocks = <&dummy_clk_sgasyncd16>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_PWM0>,
+				 <&dummy_clk_sgasyncd16>;
+			clock-names = "bus_clk", "counter_clk";
 			status = "disabled";
 		};
 
@@ -2680,7 +2684,9 @@
 			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
 			reg = <0 0xc0742000 0 0x10>;
 			#pwm-cells = <2>;
-			clocks = <&dummy_clk_sgasyncd16>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_PWM0>,
+				 <&dummy_clk_sgasyncd16>;
+			clock-names = "bus_clk", "counter_clk";
 			status = "disabled";
 		};
 
@@ -2688,7 +2694,9 @@
 			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
 			reg = <0 0xc0743000 0 0x10>;
 			#pwm-cells = <2>;
-			clocks = <&dummy_clk_sgasyncd16>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_PWM0>,
+				 <&dummy_clk_sgasyncd16>;
+			clock-names = "bus_clk", "counter_clk";
 			status = "disabled";
 		};
 
@@ -2696,7 +2704,9 @@
 			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
 			reg = <0 0xc0780000 0 0x10>;
 			#pwm-cells = <2>;
-			clocks = <&dummy_clk_s0asyncd8>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_PWM0>,
+				 <&dummy_clk_s0asyncd8>;
+			clock-names = "bus_clk", "counter_clk";
 			status = "disabled";
 		};
 
@@ -2704,7 +2714,9 @@
 			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
 			reg = <0 0xc0781000 0 0x10>;
 			#pwm-cells = <2>;
-			clocks = <&dummy_clk_s0asyncd8>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_PWM0>,
+				 <&dummy_clk_s0asyncd8>;
+			clock-names = "bus_clk", "counter_clk";
 			status = "disabled";
 		};
 
@@ -2712,7 +2724,9 @@
 			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
 			reg = <0 0xc0782000 0 0x10>;
 			#pwm-cells = <2>;
-			clocks = <&dummy_clk_s0asyncd8>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_PWM0>,
+				 <&dummy_clk_s0asyncd8>;
+			clock-names = "bus_clk", "counter_clk";
 			status = "disabled";
 		};
 
@@ -2720,7 +2734,9 @@
 			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
 			reg = <0 0xc0783000 0 0x10>;
 			#pwm-cells = <2>;
-			clocks = <&dummy_clk_s0asyncd8>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_PWM0>,
+				 <&dummy_clk_s0asyncd8>;
+			clock-names = "bus_clk", "counter_clk";
 			status = "disabled";
 		};
 
@@ -2728,7 +2744,9 @@
 			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
 			reg = <0 0xc0784000 0 0x10>;
 			#pwm-cells = <2>;
-			clocks = <&dummy_clk_s0asyncd8>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_PWM0>,
+				 <&dummy_clk_s0asyncd8>;
+			clock-names = "bus_clk", "counter_clk";
 			status = "disabled";
 		};
 
@@ -2736,7 +2754,9 @@
 			compatible = "renesas,pwm-r8a78000", "renesas,pwm-rcar";
 			reg = <0 0xc0785000 0 0x10>;
 			#pwm-cells = <2>;
-			clocks = <&dummy_clk_s0asyncd8>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_PWM0>,
+				 <&dummy_clk_s0asyncd8>;
+			clock-names = "bus_clk", "counter_clk";
 			status = "disabled";
 		};
 
@@ -2744,7 +2764,9 @@
 			compatible = "renesas,tpu-r8a78000", "renesas,tpu";
 			reg = <0 0xc0720000 0 0x148>;
 			interrupts = <GIC_SPI 4087 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&dummy_clk_sgasyncd16>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_TPU0>,
+				 <&dummy_clk_sgasyncd16>;
+			clock-names = "bus_clk", "counter_clk";
 			#pwm-cells = <3>;
 			status = "disabled";
 		};
