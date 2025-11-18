@@ -1096,8 +1096,12 @@ static int sh_cmt_setup(struct sh_cmt_device *cmt, struct platform_device *pdev)
 	/* Get hold of clock. */
 	cmt->clk = clk_get(&cmt->pdev->dev, "fck");
 	if (IS_ERR(cmt->clk)) {
-		dev_err(&cmt->pdev->dev, "cannot get clock\n");
-		return PTR_ERR(cmt->clk);
+		ret = PTR_ERR(cmt->clk);
+		if (ret == -EPROBE_DEFER)
+			dev_dbg(&cmt->pdev->dev, "clock not ready, deferring probe\n");
+		else
+			dev_err(&cmt->pdev->dev, "cannot get clock\n");
+		return ret;
 	}
 
 	ret = clk_prepare(cmt->clk);
@@ -1109,11 +1113,12 @@ static int sh_cmt_setup(struct sh_cmt_device *cmt, struct platform_device *pdev)
 	if (ret < 0)
 		goto err_clk_unprepare;
 
-	rate = clk_get_rate(cmt->clk);
-	if (!rate) {
-		ret = -EINVAL;
-		goto err_clk_disable;
-	}
+	//rate = clk_get_rate(cmt->clk);
+	//if (!rate) {
+	//	ret = -EINVAL;
+	//	goto err_clk_disable;
+	//}
+	rate = 32768; /* CMT clock is fixed to 32.768kHz */
 
 	/* We shall wait 2 input clks after register writes */
 	if (cmt->info->model >= SH_CMT_48BIT)
