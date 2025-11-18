@@ -15,6 +15,8 @@
 #include <linux/phy/phy.h>
 #include <linux/platform_device.h>
 #include <linux/reset.h>
+#include <linux/clk.h>
+
 
 /* Hardcoded for enable module clock */
 #define MDLC_BASE		0xc9c90000
@@ -150,7 +152,9 @@ struct r8a78000_eth_pcs_channel {
 struct r8a78000_eth_pcs_drv_data {
 	void __iomem *addr;
 	struct platform_device *pdev;
-	struct reset_control *reset;
+	struct reset_control *resets[R8A78000_ETH_PCS_NUM];
+	struct clk_bulk_data *clks;
+	int num_clks;
 	struct r8a78000_eth_pcs_channel channel[R8A78000_ETH_PCS_NUM];
 };
 
@@ -543,6 +547,7 @@ static int r8a78000_eth_pcs_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct phy_provider *provider;
 	int i, ret;
+	static uint8_t rst_control_get_retries = 5;
 
 	dd = devm_kzalloc(&pdev->dev, sizeof(*dd), GFP_KERNEL);
 	if (!dd)
@@ -585,11 +590,57 @@ static int r8a78000_eth_pcs_probe(struct platform_device *pdev)
 	pm_runtime_enable(&pdev->dev);
 	pm_runtime_get_sync(&pdev->dev);
 
-	/* Module reset */
-	r8a78000_eth_pcs_module_power_gating_set(0x03);
-	r8a78000_eth_pcs_module_reset();
-	udelay(1000);
-	r8a78000_eth_pcs_module_run();
+	/* Get reset control */
+	for (int i = 0; i < R8A78000_ETH_PCS_NUM - 1; ++i) {
+		char rst_name[16] = {0};
+		sprintf(rst_name, "pcs%d", i);
+		dd->resets[i] = devm_reset_control_get(&pdev->dev, rst_name);
+		if (IS_ERR(dd->resets[i])) {
+			dev_dbg(&pdev->dev, "Failed to get reset control pcs%d, retries: %d\n",
+					i, rst_control_get_retries);
+			if (rst_control_get_retries) {
+				--rst_control_get_retries;
+				return -EPROBE_DEFER;
+			} else {
+				rst_control_get_retries = 0;
+				return PTR_ERR(dd->resets[0]);
+			}
+		}
+	}
+
+	/* Get clocks */
+	dd->num_clks = devm_clk_bulk_get_all(&pdev->dev, &dd->clks);
+	if (dd->num_clks < 1) {
+		dev_err(&pdev->dev, "Failed to get pcs clocks\n");
+		return -ENODEV;
+	}
+
+	/* TODO: Reset and enable clock control when clock is available */
+	for (int i = 0; i < R8A78000_ETH_PCS_NUM - 1; ++i) {
+		char rst_name[16] = {0};
+		sprintf(rst_name, "pcs%d", i);
+		ret = reset_control_assert(dd->resets[i]);
+		if (ret) {
+			dev_err(&pdev->dev, "Failed to assert pcs%d", i);
+			return ret;
+		}
+	}
+
+	for (int i = 0; i < R8A78000_ETH_PCS_NUM - 1; ++i) {
+		char rst_name[16] = {0};
+		sprintf(rst_name, "pcs%d", i);
+		ret = reset_control_deassert(dd->resets[i]);
+		if (ret) {
+			dev_err(&pdev->dev, "Failed to deassert pcs%d", i);
+			return ret;
+		}
+	}
+
+	ret = clk_bulk_prepare_enable(dd->num_clks, dd->clks);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to enable bulk clocks: %d\n", ret);
+		return ret;
+	}
 
 	return 0;
 }
