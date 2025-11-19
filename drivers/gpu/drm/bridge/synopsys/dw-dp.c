@@ -1723,9 +1723,6 @@ static int dw_dp_phy_init(struct dw_dp *dp)
 	if (ret)
 		goto err;
 
-	/* FIXME: The PHY settings seems be fixed to HBR2 */
-	dw_dp_phy_set_rate(dp, 540000);
-
 	regmap_update_bits(dp->regmap, DW_DP_PHYIF_CTRL, PHY_WIDTH,
 			   FIELD_PREP(PHY_WIDTH, 1));
 
@@ -1740,16 +1737,16 @@ static int dw_dp_phy_init(struct dw_dp *dp)
 	if (ret)
 		goto err;
 
-	/* FIXME: User poll timedout */
-	do {
-		regmap_read(dp->regmap, DW_DP_LANEN_DIG_ASIC_TX_ASIC_OUT, &val);
-		usleep_range(1000, 1001);
-	} while ((val & TX_ACK) != 0);
 
-	do {
-		regmap_read(dp->regmap, DW_DP_LANEN_DIG_ASIC_RX_ASIC_OUT_0, &val);
-		usleep_range(1000, 1001);
-	} while ((val & RX_ACK) != 0);
+	ret = regmap_read_poll_timeout(dp->regmap, DW_DP_LANEN_DIG_ASIC_TX_ASIC_OUT, val,
+				       !(val & TX_ACK), 200, 20000000);
+	if (ret)
+		goto err;
+
+	ret = regmap_read_poll_timeout(dp->regmap, DW_DP_LANEN_DIG_ASIC_RX_ASIC_OUT_0, val,
+				       !(val & RX_ACK), 200, 20000000);
+	if (ret)
+		goto err;
 
 	ret = phy_post_init_2(dp->phy);
 	if (ret)
@@ -2106,6 +2103,7 @@ static const struct regmap_range dw_dp_readable_ranges[] = {
 	regmap_reg_range(DW_DP_PHYIF_CTRL, DW_DP_PHYIF_PWRDOWN_CTRL),
 	regmap_reg_range(DW_DP_AUX_CMD, DW_DP_AUX_DATA3),
 	regmap_reg_range(DW_DP_GENERAL_INTERRUPT, DW_DP_HPD_INTERRUPT_ENABLE),
+	regmap_reg_range(DW_DP_LANEN_DIG_ASIC_TX_ASIC_OUT, DW_DP_LANEN_DIG_ASIC_RX_ASIC_OUT_0),
 };
 
 static const struct regmap_access_table dw_dp_readable_table = {
