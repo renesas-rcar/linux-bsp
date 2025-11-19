@@ -768,10 +768,11 @@
 };
 
 &du {
+	status = "disabled";
 };
 
 &dsi0 {
-	status = "okay";
+	status = "disabled";
 
 	use-extal-clk;
 
@@ -790,7 +791,7 @@
 };
 
 &dsi1 {
-	status = "okay";
+	status = "disabled";
 
 	use-extal-clk;
 
@@ -855,27 +856,35 @@
 };
 
 &vin00 {
+	status = "okay";
 };
 
 &vin01 {
+	status = "okay";
 };
 
 &vin02 {
+	status = "okay";
 };
 
 &vin03 {
+	status = "okay";
 };
 
 &vin10 {
+	status = "okay";
 };
 
 &vin11 {
+	status = "okay";
 };
 
 &vin12 {
+	status = "okay";
 };
 
 &vin13 {
+	status = "okay";
 };
 
 /* FAKRA Overlay */
