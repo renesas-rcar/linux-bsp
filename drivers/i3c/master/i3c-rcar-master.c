@@ -127,6 +127,9 @@
 #define OUTCTL			0x88
 
 #define TMOCTL			0x90
+#define TMOCTL_TODTS(x)       ((x) & 0xff)
+#define TMOCTL_TOLCTL         BIT(4)
+#define TMOCTL_TOHCTL         BIT(5)
 
 #define ACKCTL			0xa0
 #define ACKCTL_ACKR		BIT(0)
@@ -269,7 +272,7 @@
 #define BCST			0x210
 #define BCST_BFREF		BIT(0)
 #define BCST_BAVLF		BIT(1)
-#define BCST_BIDFL		BIT(2)
+#define BCST_BIDLF		BIT(2)
 
 #define DATBAS(x)		(0x224 + 0x8 * (x))
 #define DATBAS_DVSTAD(x)	(((x) & 0x7f) << 0)
@@ -380,6 +383,7 @@ struct rcar_i3c_master {
 		/* Lock used to protect the critical section */
 		spinlock_t lock;
 	} xferqueue;
+	struct i2c_adapter adapt;
 	void __iomem *regs;
 	struct clk *tclk;
 	struct clk *pclk;
@@ -659,7 +663,7 @@ static int rcar_i2c_master_bus_init(struct i3c_master_controller *m)
 
 	/* Set OUTCTL, INCTL, TMOCTL, ACKCTL and SCSTRCTL registers (as necessary)*/
 	i3c_reg_write(master->regs, OUTCTL, 0x7);
-	i3c_reg_write(master->regs, TMOCTL, 0x30);
+	i3c_reg_write(master->regs, TMOCTL, TMOCTL_TODTS(0) | TMOCTL_TOHCTL | TMOCTL_TOLCTL);
 
 	/* Set BFCTL register (as necessary)*/
 	i3c_reg_set_bit(master->regs, BFCTL, BFCTL_SCSYNE);
@@ -672,7 +676,7 @@ static int rcar_i2c_master_bus_init(struct i3c_master_controller *m)
 	i3c_reg_write(master->regs, NTSTE, 0x3);
 
 	/* Set BIE and NTIE registers */
-	i3c_reg_write(master->regs, BIE, 0);
+	i3c_reg_write(master->regs, BIE, BIE_NACKDIE | BIE_TENDIE | BIE_TODIE);
 	i3c_reg_write(master->regs, NTIE, 0x3);
 
 	return 0;
@@ -685,7 +689,7 @@ static void rcar_i3c_master_bus_enable(struct i3c_master_controller *m, bool i3c
 	if (i3c) {
 		/* I3C protocol mode */
 		i3c_reg_write(master->regs, PRTS, 0);
-		i3c_reg_set_bit(master->regs, BCTL, BCTL_INCBA);
+		i3c_reg_clear_bit(master->regs, BCTL, BCTL_INCBA);
 		i3c_reg_update_bit(master->regs, MSDVAD, MSDVAD_MDYADV, MSDVAD_MDYADV);
 		i3c_reg_write(master->regs, STDBR, master->STDBR_I3C_MODE);
 	} else {
@@ -716,13 +720,14 @@ static int rcar_i3c_master_bus_init(struct i3c_master_controller *m)
 
 	/* Reset the I3C */
 	i3c_reg_write(master->regs, BCTL, 0);
-	i3c_reg_set_bit(master->regs, RSTCTL, RSTCTL_RI3CRST);
+	i3c_reg_set_bit(master->regs, RSTCTL, RSTCTL_INTLRST);
 
 	/* Waiting for reset completion  */
-	ret = readl_relaxed_poll_timeout(master->regs + RSTCTL, val,
-					 !(val & RSTCTL_RI3CRST), 0, 1000);
+	ret = readl_relaxed_poll_timeout(master->regs + BCST, val,
+					 !(val & BCST_BIDLF), 0, 1000);
 	if (ret)
 		return ret;
+	i3c_reg_clear_bit(master->regs, RSTCTL, RSTCTL_INTLRST);
 
 	/* Set present state to master mode */
 	i3c_reg_write(master->regs, PRSST, PRSST_PRSSTWP | PRSST_CRMS);
@@ -805,7 +810,7 @@ static int rcar_i3c_master_bus_init(struct i3c_master_controller *m)
 
 	/* Interrupt enable settings */
 	//i3c_reg_write(master->regs, INIE, INIE_INEIE);
-	i3c_reg_write(master->regs, BIE, BIE_NACKDIE | BIE_TENDIE);
+	i3c_reg_write(master->regs, BIE, BIE_NACKDIE | BIE_TENDIE | BIE_TODIE);
 	i3c_reg_write(master->regs, NTIE, NTIE_RSQFIE |
 		      NTIE_IBIQEFIE | NTIE_RDBFIE0);
 
@@ -826,7 +831,7 @@ static int rcar_i3c_master_bus_init(struct i3c_master_controller *m)
 	i3c_reg_write(master->regs, BAVLCDT, BAVLCDT_AVLCYC(0xF));
 	i3c_reg_write(master->regs, BIDLCDT, BIDLCDT_IDLCYC(0x1F));
 
-	i3c_reg_write(master->regs, TMOCTL, 0x30);
+	i3c_reg_write(master->regs, TMOCTL, TMOCTL_TODTS(0) | TMOCTL_TOHCTL | TMOCTL_TOLCTL);
 
 	/* Get an address for I3C master. */
 	ret = i3c_master_get_free_addr(m, 0);
@@ -1135,11 +1140,63 @@ static void rcar_i3c_master_detach_i3c_dev(struct i3c_dev_desc *dev)
 	kfree(data);
 }
 
-static int rcar_i3c_master_i2c_xfers(struct i2c_dev_desc *dev,
-				     const struct i2c_msg *i2c_xfers,
-				     int i2c_nxfers)
+static int rcar_i3c_master_i2c_legacy_xfers(struct i2c_dev_desc *dev,
+					    const struct i2c_msg *i2c_xfers,
+					    int i2c_nxfers)
 {
 	struct i3c_master_controller *m = i2c_dev_get_master(dev);
+	struct rcar_i3c_master *master = to_rcar_i3c_master(m);
+	struct rcar_i3c_i2c_dev_data *data = i2c_dev_get_master_data(dev);
+	struct rcar_i3c_xfer *xfer;
+	struct rcar_i3c_cmd *cmd;
+	int ret, i;
+
+	/* Enable I3C bus. */
+	rcar_i3c_master_bus_enable(m, true);
+	xfer = rcar_i3c_master_alloc_xfer(master, 1);
+	if (!xfer)
+		return -ENOMEM;
+
+	init_completion(&xfer->comp);
+
+	for (i = 0; i < i2c_nxfers; i++) {
+		cmd = xfer->cmds;
+		cmd->rnw = (i2c_xfers[i].flags & I2C_M_RD);
+		cmd->cmd0 = NCMDQP_DEV_INDEX(data->index) | NCMDQP_MODE(0) |
+				NCMDQP_RNW(cmd->rnw) | NCMDQP_ROC | NCMDQP_TOC;
+		/* Calculate the command descriptor */
+		if (i2c_xfers[i].flags & I2C_M_RD) {
+			cmd->rx_count = 0;
+			cmd->cmd0 |= NCMDQP_TID(I3C_READ);
+			cmd->rx_buf = i2c_xfers[i].buf;
+			cmd->len = i2c_xfers[i].len;
+			master->internal_state = I3C_INTERNAL_STATE_MASTER_READ;
+		} else {
+			cmd->tx_count = 0;
+			cmd->cmd0 |= NCMDQP_TID(I3C_WRITE);
+			cmd->tx_buf = i2c_xfers[i].buf;
+			cmd->len = i2c_xfers[i].len;
+			master->internal_state = I3C_INTERNAL_STATE_MASTER_WRITE;
+		}
+		if (!(i2c_xfers[i].flags & I2C_M_RD) && i2c_xfers[i].len > 4) {
+			rcar_i3c_master_write_to_tx_fifo(master, cmd->tx_buf, cmd->len);
+			if (cmd->len > NTDTBP0_DEPTH * sizeof(u32))
+				i3c_reg_set_bit(master->regs, NTIE, NTIE_TDBEIE0);
+		}
+
+		rcar_i3c_master_enqueue_xfer(master, xfer);
+		if (!wait_for_completion_timeout(&xfer->comp, XFER_TIMEOUT))
+			rcar_i3c_master_dequeue_xfer(master, xfer);
+	}
+	ret = xfer->ret;
+	return ret;
+}
+
+static int rcar_i3c_master_i2c_xfers(struct i2c_adapter *adap,
+				     struct i2c_msg *i2c_xfers,
+				     int i2c_nxfers)
+{
+	struct i3c_master_controller *m = i2c_get_adapdata(adap);
 	struct rcar_i3c_master *master = to_rcar_i3c_master(m);
 	struct rcar_i3c_xfer *xfer;
 	struct rcar_i3c_cmd *cmd;
@@ -1162,6 +1219,7 @@ static int rcar_i3c_master_i2c_xfers(struct i2c_dev_desc *dev,
 		cmd->err = -EBUSY;
 		goto out;
 	}
+
 	i3c_reg_write(master->regs, BST, 0);
 	rcar_i3c_master_enqueue_xfer(master, xfer);
 
@@ -1193,6 +1251,8 @@ out:
 	rcar_i3c_master_free_xfer(xfer);
 	rcar_i3c_master_dequeue_xfer(master, xfer);
 	return cmd->err ? : 0;
+
+	return 0;
 }
 
 static int rcar_i3c_master_attach_i2c_dev(struct i2c_dev_desc *dev)
@@ -1213,6 +1273,7 @@ static int rcar_i3c_master_attach_i2c_dev(struct i2c_dev_desc *dev)
 	data->index = pos;
 	master->addrs[pos] = dev->addr;
 	master->free_pos &= ~BIT(pos);
+	i3c_reg_write(master->regs, DATBAS(pos), DATBAS_DVTYP | DATBAS_DVSTAD(dev->addr));
 	i2c_dev_set_master_data(dev, data);
 	return 0;
 }
@@ -1547,15 +1608,27 @@ static const struct i3c_master_controller_ops rcar_i3c_master_ops = {
 	.attach_i3c_dev = rcar_i3c_master_attach_i3c_dev,
 	.reattach_i3c_dev = rcar_i3c_master_reattach_i3c_dev,
 	.detach_i3c_dev = rcar_i3c_master_detach_i3c_dev,
-	.i2c_xfers = rcar_i3c_master_i2c_xfers,
+	.i2c_xfers = rcar_i3c_master_i2c_legacy_xfers,
 	.attach_i2c_dev = rcar_i3c_master_attach_i2c_dev,
 	.detach_i2c_dev = rcar_i3c_master_detach_i2c_dev,
+};
+
+static u32 rcar_i3c_master_i2c_func(struct i2c_adapter *adap)
+{
+	u32 func = I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL;
+	return func;
+}
+
+static const struct i2c_algorithm rcar_i2c_algo = {
+	.master_xfer = rcar_i3c_master_i2c_xfers,
+	.functionality = rcar_i3c_master_i2c_func,
 };
 
 static int rcar_i3c_master_probe(struct platform_device *pdev)
 {
 	struct rcar_i3c_master *master;
 	irqreturn_t (*irqhandler)(int irq, void *ptr)  = rcar_i3c_master_irq_handler;
+	struct i2c_adapter *adap;
 	int ret, irq;
 
 	master = devm_kzalloc(&pdev->dev, sizeof(*master), GFP_KERNEL);
@@ -1597,6 +1670,18 @@ static int rcar_i3c_master_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, master);
 
+	adap = &master->adapt;
+	adap->algo = &rcar_i2c_algo;
+	adap->retries = 3;
+	adap->dev.parent = &pdev->dev;
+	adap->owner = THIS_MODULE;
+	i2c_set_adapdata(adap, &master->base);
+	strscpy(adap->name, pdev->name, sizeof(adap->name));
+
+	ret = i2c_add_adapter(adap);
+	if (ret < 0)
+		goto err_disable_tclk;
+
 	master->maxdevs = RCAR_I3C_MAX_DEVS;
 	master->free_pos = GENMASK(master->maxdevs - 1, 0);
 
@@ -1634,6 +1719,7 @@ static void rcar_i3c_master_remove(struct platform_device *pdev)
 	struct rcar_i3c_master *master = platform_get_drvdata(pdev);
 
 	i3c_master_unregister(&master->base);
+	i2c_del_adapter(&master->adapt);
 	clk_disable_unprepare(master->tclk);
 	clk_disable_unprepare(master->pclk);
 }
