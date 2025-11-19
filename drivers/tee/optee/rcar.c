@@ -29,7 +29,6 @@
 
 #include <linux/suspend.h>
 #include <linux/kthread.h>
-#include <linux/soc/renesas/rcar-rgid.h>
 #include "optee_rcar.h"
 
 static char *remaped_log_buffer;
@@ -39,7 +38,7 @@ static struct rcar_debug_log_info dlog_info;
 static struct task_struct *log_thread;
 static atomic_t thread_exit;
 
-#define TEE_LOG_NS_BASE        ADDR_ASSIGN_RGID(0x0406440000UL, CONFIG_RCAR_RGID)
+#define TEE_LOG_NS_BASE        (0x0406440000UL)
 #define TEE_LOG_NS_SIZE        (81920U)
 #define LOG_NS_CPU_AREA_SIZE   (1024U)
 #define TEE_CORE_NB_CORE   (4U)
