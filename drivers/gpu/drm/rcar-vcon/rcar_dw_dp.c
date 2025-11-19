@@ -36,6 +36,8 @@
 #define DPTX_PIPE_LANE1_M2P_MESSAGEBUS          0x0464
 #define DPTX_PIPE_LANEX_M2P_MESSAGEBUS_START    0x0468
 #define DPTX_PIPE_LANEX_P2M_MESSAGEBUS          0x046c
+#define PIPE_LANE0_P2M_MESSAGEBUS_CMD_WR	BIT(8)
+#define PIPE_LANE1_P2M_MESSAGEBUS_CMD_WR	BIT(24)
 
 #define DPTX_CLKGEN_DIV_AUXCLK                  0x0104
 #define DIV_AUXCLK_DEFAULT                      (0x31)
@@ -55,12 +57,14 @@
 #define DPTX_PHY_PIPE0                          0x0410
 #define PHY_PIPE0_MASK                          0x0202
 #define PHY_PIPE0_DEFAULT                       0x0202
+#define PHY_PIPE2_PIPE_LANE0_MAXPCLKACK		GENMASK(3, 2)
 
 #define DPTX_PHY_PIPE1                          0x0414
 #define PHY_PIPE1_MASK                          0x0034
 #define PHY_PIPE1_DEFAULT                       0x0034
 
 #define DPTX_PHY_PIPE2                          0x0418
+#define PHY_PIPE2_PIPE_LANE1_MAXPCLKACK		GENMASK(3, 2)
 
 #define DPTX_PHY_PIPE3                          0x041c
 #define PHY_PIPE3_MASK                          0x0034
@@ -81,10 +85,13 @@
 #define DPTX_PHY_CNTMON                         0x0440
 #define PHY_CNTMON_MASK                         GENMASK(12, 9)
 #define PHY_CNTMON_DEFAULT                      (BIT(9) | BIT(10))
+#define PHY_CNTMON_PHY0_SRAM_INIT_DONE		BIT(23)
 
 #define DPTX_DPCTRL_ENCRYPTION_MODE             0x70040
 #define ENCRYPTION_MODE                         BIT(0)
 #define ENCRYPTION_DIS                          BIT(0)
+
+#define RCAR_DW_DP_TIMEOUT_US			10000000
 
 struct rcar_dw_dp {
 	struct device *dev;
@@ -109,18 +116,20 @@ static void rcar_dw_dp_phy_modify(struct rcar_dw_dp *dw_dp, u32 reg, u32 clear, 
 	rcar_dw_dp_phy_write(dw_dp, reg, (rcar_dw_dp_phy_read(dw_dp, reg) & ~clear) | set);
 }
 
+static int rcar_dw_dp_phy_reg_wait(struct rcar_dw_dp *dw_dp, u32 offs, u32 mask, u32 expected)
+{
+	u32 val;
+
+	return readl_poll_timeout_atomic(dw_dp->phy_addr + offs, val, (val & mask) == expected,
+					 1, RCAR_DW_DP_TIMEOUT_US);
+}
+
 static int rcar_dw_dp_phy_write_fw(struct rcar_dw_dp *dw_dp, const u32 *array, u32 size, u32 offset)
 {
 	int i;
 
-	/* FIXME: Check timedout and return */
-
 	for (i = 0; i < size; i++) {
-		while (1) {
-			iowrite32(array[i], dw_dp->fw_addr + offset);
-			if (ioread32(dw_dp->fw_addr + offset) == array[i])
-				break;
-		}
+		iowrite32(array[i], dw_dp->fw_addr + offset);
 		offset += 4;
 	}
 
@@ -215,8 +224,10 @@ static int rcar_dw_dp_phy_post_init_1(struct phy *p)
 	struct rcar_dw_dp *dw_dp = phy_get_drvdata(p);
 	int ret;
 
-	while ((rcar_dw_dp_phy_read(dw_dp, DPTX_PHY_CNTMON) & 0x00800000) != 0x00800000)
-		usleep_range(1000, 1001);
+	ret = rcar_dw_dp_phy_reg_wait(dw_dp, DPTX_PHY_CNTMON, PHY_CNTMON_PHY0_SRAM_INIT_DONE,
+				      PHY_CNTMON_PHY0_SRAM_INIT_DONE);
+	if (ret)
+		return ret;
 
 	ret = rcar_dw_dp_phy_load_fw(dw_dp);
 	if (ret)
@@ -232,7 +243,8 @@ static int rcar_dw_dp_phy_post_init_1(struct phy *p)
 static int rcar_dw_dp_phy_post_init_2(struct phy *p)
 {
 	struct rcar_dw_dp *dw_dp = phy_get_drvdata(p);
-	u32 val;
+	u32 val, mask;
+	int ret;
 
 	rcar_dw_dp_phy_write(dw_dp, DPTX_PIPE_LANE0_M2P_MESSAGEBUS, 0x000224);
 	rcar_dw_dp_phy_write(dw_dp, DPTX_PIPE_LANE1_M2P_MESSAGEBUS, 0x000224);
@@ -241,9 +253,10 @@ static int rcar_dw_dp_phy_post_init_2(struct phy *p)
 	val |= 0x00000101;
 	rcar_dw_dp_phy_write(dw_dp, DPTX_PIPE_LANEX_M2P_MESSAGEBUS_START, val);
 
-	while ((rcar_dw_dp_phy_read(dw_dp, DPTX_PIPE_LANEX_P2M_MESSAGEBUS)
-		& 0x1000100) != 0x1000100)
-		usleep_range(1000, 1001);
+	mask = PIPE_LANE0_P2M_MESSAGEBUS_CMD_WR | PIPE_LANE1_P2M_MESSAGEBUS_CMD_WR;
+	ret = rcar_dw_dp_phy_reg_wait(dw_dp, DPTX_PIPE_LANEX_P2M_MESSAGEBUS, mask, mask);
+	if (ret)
+		return ret;
 
 	rcar_dw_dp_phy_write(dw_dp, DPTX_PIPE_LANE0_M2P_MESSAGEBUS, 0x000226);
 	rcar_dw_dp_phy_write(dw_dp, DPTX_PIPE_LANE1_M2P_MESSAGEBUS, 0x000226);
@@ -252,9 +265,10 @@ static int rcar_dw_dp_phy_post_init_2(struct phy *p)
 	val |= 0x00000101;
 	rcar_dw_dp_phy_write(dw_dp, DPTX_PIPE_LANEX_M2P_MESSAGEBUS_START, val);
 
-	while ((rcar_dw_dp_phy_read(dw_dp, DPTX_PIPE_LANEX_P2M_MESSAGEBUS)
-		& 0x1000100) != 0x1000100)
-		usleep_range(1000, 1001);
+	mask = PIPE_LANE0_P2M_MESSAGEBUS_CMD_WR | PIPE_LANE1_P2M_MESSAGEBUS_CMD_WR;
+	ret = rcar_dw_dp_phy_reg_wait(dw_dp, DPTX_PIPE_LANEX_P2M_MESSAGEBUS, mask, mask);
+	if (ret)
+		return ret;
 
 	val = rcar_dw_dp_phy_read(dw_dp, DPTX_PHY_PIPE0);
 	rcar_dw_dp_phy_write(dw_dp, DPTX_PHY_PIPE0, val | 0x303);
@@ -265,12 +279,17 @@ static int rcar_dw_dp_phy_post_init_2(struct phy *p)
 static int rcar_dw_dp_phy_post_init_3(struct phy *p)
 {
 	struct rcar_dw_dp *dw_dp = phy_get_drvdata(p);
+	int ret;
 
-	while ((rcar_dw_dp_phy_read(dw_dp, DPTX_PHY_PIPE0) & 0xc) != 0xc)
-		mdelay(1);
+	ret = rcar_dw_dp_phy_reg_wait(dw_dp, DPTX_PHY_PIPE0, PHY_PIPE2_PIPE_LANE0_MAXPCLKACK,
+				      PHY_PIPE2_PIPE_LANE1_MAXPCLKACK);
+	if (ret)
+		return ret;
 
-	while ((rcar_dw_dp_phy_read(dw_dp, DPTX_PHY_PIPE2) & 0xc) != 0xc)
-		mdelay(1);
+	ret = rcar_dw_dp_phy_reg_wait(dw_dp, DPTX_PHY_PIPE2, PHY_PIPE2_PIPE_LANE1_MAXPCLKACK,
+				      PHY_PIPE2_PIPE_LANE1_MAXPCLKACK);
+	if (ret)
+		return ret;
 
 	/* FIXME: Hardcoded for 8-bit per component,
 	 * it should be set when configuring VIDEO_CONFIG
@@ -292,6 +311,7 @@ static int rcar_dw_dp_phy_configure(struct phy *p, union phy_configure_opts *phy
 	int lanes = phy_cfg->dp.lanes;
 	u32 start_data, chk_data;
 	u32 val;
+	int ret;
 
 	for (i = 0; i < lanes; i++) {
 		if (i == 0 || i == 3) {
@@ -337,8 +357,9 @@ static int rcar_dw_dp_phy_configure(struct phy *p, union phy_configure_opts *phy
 	val = rcar_dw_dp_phy_read(dw_dp, DPTX_PIPE_LANEX_M2P_MESSAGEBUS_START);
 	val |= start_data;
 	rcar_dw_dp_phy_write(dw_dp, DPTX_PIPE_LANEX_M2P_MESSAGEBUS_START, start_data);
-	while ((rcar_dw_dp_phy_read(dw_dp, DPTX_PIPE_LANEX_P2M_MESSAGEBUS) & chk_data) != chk_data)
-		udelay(1000);
+	ret = rcar_dw_dp_phy_reg_wait(dw_dp, DPTX_PIPE_LANEX_P2M_MESSAGEBUS, chk_data, chk_data);
+	if (ret)
+		return ret;
 
 	/* Transmit lane 1/3 deemphasis */
 	if (lanes >= 2) {
@@ -351,9 +372,10 @@ static int rcar_dw_dp_phy_configure(struct phy *p, union phy_configure_opts *phy
 		val = rcar_dw_dp_phy_read(dw_dp, DPTX_PIPE_LANEX_M2P_MESSAGEBUS_START);
 		val |= start_data;
 		rcar_dw_dp_phy_write(dw_dp, DPTX_PIPE_LANEX_M2P_MESSAGEBUS_START, start_data);
-		while ((rcar_dw_dp_phy_read(dw_dp, DPTX_PIPE_LANEX_P2M_MESSAGEBUS) & chk_data) !=
-		       chk_data)
-			usleep_range(1000, 1001);
+		ret = rcar_dw_dp_phy_reg_wait(dw_dp, DPTX_PIPE_LANEX_P2M_MESSAGEBUS,
+					      chk_data, chk_data);
+		if (ret)
+			return ret;
 	}
 
 	/* Transmit lane 0/2 margin */
@@ -366,8 +388,9 @@ static int rcar_dw_dp_phy_configure(struct phy *p, union phy_configure_opts *phy
 	val = rcar_dw_dp_phy_read(dw_dp, DPTX_PIPE_LANEX_M2P_MESSAGEBUS_START);
 	val |= start_data;
 	rcar_dw_dp_phy_write(dw_dp, DPTX_PIPE_LANEX_M2P_MESSAGEBUS_START, start_data);
-	while ((rcar_dw_dp_phy_read(dw_dp, DPTX_PIPE_LANEX_P2M_MESSAGEBUS) & chk_data) != chk_data)
-		usleep_range(1000, 10001);
+	ret = rcar_dw_dp_phy_reg_wait(dw_dp, DPTX_PIPE_LANEX_P2M_MESSAGEBUS, chk_data, chk_data);
+	if (ret)
+		return ret;
 
 	/* Transmit lane 1/3 margin */
 	if (lanes >= 2) {
@@ -380,9 +403,10 @@ static int rcar_dw_dp_phy_configure(struct phy *p, union phy_configure_opts *phy
 		val = rcar_dw_dp_phy_read(dw_dp, DPTX_PIPE_LANEX_M2P_MESSAGEBUS_START);
 		val |= start_data;
 		rcar_dw_dp_phy_write(dw_dp, DPTX_PIPE_LANEX_M2P_MESSAGEBUS_START, start_data);
-		while ((rcar_dw_dp_phy_read(dw_dp, DPTX_PIPE_LANEX_P2M_MESSAGEBUS) & chk_data) !=
-		       chk_data)
-			usleep_range(1000, 1001);
+		ret = rcar_dw_dp_phy_reg_wait(dw_dp, DPTX_PIPE_LANEX_P2M_MESSAGEBUS,
+					      chk_data, chk_data);
+		if (ret)
+			return ret;
 	}
 
 	return 0;
