@@ -448,18 +448,17 @@ static int mp_phy_init_usb(struct mp_phy_priv *priv, u32 channel_id)
 	u32 data;
 
 	dev_info(priv->dev, "USB PHY initialization requested on channel %d\n", channel_id);
-	while (1) {
-		data = readl(priv->base + MPPHY_PXSRAMCNT(channel_id));
-		if (data & BIT(5))
-			break;
+	data = mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(channel_id), 0x00000020, 0x00000020);
+	if (data) {
+		pr_err("mp_phy_init_usb: Timeout waiting for MPPHY_PXSRAMCNT(%d) configuration\n", channel_id);
+		return data;
 	}
 	mp_phy_update_firmware(priv, channel_id);
-
 	mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(channel_id), SRAM_EXT_LD_DONE, SRAM_EXT_LD_DONE);
-	while (1) {
-		data = readl(priv->base + MPPHY_PXRXREQ1(channel_id));
-		if (!(data & BIT(1)))
-			break;
+	data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(channel_id), 0x00000002, 0x00000000);
+	if (data) {
+		pr_err("mp_phy_init_usb: Timeout waiting for MPPHY_PXRXREQ1(%d) configuration\n", channel_id);
+		return data;
 	}
 
 	return 0;
@@ -539,112 +538,113 @@ static int mp_phy_late_init(struct phy *phy)
 		switch(link_width) {
 		case 1:
 		case 2:
-			while (1) {
-				data = readl(priv->base + MPPHY_PXSRAMCNT(channel_id));
-				if (data & BIT(5))
-					break;
+			data = mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(channel_id), 0x00000020, 0x00000020);
+			if (data) {
+				pr_err("mp_phy_late_init: Timeout waiting for MPPHY_PXSRAMCNT(%d) configuration\n", channel_id);
+				return data;
 			}
-			while (1) {
-				data = readl(priv->base + MPPHY_PXRXREQ1(channel_id));
-				if (!(data & BIT(1)))
-					break;
+
+			data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(channel_id), 0x00000002, 0x00000000);
+			if (data) {
+				pr_err("mp_phy_late_init: Timeout waiting for MPPHY_PXRXREQ1(%d) configuration\n", channel_id);
+				return data;
 			}
 			break;
 		case 4:
 			if(channel_id == 0) {
-				while (1) {
-					data = readl(priv->base + MPPHY_PXSRAMCNT(0));
-					if (data & BIT(5))
-						break;
+				data = mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(0), 0x00000020, 0x00000020);
+				if (data) {
+					pr_err("mp_phy_late_init: Timeout waiting for MPPHY_PXSRAMCNT(0) configuration\n");
+					return data;
 				}
-				while (1) {
-					data = readl(priv->base + MPPHY_PXSRAMCNT(1));
-					if (data & BIT(5))
-						break;
+				data = mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(1), 0x00000020, 0x00000020);
+				if (data) {
+					pr_err("mp_phy_late_init: Timeout waiting for MPPHY_PXSRAMCNT(1) configuration\n");
+					return data;
 				}
-				while (1) {
-					data = readl(priv->base + MPPHY_PXRXREQ1(0));
-					if (!(data & BIT(1)))
-						break;
+				data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(0), 0x00000002, 0x00000000);
+				if (data) {
+					pr_err("mp_phy_late_init: Timeout waiting for MPPHY_PXRXREQ(0) configuration\n");
+					return data;
 				}
-				while (1) {
-					data = readl(priv->base + MPPHY_PXRXREQ1(1));
-					if (!(data & BIT(1)))
-						break;
+				data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(1), 0x00000002, 0x00000000);
+				if (data) {
+					pr_err("mp_phy_late_init: Timeout waiting for MPPHY_PXRXREQ(1) configuration\n");
+					return data;
 				}
 			}
 			if(channel_id == 1) {
-				while (1) {
-					data = readl(priv->base + MPPHY_PXSRAMCNT(2));
-					if (data & BIT(5))
-						break;
+				data = mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(2), 0x00000020, 0x00000020);
+				if (data) {
+					pr_err("mp_phy_late_init: Timeout waiting for MPPHY_PXSRAMCNT(2) configuration\n");
+					return data;
 				}
-				while (1) {
-					data = readl(priv->base + MPPHY_PXSRAMCNT(3));
-					if (data & BIT(5))
-						break;
+				data = mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(3), 0x00000020, 0x00000020);
+				if (data) {
+					pr_err("mp_phy_late_init: Timeout waiting for MPPHY_PXSRAMCNT(3) configuration\n");
+					return data;
 				}
-				while (1) {
-					data = readl(priv->base + MPPHY_PXRXREQ1(2));
-					if (!(data & BIT(1)))
-						break;
+				data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(2), 0x00000002, 0x00000000);
+				if (data) {
+					pr_err("mp_phy_late_init: Timeout waiting for MPPHY_PXRXREQ(2) configuration\n");
+					return data;
 				}
-				while (1) {
-					data = readl(priv->base + MPPHY_PXRXREQ1(3));
-					if (!(data & BIT(1)))
-						break;
+				data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(3), 0x00000002, 0x00000000);
+				if (data) {
+					pr_err("mp_phy_late_init: Timeout waiting for MPPHY_PXRXREQ(3) configuration\n");
+					return data;
 				}
 			}
 			break;
 		case 8:
-			while (1) {
-				data = readl(priv->base + MPPHY_PXSRAMCNT(0));
-				if (data & BIT(5))
-					break;
+			data = mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(0), 0x00000020, 0x00000020);
+			if (data) {
+				pr_err("mp_phy_late_init: Timeout waiting for MPPHY_PXSRAMCNT(0) configuration\n");
+				return data;
 			}
-			while (1) {
-				data = readl(priv->base + MPPHY_PXSRAMCNT(1));
-				if (data & BIT(5))
-					break;
+			data = mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(1), 0x00000020, 0x00000020);
+			if (data) {
+				pr_err("mp_phy_late_init: Timeout waiting for MPPHY_PXSRAMCNT(1) configuration\n");
+				return data;
 			}
-			while (1) {
-				data = readl(priv->base + MPPHY_PXSRAMCNT(2));
-				if (data & BIT(5))
-					break;
+			data = mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(2), 0x00000020, 0x00000020);
+			if (data) {
+				pr_err("mp_phy_late_init: Timeout waiting for MPPHY_PXSRAMCNT(2) configuration\n");
+				return data;
 			}
-			while (1) {
-				data = readl(priv->base + MPPHY_PXSRAMCNT(3));
-				if (data & BIT(5))
-					break;
+			data = mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(3), 0x00000020, 0x00000020);
+			if (data) {
+				pr_err("mp_phy_late_init: Timeout waiting for MPPHY_PXSRAMCNT(3) configuration\n");
+				return data;
 			}
-			while (1) {
-				data = readl(priv->base + MPPHY_PXRXREQ1(0));
-				if (!(data & BIT(1)))
-					break;
+			data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(0), 0x00000002, 0x00000000);
+			if (data) {
+				pr_err("mp_phy_late_init: Timeout waiting for MPPHY_PXRXREQ(0) configuration\n");
+				return data;
 			}
-			while (1) {
-				data = readl(priv->base + MPPHY_PXRXREQ1(1));
-				if (!(data & BIT(1)))
-					break;
+			data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(1), 0x00000002, 0x00000000);
+			if (data) {
+				pr_err("mp_phy_late_init: Timeout waiting for MPPHY_PXRXREQ(1) configuration\n");
+				return data;
 			}
-			while (1) {
-				data = readl(priv->base + MPPHY_PXRXREQ1(2));
-				if (!(data & BIT(1)))
-					break;
+			data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(2), 0x00000002, 0x00000000);
+			if (data) {
+				pr_err("mp_phy_late_init: Timeout waiting for MPPHY_PXRXREQ(2) configuration\n");
+				return data;
 			}
-			while (1) {
-				data = readl(priv->base + MPPHY_PXRXREQ1(3));
-				if (!(data & BIT(1)))
-					break;
+			data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(3), 0x00000002, 0x00000000);
+			if (data) {
+				pr_err("mp_phy_late_init: Timeout waiting for MPPHY_PXRXREQ(3) configuration\n");
+				return data;
 			}
 			break;
 		}
 	} else if (chan->protocol_id == PHY_MODE_ETHERNET) {
 		mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(channel_id), SRAM_EXT_LD_DONE, SRAM_EXT_LD_DONE);
-		while (1) {
-			data = readl(priv->base + MPPHY_PXRXREQ1(channel_id));
-			if (!(data & BIT(1)))
-				break;
+		data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(channel_id), 0x00000002, 0x00000000);
+		if (data) {
+			pr_err("mp_phy_late_init: Timeout waiting for MPPHY_PXRXREQ1(%d) configuration\n", channel_id);
+			return data;
 		}
 	}
 	return 0;
@@ -712,12 +712,7 @@ static int mp_phy_config_usb(struct phy *phy, int speed)
 			return data;
 		}
 
-		printk("%s %d: PSTATE_1_OFFSET(%d): 0x%x\n", __func__, __LINE__, chan->lane_id,
-			readl(priv->base + PSTATE_1_OFFSET(chan->lane_id)));
-
 		mp_phy_update_bits(priv->base, TCA_INTR_OFFSET(chan->lane_id), 0x3, 0x3);
-		printk("%s %d: TCA_INTR_OFFSET(%d): 0x%x\n", __func__, __LINE__, chan->lane_id,
-			readl(priv->base + TCA_INTR_OFFSET(chan->lane_id)));
 
 		mp_phy_update_bits(priv->base, TCA_TCPC_OFFSET(chan->lane_id), 0x10, 0x10);
 		data = mp_phy_reg_wait(priv->base, TCA_INTR_STS_OFFSET(chan->lane_id), 0x00000001, 0x00000001);
@@ -728,18 +723,12 @@ static int mp_phy_config_usb(struct phy *phy, int speed)
 
 		mp_phy_update_bits(priv->base, TCA_INTR_STS_OFFSET(chan->lane_id), 0x1503, 0x1503);
 		mp_phy_update_bits(priv->base, TCA_TCPC_OFFSET(chan->lane_id), 0x11, 0x11);
-		printk("%s %d: TCA_INTR_STS_OFFSET(%d): 0x%x\n", __func__, __LINE__, chan->lane_id,
-		       readl(priv->base + TCA_INTR_STS_OFFSET(chan->lane_id)));
-		printk("%s %d: TCA_TCPC_OFFSET(%d): 0x%x\n", __func__, __LINE__, chan->lane_id,
-		       readl(priv->base + TCA_TCPC_OFFSET(chan->lane_id)));
 		data = mp_phy_reg_wait(priv->base, TCA_INTR_STS_OFFSET(chan->lane_id), 0x00000001, 0x00000001);
 		if (data) {
 			pr_err("mp_phy_config_usb: Timeout waiting for TCA_INTR_STS_OFFSET(%d) configuration\n", chan->lane_id);
 			return data;
 		}
 		mp_phy_update_bits(priv->base, TCA_INTR_STS_OFFSET(channel_id), 0x1503, 0x1503);
-		printk("%s %d: TCA_INTR_STS_OFFSET(%d): 0x%x\n", __func__, __LINE__, chan->lane_id,
-			readl(priv->base + TCA_INTR_STS_OFFSET(chan->lane_id)));
 		break;
 	}
 
