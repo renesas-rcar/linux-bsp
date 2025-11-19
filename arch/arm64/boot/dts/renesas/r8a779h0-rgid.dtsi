@@ -416,9 +416,9 @@
 			reg = <0 0xe6160000 0 0x4000>;
 		};
 
-		sysc: system-controller@20e6180000 {
+		sysc: system-controller@e6180000 {
 			compatible = "renesas,r8a779h0-sysc";
-			reg = <0x20 0xe6180000 0 0x4000>;
+			reg = <0 0xe6180000 0 0x4000>;
 			#power-domain-cells = <1>;
 		};
 
@@ -1130,7 +1130,6 @@
 			resets = <&cpg 730>;
 			renesas,id = <0>;
 			renesas,isp = <&isp0>;
-			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 0>;
 			//iommus = <&ipmmu_vi0 0>;
 
@@ -1161,7 +1160,6 @@
 			resets = <&cpg 731>;
 			renesas,id = <1>;
 			renesas,isp = <&isp0>;
-			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 0>;
 			//iommus = <&ipmmu_vi0 0>;
 
@@ -1192,7 +1190,6 @@
 			resets = <&cpg 800>;
 			renesas,id = <2>;
 			renesas,isp = <&isp0>;
-			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 0>;
 			//iommus = <&ipmmu_vi0 0>;
 
@@ -1223,7 +1220,6 @@
 			resets = <&cpg 801>;
 			renesas,id = <3>;
 			renesas,isp = <&isp0>;
-			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 0>;
 			//iommus = <&ipmmu_vi0 0>;
 
@@ -1254,7 +1250,6 @@
 			resets = <&cpg 802>;
 			renesas,id = <4>;
 			renesas,isp = <&isp0>;
-			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 0>;
 			//iommus = <&ipmmu_vi0 0>;
 		};
@@ -1268,7 +1263,6 @@
 			resets = <&cpg 803>;
 			renesas,id = <5>;
 			renesas,isp = <&isp0>;
-			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 0>;
 			//iommus = <&ipmmu_vi0 0>;
 		};
@@ -1282,7 +1276,6 @@
 			resets = <&cpg 804>;
 			renesas,id = <6>;
 			renesas,isp = <&isp0>;
-			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 0>;
 			//iommus = <&ipmmu_vi0 0>;
 		};
@@ -1296,9 +1289,8 @@
 			resets = <&cpg 805>;
 			renesas,id = <7>;
 			renesas,isp = <&isp0>;
-			status = "disabled";
-			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
-			//iommus = <&ipmmu_vi0 1>;
+			//ipmmu-id = <RCAR_IPMMU_VI0 0>;
+			//iommus = <&ipmmu_vi0 0>;
 		};
 
 		vin08: video@e6ef8000 {
@@ -1310,7 +1302,6 @@
 			resets = <&cpg 806>;
 			renesas,id = <8>;
 			renesas,isp = <&isp1>;
-			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
 			//iommus = <&ipmmu_vi0 1>;
 
@@ -1341,7 +1332,6 @@
 			resets = <&cpg 807>;
 			renesas,id = <9>;
 			renesas,isp = <&isp1>;
-			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
 			//iommus = <&ipmmu_vi0 1>;
 
@@ -1372,7 +1362,6 @@
 			resets = <&cpg 808>;
 			renesas,id = <10>;
 			renesas,isp = <&isp1>;
-			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
 			//iommus = <&ipmmu_vi0 1>;
 
@@ -1403,7 +1392,6 @@
 			resets = <&cpg 809>;
 			renesas,id = <11>;
 			renesas,isp = <&isp1>;
-			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
 			//iommus = <&ipmmu_vi0 1>;
 
@@ -1434,7 +1422,6 @@
 			resets = <&cpg 810>;
 			renesas,id = <12>;
 			renesas,isp = <&isp1>;
-			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
 			//iommus = <&ipmmu_vi0 1>;
 		};
@@ -1448,7 +1435,6 @@
 			resets = <&cpg 811>;
 			renesas,id = <13>;
 			renesas,isp = <&isp1>;
-			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
 			//iommus = <&ipmmu_vi0 1>;
 		};
@@ -1462,7 +1448,6 @@
 			resets = <&cpg 812>;
 			renesas,id = <14>;
 			renesas,isp = <&isp1>;
-			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
 			//iommus = <&ipmmu_vi0 1>;
 		};
@@ -1476,7 +1461,6 @@
 			resets = <&cpg 813>;
 			renesas,id = <15>;
 			renesas,isp = <&isp1>;
-			status = "disabled";
 			//ipmmu-id = <RCAR_IPMMU_VI0 1>;
 			//iommus = <&ipmmu_vi0 1>;
 		};
@@ -1513,7 +1497,6 @@
 			resets = <&cpg 709>;
 			#dma-cells = <1>;
 			dma-channels = <16>;
-			status = "disabled";
 		};
 
 		dmac2: dma-controller@e7351000 {
@@ -1538,7 +1521,6 @@
 			resets = <&cpg 710>;
 			#dma-cells = <1>;
 			dma-channels = <8>;
-			status = "disabled";
 		};
 
 		rcar_sound: sound@ec400000 {
@@ -1852,7 +1834,6 @@
 			power-domains = <&sysc R8A779H0_PD_C4>;
 			resets = <&cpg 830>;
 			renesas,fcp = <&fcpvd0>;
-			status = "disabled";
 		};
 
 		du: display@feb00000 {
