@@ -1019,6 +1019,58 @@ static int mp_phy_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int mp_phy_suspend_noirq(struct device *dev)
+{
+	struct mp_phy_priv *priv = dev_get_drvdata(dev);
+	int i;
+
+	for (i = 0; i < MPPHY_NUM_CHANNELS; i++) {
+		struct mp_phy_chan_priv *chan = &priv->chan[i];
+
+		if (chan->initialized) {
+			dev_dbg(dev, "Channel %d will need re-init (was protocol: %d)\n",
+				i, chan->current_protocol);
+			chan->initialized = false;
+		}
+	}
+
+	if (priv->fw) {
+		release_firmware(priv->fw);
+		priv->fw = NULL;
+		dev_dbg(dev, "Firmware released during suspend\n");
+	}
+
+	dev_info(dev, "Multi-Protocol PHY suspended \n");
+
+	return 0;
+}
+
+static int mp_phy_resume_noirq(struct device *dev)
+{
+	struct mp_phy_priv *priv = dev_get_drvdata(dev);
+	int ret;
+
+	ret = request_firmware(&priv->fw, MPPHY_FW_NAME, dev);
+	if (ret < 0) {
+		dev_err(dev, "Failed to request firmware during resume: %d\n", ret);
+		return ret;
+	}
+	dev_dbg(dev, "Firmware loaded during resume\n");
+
+	mp_phy_module_power_reset();
+	udelay(1000);
+	mp_phy_module_power_run();
+
+	dev_info(dev, "Multi-Protocol PHY resumed \n");
+
+	return 0;
+}
+
+static const struct dev_pm_ops mp_phy_pm_ops = {
+	.suspend_noirq = mp_phy_suspend_noirq,
+	.resume_noirq = mp_phy_resume_noirq,
+};
+
 static const struct of_device_id mp_phy_of_match[] = {
 	{ .compatible = "renesas,multi-protocol-phy" },
 	{ /* sentinel */ }
@@ -1031,6 +1083,7 @@ static struct platform_driver mp_phy_driver = {
 	.driver = {
 		.name		= "renesas,multi-protocol-phy",
 		.of_match_table	= mp_phy_of_match,
+		.pm = &mp_phy_pm_ops,
 	},
 };
 
