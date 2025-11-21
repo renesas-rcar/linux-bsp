@@ -133,6 +133,11 @@ struct mp_phy_chan_priv {
 	int speed;
 };
 
+struct mpphy_pwr_dev {
+	int no_pwr_devs;
+	struct device **devs;
+};
+
 struct mp_phy_priv {
 	void __iomem *base;
 	struct device *dev;
@@ -142,6 +147,7 @@ struct mp_phy_priv {
 	int num_clks;
 	const struct firmware *fw;
 	struct mp_phy_chan_priv chan[MPPHY_NUM_CHANNELS];
+	struct mpphy_pwr_dev pwr_devs;
 };
 
 static void mp_phy_write(void __iomem *base, u32 offset, u32 value)
@@ -194,6 +200,25 @@ static void mp_phy_update_firmware(struct mp_phy_priv *priv, u32 channel_id)
 	}
 }
 
+static int mp_phy_exit(struct phy *phy)
+{
+	struct mp_phy_priv *priv = phy_get_drvdata(phy);
+	struct mp_phy_chan_priv *chan = &priv->chan[phy->id];
+	u32 channel_id = phy->id;
+
+	if (!chan->initialized)
+		return 0;
+
+	chan->initialized = false;
+	chan->current_protocol = PHY_MODE_INVALID;
+
+	if (channel_id < priv->pwr_devs.no_pwr_devs &&
+	    priv->pwr_devs.devs[channel_id])
+		pm_runtime_put_sync(priv->pwr_devs.devs[channel_id]);
+
+	return 0;
+}
+
 static int mp_phy_init_ethernet(struct mp_phy_priv *priv, u32 channel_id)
 {
 	mp_phy_update_firmware(priv, channel_id);
@@ -218,8 +243,6 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 	dev_info(priv->dev, "PCIe4 PHY initialization on channel %d, link_width: %d\n",
 		 channel_id, link_width);
 
-	mp_phy_module_standy_set(6, 16, 0x03);
-
 	switch (link_width) {
 	case 1:
 	case 2:
@@ -230,8 +253,6 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x1, 0x1);
-			mp_phy_module_standy_set(6, 8, 0x03);
-			mp_phy_module_standy_set(6, 10, 0x03);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x202);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x0);
 		}
@@ -242,8 +263,6 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(2), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(2), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(2), 0x1, 0x1);
-			mp_phy_module_standy_set(6, 12, 0x03);
-			mp_phy_module_standy_set(6, 14, 0x03);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(2), 0x202, 0x202);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(2), 0x202, 0x0);
 		}
@@ -262,8 +281,6 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(1), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(1), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(1), 0x1, 0x1);
-			mp_phy_module_standy_set(6, 8, 0x03);
-			mp_phy_module_standy_set(6, 10, 0x03);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x202);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(1), 0x202, 0x202);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x0);
@@ -282,8 +299,6 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(3), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(3), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(3), 0x1, 0x1);
-			mp_phy_module_standy_set(6, 12, 0x03);
-			mp_phy_module_standy_set(6, 14, 0x03);
 
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(2), 0x202, 0x202);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(3), 0x202, 0x202);
@@ -310,11 +325,6 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 		mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(2), 0x202, 0x202);
 		mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(3), 0x202, 0x202);
 
-		mp_phy_module_standy_set(6, 8, 0x03);
-		mp_phy_module_standy_set(6, 10, 0x03);
-		mp_phy_module_standy_set(6, 12, 0x03);
-		mp_phy_module_standy_set(6, 14, 0x03);
-
 		mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x202);
 		mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(1), 0x202, 0x202);
 		mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(2), 0x202, 0x202);
@@ -335,19 +345,20 @@ static int mp_phy_init_usb(struct mp_phy_priv *priv, u32 channel_id)
 	u32 data;
 
 	dev_info(priv->dev, "USB PHY initialization requested on channel %d\n", channel_id);
-	while (1) {
-		data = readl(priv->base + MPPHY_PXSRAMCNT(channel_id));
-		if (data & BIT(5))
-			break;
+	data = mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(channel_id), 0x00000020, 0x00000020);
+	if (data) {
+		dev_err(priv->dev, "Timeout waiting for MPPHY_PXSRAMCNT(%d) configuration\n",
+			channel_id);
+		return data;
 	}
 	mp_phy_update_firmware(priv, channel_id);
-
 	mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(channel_id), SRAM_EXT_LD_DONE,
 			   SRAM_EXT_LD_DONE);
-	while (1) {
-		data = readl(priv->base + MPPHY_PXRXREQ1(channel_id));
-		if (!(data & BIT(1)))
-			break;
+	data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(channel_id), 0x00000002, 0x00000000);
+	if (data) {
+		dev_err(priv->dev, "Timeout waiting for MPPHY_PXRXREQ1(%d) configuration\n",
+			channel_id);
+		return data;
 	}
 
 	return 0;
@@ -372,9 +383,19 @@ static int mp_phy_init(struct phy *phy)
 		return -EINVAL;
 	}
 
+	if (channel_id < priv->pwr_devs.no_pwr_devs &&
+	    priv->pwr_devs.devs[channel_id]) {
+		ret = pm_runtime_get_sync(priv->pwr_devs.devs[channel_id]);
+		if (ret < 0) {
+			dev_err(priv->dev, "Failed to power on domain for channel %d: %d\n",
+				channel_id, ret);
+			return ret;
+		}
+	}
+
 	/* Check if initialized with same protocol then skip */
 	if (chan->initialized && chan->current_protocol == protocol_id) {
-		dev_info(priv->dev, "Channel %d already initialized for protocol %d, skip settings\n",
+		dev_info(priv->dev, "ch%d already initialized (protocol %d), skip settings\n",
 			 channel_id, protocol_id);
 		return 0;
 	}
@@ -427,113 +448,102 @@ static int mp_phy_late_init(struct phy *phy)
 		switch (link_width) {
 		case 1:
 		case 2:
-			while (1) {
-				data = readl(priv->base + MPPHY_PXSRAMCNT(channel_id));
-				if (data & BIT(5))
-					break;
+			data = mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(channel_id),
+					       0x00000020, 0x00000020);
+			if (data) {
+				dev_err(priv->dev, "Timeout waiting for MPPHY_PXSRAMCNT(%d)\n",
+					channel_id);
 			}
-			while (1) {
-				data = readl(priv->base + MPPHY_PXRXREQ1(channel_id));
-				if (!(data & BIT(1)))
-					break;
+
+			data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(channel_id),
+					       0x00000002, 0x00000000);
+			if (data) {
+				dev_err(priv->dev, "Timeout waiting for MPPHY_PXRXREQ1(%d)\n",
+					channel_id);
 			}
 			break;
 		case 4:
 			if (channel_id == 0) {
-				while (1) {
-					data = readl(priv->base + MPPHY_PXSRAMCNT(0));
-					if (data & BIT(5))
-						break;
-				}
-				while (1) {
-					data = readl(priv->base + MPPHY_PXSRAMCNT(1));
-					if (data & BIT(5))
-						break;
-				}
-				while (1) {
-					data = readl(priv->base + MPPHY_PXRXREQ1(0));
-					if (!(data & BIT(1)))
-						break;
-				}
-				while (1) {
-					data = readl(priv->base + MPPHY_PXRXREQ1(1));
-					if (!(data & BIT(1)))
-						break;
-				}
+				data = mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(0),
+						       0x00000020, 0x00000020);
+				if (data)
+					dev_err(priv->dev, "Timeout waiting for PXSRAMCNT(0)\n");
+				data = mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(1),
+						       0x00000020, 0x00000020);
+				if (data)
+					dev_err(priv->dev, "Timeout waiting for PXSRAMCNT(1)\n");
+				data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(0),
+						       0x00000002, 0x00000000);
+				if (data)
+					dev_err(priv->dev, "Timeout waiting for PXRXREQ(0)\n");
+				data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(1),
+						       0x00000002, 0x00000000);
+				if (data)
+					dev_err(priv->dev, "Timeout waiting for PXRXREQ(1)\n");
 			}
+
 			if (channel_id == 1) {
-				while (1) {
-					data = readl(priv->base + MPPHY_PXSRAMCNT(2));
-					if (data & BIT(5))
-						break;
-				}
-				while (1) {
-					data = readl(priv->base + MPPHY_PXSRAMCNT(3));
-					if (data & BIT(5))
-						break;
-				}
-				while (1) {
-					data = readl(priv->base + MPPHY_PXRXREQ1(2));
-					if (!(data & BIT(1)))
-						break;
-				}
-				while (1) {
-					data = readl(priv->base + MPPHY_PXRXREQ1(3));
-					if (!(data & BIT(1)))
-						break;
-				}
+				data = mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(2),
+						       0x00000020, 0x00000020);
+				if (data)
+					dev_err(priv->dev, "Timeout waiting for PXSRAMCNT(2)\n");
+				data = mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(3),
+						       0x00000020, 0x00000020);
+				if (data)
+					dev_err(priv->dev, "Timeout waiting for PXSRAMCNT(3)\n");
+				data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(2),
+						       0x00000002, 0x00000000);
+				if (data)
+					dev_err(priv->dev, "Timeout waiting for PXRXREQ(2)\n");
+				data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(3),
+						       0x00000002, 0x00000000);
+				if (data)
+					dev_err(priv->dev, "Timeout waiting for PXRXREQ(3)\n");
 			}
 			break;
 		case 8:
-			while (1) {
-				data = readl(priv->base + MPPHY_PXSRAMCNT(0));
-				if (data & BIT(5))
-					break;
-			}
-			while (1) {
-				data = readl(priv->base + MPPHY_PXSRAMCNT(1));
-				if (data & BIT(5))
-					break;
-			}
-			while (1) {
-				data = readl(priv->base + MPPHY_PXSRAMCNT(2));
-				if (data & BIT(5))
-					break;
-			}
-			while (1) {
-				data = readl(priv->base + MPPHY_PXSRAMCNT(3));
-				if (data & BIT(5))
-					break;
-			}
-			while (1) {
-				data = readl(priv->base + MPPHY_PXRXREQ1(0));
-				if (!(data & BIT(1)))
-					break;
-			}
-			while (1) {
-				data = readl(priv->base + MPPHY_PXRXREQ1(1));
-				if (!(data & BIT(1)))
-					break;
-			}
-			while (1) {
-				data = readl(priv->base + MPPHY_PXRXREQ1(2));
-				if (!(data & BIT(1)))
-					break;
-			}
-			while (1) {
-				data = readl(priv->base + MPPHY_PXRXREQ1(3));
-				if (!(data & BIT(1)))
-					break;
-			}
+			data = mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(0),
+					       0x00000020, 0x00000020);
+			if (data)
+				dev_err(priv->dev, "Timeout waiting for MPPHY_PXSRAMCNT(0)\n");
+			data = mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(1),
+					       0x00000020, 0x00000020);
+			if (data)
+				dev_err(priv->dev, "Timeout waiting for MPPHY_PXSRAMCNT(1)\n");
+			data = mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(2),
+					       0x00000020, 0x00000020);
+			if (data)
+				dev_err(priv->dev, "Timeout waiting for MPPHY_PXSRAMCNT(2)\n");
+			data = mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(3),
+					       0x00000020, 0x00000020);
+			if (data)
+				dev_err(priv->dev, "Timeout waiting for MPPHY_PXSRAMCNT(3)\n");
+			data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(0),
+					       0x00000002, 0x00000000);
+			if (data)
+				dev_err(priv->dev, "Timeout waiting for MPPHY_PXRXREQ(0)\n");
+			data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(1),
+					       0x00000002, 0x00000000);
+			if (data)
+				dev_err(priv->dev, "Timeout waiting for MPPHY_PXRXREQ(1)\n");
+			data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(2),
+					       0x00000002, 0x00000000);
+			if (data)
+				dev_err(priv->dev, "Timeout waiting for MPPHY_PXRXREQ(2)\n");
+			data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(3),
+					       0x00000002, 0x00000000);
+			if (data)
+				dev_err(priv->dev, "Timeout waiting for MPPHY_PXRXREQ(3)\n");
 			break;
 		}
 	} else if (chan->protocol_id == PHY_MODE_ETHERNET) {
-		mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(channel_id), SRAM_EXT_LD_DONE,
-				   SRAM_EXT_LD_DONE);
-		while (1) {
-			data = readl(priv->base + MPPHY_PXRXREQ1(channel_id));
-			if (!(data & BIT(1)))
-				break;
+		mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(channel_id),
+				   SRAM_EXT_LD_DONE, SRAM_EXT_LD_DONE);
+		data = mp_phy_reg_wait(priv->base, MPPHY_PXRXREQ1(channel_id),
+				       0x00000002, 0x00000000);
+		if (data) {
+			dev_err(priv->dev, "Timeout waiting for MPPHY_PXRXREQ1(%d)\n", channel_id);
+			return data;
 		}
 	}
 	return 0;
@@ -562,18 +572,35 @@ static int mp_phy_set_mode(struct phy *phy, enum phy_mode mode, int submode)
 		return -EOPNOTSUPP;
 	}
 
-	/* Check for protocol conflicts if initialized with another protocol */
 	if (chan->initialized && chan->current_protocol != new_protocol) {
-		dev_err(&phy->dev, "Protocol conflict on channel %d: current=%d, requested=%d\n",
-			phy->id, chan->current_protocol, new_protocol);
-		return -EINVAL;
+		if (new_protocol != PHY_MODE_USB_HOST && new_protocol != PHY_MODE_USB_DEVICE &&
+		    new_protocol != PHY_MODE_USB_OTG) {
+			dev_err(&phy->dev, "Protocol conflict on channel %d: current=%d, requested=%d\n",
+				phy->id, chan->current_protocol, new_protocol);
+			return -EINVAL;
+		}
 	}
 
-	/* If same protocol and initialized then return success*/
-	if (chan->initialized && chan->current_protocol == new_protocol) {
-		dev_info(&phy->dev, "Channel %d already configured for protocol %d\n",
-			 phy->id, new_protocol);
-		return 0;
+	if (chan->initialized) {
+		/* Skip if same protocol */
+		if (chan->current_protocol == new_protocol) {
+			dev_info(&phy->dev, "Channel %d already configured for protocol %d\n",
+				 phy->id, new_protocol);
+			return 0;
+		}
+
+		bool is_current_usb = (chan->current_protocol == PHY_MODE_USB_HOST ||
+					chan->current_protocol == PHY_MODE_USB_DEVICE ||
+					chan->current_protocol == PHY_MODE_USB_OTG);
+		bool is_new_usb = (new_protocol == PHY_MODE_USB_HOST ||
+				new_protocol == PHY_MODE_USB_DEVICE ||
+				new_protocol == PHY_MODE_USB_OTG);
+
+		if (is_current_usb && is_new_usb) {
+			dev_info(&phy->dev, "Channel %d switching USB mode from %d to %d, skip reconfiguration\n",
+				 phy->id, chan->current_protocol, new_protocol);
+			return 0;
+		}
 	}
 
 	chan->current_protocol = new_protocol;
@@ -591,50 +618,38 @@ static int mp_phy_config_usb(struct phy *phy, int speed)
 
 	switch (speed) {
 	case HIGH_SPEED:
-		/* Setting TCA VBUS CTRL registers. */
 		mp_phy_write(priv->base, TCA_VBUS_CTRL_OFFSET(chan->lane_id), 0x0000003E);
 		break;
 	case SUPER_SPEED_PLUS:
 		data = mp_phy_reg_wait(priv->base, PSTATE_1_OFFSET(chan->lane_id),
 				       0x00000003, 0x00000003);
 		if (data) {
-			pr_err("%s: Timeout waiting for PSTATE_1_OFFSET(%d)\n", __func__,
-			       chan->lane_id);
+			dev_err(priv->dev, "Timeout waiting for PSTATE_1_OFFSET(%d)\n",
+				chan->lane_id);
 			return data;
 		}
 
-		pr_info("%s %d: PSTATE_1_OFFSET(%d): 0x%x\n", __func__, __LINE__, chan->lane_id,
-			readl(priv->base + PSTATE_1_OFFSET(chan->lane_id)));
-
 		mp_phy_update_bits(priv->base, TCA_INTR_OFFSET(chan->lane_id), 0x3, 0x3);
-		pr_info("%s %d: TCA_INTR_OFFSET(%d): 0x%x\n", __func__, __LINE__, chan->lane_id,
-			readl(priv->base + TCA_INTR_OFFSET(chan->lane_id)));
 
 		mp_phy_update_bits(priv->base, TCA_TCPC_OFFSET(chan->lane_id), 0x10, 0x10);
 		data = mp_phy_reg_wait(priv->base, TCA_INTR_STS_OFFSET(chan->lane_id),
 				       0x00000001, 0x00000001);
 		if (data) {
-			pr_err("%s: Timeout waiting for TCA_INTR_STS_OFFSET(%d)\n", __func__,
-			       chan->lane_id);
+			dev_err(priv->dev, "Timeout waiting for TCA_INTR_STS_OFFSET(%d)\n",
+				chan->lane_id);
 			return data;
 		}
 
 		mp_phy_update_bits(priv->base, TCA_INTR_STS_OFFSET(chan->lane_id), 0x1503, 0x1503);
 		mp_phy_update_bits(priv->base, TCA_TCPC_OFFSET(chan->lane_id), 0x11, 0x11);
-		pr_info("%s %d: TCA_INTR_STS_OFFSET(%d): 0x%x\n", __func__, __LINE__, chan->lane_id,
-			readl(priv->base + TCA_INTR_STS_OFFSET(chan->lane_id)));
-		pr_info("%s %d: TCA_TCPC_OFFSET(%d): 0x%x\n", __func__, __LINE__, chan->lane_id,
-			readl(priv->base + TCA_TCPC_OFFSET(chan->lane_id)));
-		data = mp_phy_reg_wait(priv->base,
-				       TCA_INTR_STS_OFFSET(chan->lane_id), 0x00000001, 0x00000001);
+		data = mp_phy_reg_wait(priv->base, TCA_INTR_STS_OFFSET(chan->lane_id),
+				       0x00000001, 0x00000001);
 		if (data) {
-			pr_err("%s: Timeout waiting for TCA_INTR_STS_OFFSET(%d)\n", __func__,
-			       chan->lane_id);
+			dev_err(priv->dev, "Timeout waiting for TCA_INTR_STS_OFFSET(%d)\n",
+				chan->lane_id);
 			return data;
 		}
 		mp_phy_update_bits(priv->base, TCA_INTR_STS_OFFSET(channel_id), 0x1503, 0x1503);
-		pr_info("%s %d: TCA_INTR_STS_OFFSET(%d): 0x%x\n", __func__, __LINE__, chan->lane_id,
-			readl(priv->base + TCA_INTR_STS_OFFSET(chan->lane_id)));
 		break;
 	}
 
@@ -643,6 +658,7 @@ static int mp_phy_config_usb(struct phy *phy, int speed)
 
 static const struct phy_ops mp_phy_ops = {
 	.init		= mp_phy_init,
+	.exit		= mp_phy_exit,
 	.power_on	= mp_phy_late_init,
 	.set_mode	= mp_phy_set_mode,
 	.set_speed	= mp_phy_config_usb,
@@ -668,7 +684,6 @@ static struct phy *mp_phy_xlate(struct device *dev, const struct of_phandle_args
 		return phy;
 	}
 
-	/* Set channel ID from first argument if available */
 	if (args->args_count >= 1)
 		phy->id = args->args[0];
 	else
@@ -688,7 +703,6 @@ static struct phy *mp_phy_xlate(struct device *dev, const struct of_phandle_args
 
 	chan->num_lanes = num_lanes;
 
-	/* Set lane ID from second argument if available */
 	if (args->args_count >= 2)
 		chan->lane_id = args->args[1];
 	else
@@ -779,7 +793,6 @@ static int mp_phy_probe(struct platform_device *pdev)
 	static u8 rst_control_get_retries = 5;
 	struct device_node *np = dev->of_node;
 	int num_power_domains;
-	struct of_phandle_args pd_args;
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
@@ -791,7 +804,6 @@ static int mp_phy_probe(struct platform_device *pdev)
 	if (ret < 0)
 		return ret;
 
-	/* Get base address from device tree */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		dev_err(dev, "Invalid resource\n");
@@ -810,8 +822,6 @@ static int mp_phy_probe(struct platform_device *pdev)
 		priv->chan[i].protocol_id = PHY_MODE_INVALID;
 	}
 
-	/* TODO: Enable reset control when DTS binding is ready */
-	/* Get reset control */
 	for (i = 0; i < NUM_OF_MPPHY_RST - 1; ++i) {
 		char rst_name[16] = {0};
 
@@ -834,40 +844,54 @@ static int mp_phy_probe(struct platform_device *pdev)
 		return PTR_ERR(priv->resets[NUM_OF_MPPHY_RST - 1]);
 	}
 
-	/* Get clocks */
 	priv->num_clks = devm_clk_bulk_get_all(dev, &priv->clks);
 	if (priv->num_clks < 1) {
 		dev_err(dev, "Failed to get mp_phy clocks\n");
 		return -ENODEV;
 	}
 
-	/* Get number of power domains */
 	num_power_domains = of_count_phandle_with_args(np, "power-domains", "#power-domain-cells");
-	if (num_power_domains <= 0) {
+	if (num_power_domains < 0) {
 		dev_err(dev, "Failed to get number of power domains (%d)\n", num_power_domains);
 		return num_power_domains;
 	}
 
-	/* Attach MP-PHY to multi power domains */
+	priv->pwr_devs.no_pwr_devs = num_power_domains;
+	priv->pwr_devs.devs = devm_kcalloc(dev, num_power_domains,
+					   sizeof(*priv->pwr_devs.devs), GFP_KERNEL);
+
+	if (!priv->pwr_devs.devs) {
+		dev_err(dev, "Failed to allocate power domain devices\n");
+		return -ENOMEM;
+	}
+
 	for (int i = 0; i < num_power_domains; i++) {
-		ret = of_parse_phandle_with_args(np, "power-domains", "#power-domain-cells",
-						 i, &pd_args);
-		if (ret) {
-			dev_err(dev, "Failed to parse power domain index %d\n", i);
-			return ret;
+		priv->pwr_devs.devs[i] = dev_pm_domain_attach_by_id(dev, i);
+		if (IS_ERR(priv->pwr_devs.devs[i])) {
+			dev_err(dev, "Failed to attach power domain index %d\n", i);
+			for (int j = 0; j < i; j++) {
+				if (priv->pwr_devs.devs[j] &&
+				    !IS_ERR(priv->pwr_devs.devs[j])) {
+					pm_runtime_put_sync(priv->pwr_devs.devs[j]);
+					dev_pm_domain_detach(priv->pwr_devs.devs[j], true);
+				}
+			}
+			return PTR_ERR(priv->pwr_devs.devs[i]);
 		}
-		if (IS_ERR(dev_pm_domain_attach_by_id(dev, pd_args.args[0]))) {
-			dev_err(dev, "Failed to attach to power domain %d (%d)\n",
-				pd_args.args[0], ret);
-			return -EINVAL;
+		ret = pm_runtime_get_sync(priv->pwr_devs.devs[i]);
+		if (ret < 0) {
+			dev_err(dev, "Failed to power on domain %d: %d\n", i, ret);
+			dev_pm_domain_detach(priv->pwr_devs.devs[i], true);
+			priv->pwr_devs.devs[i] = NULL;
+			for (int j = 0; j < i; j++) {
+				pm_runtime_put_sync(priv->pwr_devs.devs[j]);
+				dev_pm_domain_detach(priv->pwr_devs.devs[j], true);
+			}
+			return ret;
 		}
 	}
 
-	/* TODO: Reset and enable clock control when clock is available */
 	for (i = 0; i < NUM_OF_MPPHY_RST - 1; ++i) {
-		char rst_name[16] = {0};
-
-		sprintf(rst_name, "mpphy%d1", i);
 		ret = reset_control_assert(priv->resets[i]);
 		if (ret) {
 			dev_err(dev, "Failed to assert mpphy%d1", i);
@@ -881,10 +905,6 @@ static int mp_phy_probe(struct platform_device *pdev)
 	}
 
 	for (i = 0; i < NUM_OF_MPPHY_RST - 1; ++i) {
-		char rst_name[16] = {0};
-
-		sprintf(rst_name, "mpphy%d1", i);
-
 		ret = reset_control_deassert(priv->resets[i]);
 		if (ret) {
 			dev_err(dev, "Failed to deassert mpphy%d1", i);
@@ -921,11 +941,121 @@ static int mp_phy_probe(struct platform_device *pdev)
 
 static void mp_phy_remove(struct platform_device *pdev)
 {
+	struct mp_phy_priv *priv = dev_get_drvdata(&pdev->dev);
+	int i;
+
+	clk_bulk_disable_unprepare(priv->num_clks, priv->clks);
+
+	if (priv->fw) {
+		release_firmware(priv->fw);
+		priv->fw = NULL;
+	}
+
+	for (i = priv->pwr_devs.no_pwr_devs - 1; i >= 0; i--) {
+		if (priv->pwr_devs.devs[i]) {
+			pm_runtime_put_sync(priv->pwr_devs.devs[i]);
+			dev_pm_domain_detach(priv->pwr_devs.devs[i], true);
+			priv->pwr_devs.devs[i] = NULL;
+		}
+	}
+
 	pm_runtime_put(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 
 	platform_set_drvdata(pdev, NULL);
 }
+
+static int mp_phy_suspend_noirq(struct device *dev)
+{
+	struct mp_phy_priv *priv = dev_get_drvdata(dev);
+	int i;
+
+	for (i = 0; i < MPPHY_NUM_CHANNELS; i++) {
+		struct mp_phy_chan_priv *chan = &priv->chan[i];
+
+		if (chan->initialized) {
+			dev_dbg(dev, "Channel %d will need re-init (was protocol: %d)\n",
+				i, chan->current_protocol);
+			chan->initialized = false;
+		}
+	}
+
+	if (priv->fw) {
+		release_firmware(priv->fw);
+		priv->fw = NULL;
+		dev_dbg(dev, "Firmware released during suspend\n");
+	}
+
+	clk_bulk_disable_unprepare(priv->num_clks, priv->clks);
+
+	for (int i = 0; i < priv->pwr_devs.no_pwr_devs; i++) {
+		if (priv->pwr_devs.devs[i])
+			pm_runtime_put_sync(priv->pwr_devs.devs[i]);
+	}
+
+	dev_info(dev, "Multi-Protocol PHY suspended\n");
+
+	return 0;
+}
+
+static int mp_phy_resume_noirq(struct device *dev)
+{
+	struct mp_phy_priv *priv = dev_get_drvdata(dev);
+	int ret;
+
+	ret = request_firmware(&priv->fw, MPPHY_FW_NAME, dev);
+	if (ret < 0) {
+		dev_err(dev, "Failed to request firmware during resume: %d\n", ret);
+		return ret;
+	}
+	dev_dbg(dev, "Firmware loaded during resume\n");
+
+	for (int i = 0; i < NUM_OF_MPPHY_RST; ++i) {
+		ret = reset_control_assert(priv->resets[i]);
+		if (ret) {
+			dev_err(dev, "Failed to assert mpphy %d", i);
+			return ret;
+		}
+	}
+	for (int i = 0; i < NUM_OF_MPPHY_RST; ++i) {
+		ret = reset_control_deassert(priv->resets[i]);
+		if (ret) {
+			dev_err(dev, "Failed to deassert mpphy %d", i);
+			return ret;
+		}
+	}
+
+	ret = clk_bulk_prepare_enable(priv->num_clks, priv->clks);
+	if (ret) {
+		dev_err(dev, "Failed to enable bulk clocks: %d\n", ret);
+		return ret;
+	}
+
+	for (int i = 0; i < priv->pwr_devs.no_pwr_devs; i++) {
+		if (priv->pwr_devs.devs[i]) {
+			ret = pm_runtime_get_sync(priv->pwr_devs.devs[i]);
+			if (ret < 0) {
+				dev_err(dev, "Failed to resume domain %d: %d\n", i, ret);
+				return ret;
+			}
+		}
+	}
+
+	ret = mp_phy_pre_init(priv);
+	if (ret < 0) {
+		dev_err(dev, "Failed to pre-init during resume: %d\n", ret);
+		return ret;
+	}
+
+	dev_info(dev, "Multi-Protocol PHY resumed\n");
+
+	return 0;
+}
+
+static const struct dev_pm_ops mp_phy_pm_ops = {
+	.suspend_noirq = mp_phy_suspend_noirq,
+	.resume_noirq = mp_phy_resume_noirq,
+};
 
 static const struct of_device_id mp_phy_of_match[] = {
 	{ .compatible = "renesas,multi-protocol-phy" },
@@ -939,6 +1069,7 @@ static struct platform_driver mp_phy_driver = {
 	.driver = {
 		.name		= "renesas,multi-protocol-phy",
 		.of_match_table	= mp_phy_of_match,
+		.pm = &mp_phy_pm_ops,
 	},
 };
 
