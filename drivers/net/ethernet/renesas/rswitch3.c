@@ -369,6 +369,9 @@ static void rsw3_gwca_queue_free(struct net_device *ndev,
 		kfree(gq->unmap_addrs);
 		gq->unmap_addrs = NULL;
 	}
+
+	gq->cur = 0;
+	gq->dirty = 0;
 }
 
 static int rsw3_gwca_queue_alloc(struct net_device *ndev,
@@ -1407,6 +1410,9 @@ static int rsw3_mii_register(struct rsw3_device *rdev)
 	struct mii_bus *mii_bus;
 	int err;
 
+	if (rdev->etha->mii)
+		return 0;
+
 	mii_bus = mdiobus_alloc();
 	if (!mii_bus)
 		return -ENOMEM;
@@ -2306,8 +2312,19 @@ static int renesas_eth_sw_suspend(struct device *dev)
 			rsw3_stop(ndev);
 		}
 
-		if (priv->rdev[i]->pcs->init_count)
+		if (priv->rdev[i]->pcs->init_count) {
 			phy_exit(priv->rdev[i]->pcs);
+			priv->rdev[i]->pcs->init_count = 0;
+		}
+
+		rsw3_txdmac_free(ndev);
+		rsw3_rxdmac_free(ndev);
+	}
+
+	for (i = 0; i < rswitch3_num_ports; i++) {
+		struct rsw3_etha *etha_mii = &priv->etha_mii[i];
+
+		etha_mii->operated = false;
 	}
 
 	return 0;
@@ -2319,9 +2336,28 @@ static int renesas_eth_sw_resume(struct device *dev)
 	struct net_device *ndev;
 	unsigned int i;
 
-	rsw3_for_each_enabled_port(priv, i) {
-		phy_init(priv->rdev[i]->pcs);
+	rsw3_clock_enable(priv);
 
+	rsw3_top_init(priv);
+
+	rsw3_bpool_config(priv);
+
+	rsw3_coma_init(priv);
+
+	rsw3_fwd_init(priv);
+
+	rsw3_for_each_enabled_port(priv, i) {
+		ndev = priv->rdev[i]->ndev;
+
+		rsw3_rxdmac_alloc(ndev);
+		rsw3_txdmac_alloc(ndev);
+	}
+
+	rsw3_gwca_hw_init(priv);
+
+	rsw3_ether_port_init_all(priv);
+
+	rsw3_for_each_enabled_port(priv, i) {
 		ndev = priv->rdev[i]->ndev;
 		if (netif_running(ndev)) {
 			rsw3_open(ndev);
