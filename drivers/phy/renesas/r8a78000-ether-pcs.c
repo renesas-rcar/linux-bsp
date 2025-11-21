@@ -656,12 +656,43 @@ static void r8a78000_eth_pcs_remove(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
 }
 
+static int pcs_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct r8a78000_eth_pcs_drv_data *dd = platform_get_drvdata(pdev);
+
+	for (int i = 0; i < R8A78000_ETH_PCS_NUM; i++) {
+		struct r8a78000_eth_pcs_channel *channel = &dd->channel[i];
+
+		if (channel->mpphy) {
+			phy_power_off(channel->mpphy);
+			phy_exit(channel->mpphy);
+		}
+	}
+
+	return 0;
+}
+
+static int pcs_resume(struct device *dev)
+{
+	/* Module reset */
+	r8a78000_eth_pcs_module_power_gating_set(0x03);
+	r8a78000_eth_pcs_module_reset();
+	udelay(1000);
+	r8a78000_eth_pcs_module_run();
+
+	return 0;
+}
+
+static DEFINE_SIMPLE_DEV_PM_OPS(pcs_pm_ops, pcs_suspend, pcs_resume);
+
 static struct platform_driver r8a78000_eth_pcs_driver_platform = {
 	.probe = r8a78000_eth_pcs_probe,
 	.remove_new = r8a78000_eth_pcs_remove,
 	.driver = {
 		.name = "r8a78000_eth_pcs",
 		.of_match_table = r8a78000_eth_pcs_of_table,
+		.pm = &pcs_pm_ops,
 	}
 };
 module_platform_driver(r8a78000_eth_pcs_driver_platform);
