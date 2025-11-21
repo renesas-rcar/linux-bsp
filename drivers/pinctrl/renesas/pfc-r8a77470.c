@@ -3402,7 +3402,7 @@ static const struct pinmux_cfg_reg pinmux_config_regs[] = {
 };
 
 static int r8a77470_pin_to_pocctrl(struct sh_pfc *pfc, unsigned int pin,
-				   u64 *pocctrl)
+				   u32 *pocctrl)
 {
 	int bit = -EINVAL;
 

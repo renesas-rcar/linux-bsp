@@ -76,7 +76,7 @@
 
 #if defined(GRAYHAWK_CAMERA0) || defined(GRAYHAWK_CAMERA1) || \
 	defined(GRAYHAWK_CAMERA2) || defined(GRAYHAWK_CAMERA3)
-	status = "disabled";
+	status = "okay";
 
 #endif
 
@@ -155,7 +155,7 @@
 
 #if defined(GRAYHAWK_CAMERA4) || defined(GRAYHAWK_CAMERA5) || \
 	defined(GRAYHAWK_CAMERA6) || defined(GRAYHAWK_CAMERA7)
-	status = "disabled";
+	status = "okay";
 
 #endif
 

@@ -11,6 +11,7 @@
 #include <linux/memblock.h> /* for min_low_pfn */
 #include <linux/mem_encrypt.h>
 #include <linux/swiotlb.h>
+#include <linux/soc/renesas/rcar-rgid.h>
 
 extern unsigned int zone_dma_bits;
 
@@ -71,6 +72,12 @@ static inline dma_addr_t phys_to_dma_unencrypted(struct device *dev,
  */
 static inline dma_addr_t phys_to_dma(struct device *dev, phys_addr_t paddr)
 {
+#if CONFIG_RCAR_RGID
+	if (check_cmem_others_node(dev_name(dev)))
+		paddr = ADDR_ASSIGN_RGID(paddr, CONFIG_CMEM_RGID);
+	else
+		REMOVE_RGID(paddr);
+#endif /* CONFIG_RCAR_RGID */
 	return __sme_set(phys_to_dma_unencrypted(dev, paddr));
 }
 
@@ -82,6 +89,14 @@ static inline phys_addr_t dma_to_phys(struct device *dev, dma_addr_t dma_addr)
 		paddr = translate_dma_to_phys(dev, dma_addr);
 	else
 		paddr = dma_addr;
+
+#if CONFIG_RCAR_RGID
+	if (check_cmem_others_node(dev_name(dev)))
+		paddr = ADDR_ASSIGN_RGID(paddr, CONFIG_CMEM_RGID);
+	else
+		paddr = ADDR_ASSIGN_RGID(paddr, CONFIG_RCAR_RGID);
+
+#endif /* CONFIG_RCAR_RGID */
 
 	return __sme_clr(paddr);
 }

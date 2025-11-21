@@ -192,17 +192,22 @@
 	pinctrl-0 = <&canfd0_pins>, <&canfd1_pins>,
 		<&canfd2_pins>, <&canfd3_pins>;
 		pinctrl-names = "default";
+	status = "disabled";
 
 	channel0 {
+		status = "okay";
 	};
 
 	channel1 {
+		status = "okay";
 	};
 
 	channel2 {
+		status = "okay";
 	};
 
 	channel3 {
+		status = "okay";
 	};
 };
 
@@ -277,6 +282,7 @@
 };
 
 &du {
+	status = "okay";
 };
 
 &extal_clk {
@@ -624,9 +630,11 @@
 };
 
 &isp0 {
+	status = "okay";
 };
 
 &isp1 {
+	status = "okay";
 };
 
 &mmc0 {
@@ -898,27 +906,35 @@
 };
 
 &vin00 {
+	status = "okay";
 };
 
 &vin01 {
+	status = "okay";
 };
 
 &vin02 {
+	status = "okay";
 };
 
 &vin03 {
+	status = "okay";
 };
 
 &vin08 {
+	status = "okay";
 };
 
 &vin09 {
+	status = "okay";
 };
 
 &vin10 {
+	status = "okay";
 };
 
 &vin11 {
+	status = "okay";
 };
 
 /* FAKRA Overlay */

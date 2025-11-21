@@ -85,6 +85,7 @@
 
 #include "pgalloc-track.h"
 #include "internal.h"
+#include <linux/soc/renesas/rcar-rgid.h>
 
 #if defined(LAST_CPUPID_NOT_IN_PAGE_FLAGS) && !defined(CONFIG_COMPILE_TEST)
 #warning Unfortunate NUMA and NUMA Balancing config, growing page-frame for last_cpupid.
@@ -2380,6 +2381,15 @@ int remap_pfn_range(struct vm_area_struct *vma, unsigned long addr,
 		    unsigned long pfn, unsigned long size, pgprot_t prot)
 {
 	int err;
+
+#if CONFIG_RCAR_RGID
+	phys_addr_t pa = (phys_addr_t)pfn << PAGE_SHIFT;
+
+	if ((pa & ADDR_RGID_MASK) == 0)
+		pa = ADDR_ASSIGN_RGID(pa, CONFIG_RCAR_RGID);
+
+	pfn = pa >> PAGE_SHIFT;
+#endif /* CONFIG_RCAR_RGID */
 
 	err = track_pfn_remap(vma, &prot, pfn, addr, PAGE_ALIGN(size));
 	if (err)

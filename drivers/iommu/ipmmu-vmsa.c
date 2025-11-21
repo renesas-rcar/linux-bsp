@@ -26,6 +26,7 @@
 #include <linux/slab.h>
 #include <linux/sys_soc.h>
 #include <linux/pci.h>
+#include <linux/soc/renesas/rcar-rgid.h>
 
 #if defined(CONFIG_ARM) && !defined(CONFIG_IOMMU_DMA)
 #include <asm/dma-iommu.h>
@@ -385,6 +386,11 @@ static void ipmmu_domain_setup_context(struct ipmmu_vmsa_domain *domain)
 
 	/* TTBR0 */
 	ttbr = domain->cfg.arm_lpae_s1_cfg.ttbr;
+
+#if CONFIG_RCAR_RGID
+	REMOVE_RGID(ttbr);
+#endif /* CONFIG_RCAR_RGID */
+
 	ipmmu_ctx_write_root(domain, IMTTLBR0, ttbr & IMTTLBR0_TTBR_MASK);
 	ipmmu_ctx_write_root(domain, IMTTUBR0,
 			     (ttbr >> 32) & IMTTUBR0_TTBR_MASK);

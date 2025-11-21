@@ -30,7 +30,6 @@
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/sys_soc.h>
-#include <linux/soc/renesas/rcar-rgid.h>
 
 #include <asm/div64.h>
 
@@ -200,8 +199,7 @@ static int ravb_tx_free(struct net_device *ndev, int q, bool free_txed_only)
 		size = le16_to_cpu(desc->ds_tagl) & TX_DS;
 		/* Free the original skb. */
 		if (priv->tx_skb[q][entry / num_tx_desc]) {
-			dma_unmap_single(ndev->dev.parent,
-					 ADDR_ASSIGN_RGID(le32_to_cpu(desc->dptr), CONFIG_RCAR_RGID),
+			dma_unmap_single(ndev->dev.parent, le32_to_cpu(desc->dptr),
 					 size, DMA_TO_DEVICE);
 			/* Last packet descriptor? */
 			if (entry % num_tx_desc == num_tx_desc - 1) {
@@ -235,9 +233,9 @@ static void ravb_ring_free(struct net_device *ndev, int q)
 			if (!dma_mapping_error(ndev->dev.parent,
 					       le32_to_cpu(desc->dptr)))
 				dma_unmap_single(ndev->dev.parent,
-					ADDR_ASSIGN_RGID(le32_to_cpu(desc->dptr), CONFIG_RCAR_RGID),
-					RX_BUF_SZ,
-					DMA_FROM_DEVICE);
+						 le32_to_cpu(desc->dptr),
+						 RX_BUF_SZ,
+						 DMA_FROM_DEVICE);
 		}
 		ring_size = sizeof(struct ravb_ex_rx_desc) *
 			    (priv->num_rx_ring[q] + 1);
@@ -303,7 +301,6 @@ static void ravb_ring_format(struct net_device *ndev, int q)
 		dma_addr = dma_map_single(ndev->dev.parent, priv->rx_skb[q][i]->data,
 					  RX_BUF_SZ,
 					  DMA_FROM_DEVICE);
-
 		/* We just set the data size to 0 for a failed mapping which
 		 * should prevent DMA from happening...
 		 */
@@ -596,8 +593,7 @@ static bool ravb_rx(struct net_device *ndev, int *quota, int q)
 
 			skb = priv->rx_skb[q][entry];
 			priv->rx_skb[q][entry] = NULL;
-			dma_unmap_single(ndev->dev.parent,
-					 ADDR_ASSIGN_RGID(le32_to_cpu(desc->dptr), CONFIG_RCAR_RGID),
+			dma_unmap_single(ndev->dev.parent, le32_to_cpu(desc->dptr),
 					 RX_BUF_SZ,
 					 DMA_FROM_DEVICE);
 
@@ -1670,8 +1666,7 @@ exit:
 	return NETDEV_TX_OK;
 
 unmap:
-	dma_unmap_single(ndev->dev.parent,
-			 ADDR_ASSIGN_RGID(le32_to_cpu(desc->dptr), CONFIG_RCAR_RGID),
+	dma_unmap_single(ndev->dev.parent, le32_to_cpu(desc->dptr),
 			 le16_to_cpu(desc->ds_tagl), DMA_TO_DEVICE);
 drop:
 	dev_kfree_skb_any(skb);
@@ -2320,15 +2315,6 @@ static int ravb_probe(struct platform_device *pdev)
 		ravb_parse_delay_mode(np, ndev);
 		ravb_set_delay_mode(ndev);
 	}
-
-#if CONFIG_RCAR_RGID
-	// Set DMA mask to 40-bit
-	error = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(40));
-	if (error) {
-		dev_err(&pdev->dev, "Failed to set 40-bit DMA mask\n");
-		goto out_release;
-	}
-#endif
 
 	/* Allocate descriptor base address table */
 	priv->desc_bat_size = sizeof(struct ravb_desc) * DBAT_ENTRY_NUM;
