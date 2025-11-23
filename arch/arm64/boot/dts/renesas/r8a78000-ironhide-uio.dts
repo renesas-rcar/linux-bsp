@@ -13,3 +13,239 @@
 	model = "Renesas Ironhide board based on r8a78000";
 	compatible = "renesas,ironhide", "renesas,r8a78000", "renesas,r8a78000-uio";
 };
+
+&fcpvd0 {
+	status = "disabled";
+};
+
+&fcpvd1 {
+	status = "disabled";
+};
+
+&fcpvd4 {
+	status = "disabled";
+};
+
+&fcpvd5 {
+	status = "disabled";
+};
+
+&fcpvd8 {
+	status = "disabled";
+};
+
+&fcpvd2 {
+	status = "disabled";
+};
+
+&fcpvd3 {
+	status = "disabled";
+};
+
+&fcpvd6 {
+	status = "disabled";
+};
+
+&fcpvd7 {
+	status = "disabled";
+};
+
+&fcpvd9 {
+	status = "disabled";
+};
+
+&vspd0 {
+	status = "disabled";
+};
+
+&vspd1 {
+	status = "disabled";
+};
+
+&vspd4 {
+	status = "disabled";
+};
+
+&vspd5 {
+	status = "disabled";
+};
+
+&vspd8 {
+	status = "disabled";
+};
+
+&vspd2 {
+	status = "disabled";
+};
+
+&vspd3 {
+	status = "disabled";
+};
+
+&vspd6 {
+	status = "disabled";
+};
+
+&vspd7 {
+	status = "disabled";
+};
+
+&vspd9 {
+	status = "disabled";
+};
+
+&dp0 {
+	status = "disabled";
+};
+
+&dp1 {
+	status = "disabled";
+};
+
+&dp2 {
+	status = "disabled";
+};
+
+&vcon_group0 {
+	status = "disabled";
+};
+
+&vcon_group1 {
+	status = "disabled";
+};
+
+&vcon_group2 {
+	status = "disabled";
+};
+
+&vspi0 {
+	status = "disabled";
+};
+
+&vspi1 {
+	status = "disabled";
+};
+
+&vspi2 {
+	status = "disabled";
+};
+
+&vspi3 {
+	status = "disabled";
+};
+
+&vspb0 {
+	status = "disabled";
+};
+
+&vspb1 {
+	status = "disabled";
+};
+
+&vspb2 {
+	status = "disabled";
+};
+
+&vspb3 {
+	status = "disabled";
+};
+
+&vspb4 {
+	status = "disabled";
+};
+
+&vin000 {
+	status = "disabled";
+};
+
+&vin001 {
+	status = "disabled";
+};
+
+&vin010 {
+	status = "disabled";
+};
+
+&vin020 {
+	status = "disabled";
+};
+
+&vin030 {
+	status = "disabled";
+};
+
+&vin031 {
+	status = "disabled";
+};
+
+&vin040 {
+	status = "disabled";
+};
+
+&vin050 {
+	status = "disabled";
+};
+
+&vin060 {
+	status = "disabled";
+};
+
+&vin061 {
+	status = "disabled";
+};
+
+&vin070 {
+	status = "disabled";
+};
+
+&vin080 {
+	status = "disabled";
+};
+
+&vin090 {
+	status = "disabled";
+};
+
+&vin091 {
+	status = "disabled";
+};
+
+&vin100 {
+	status = "disabled";
+};
+
+&vin110 {
+	status = "disabled";
+};
+
+&csi40 {
+	status = "disabled";
+};
+
+&csi41 {
+	status = "disabled";
+};
+
+&csi42 {
+	status = "disabled";
+};
+
+&csi43 {
+	status = "disabled";
+};
+
+&isp0 {
+	status = "disabled";
+};
+
+&isp1 {
+	status = "disabled";
+};
+
+&isp2 {
+	status = "disabled";
+};
+
+&isp3 {
+	status = "disabled";
+};
