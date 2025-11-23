@@ -587,6 +587,66 @@
 			linux,uio-name = "rsip_e_stb_00";
 		};
 
+		ostm0: ostm@1c060000 {
+			compatible = "generic-uio";
+			reg = <0 0x1c060000 0 0x1000>;
+			interrupts = <GIC_SPI 4135 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_OSTM0>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_OSTM0>;
+			linux,uio-name = "ostm_00";
+		};
+
+		ostm1: ostm@1c061000 {
+			compatible = "generic-uio";
+			reg = <0 0x1c061000 0 0x1000>;
+			interrupts = <GIC_SPI 4136 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_OSTM1>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_OSTM1>;
+			linux,uio-name = "ostm_01";
+		};
+
+		ostm2: ostm@1c062000 {
+			compatible = "generic-uio";
+			reg = <0 0x1c062000 0 0x1000>;
+			interrupts = <GIC_SPI 4137 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_OSTM2>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_OSTM2>;
+			linux,uio-name = "ostm_02";
+		};
+
+		ostm3: ostm@1c063000 {
+			compatible = "generic-uio";
+			reg = <0 0x1c063000 0 0x1000>;
+			interrupts = <GIC_SPI 4138 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_OSTM3>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_OSTM3>;
+			linux,uio-name = "ostm_03";
+		};
+
+		ostm4: ostm@1c064000 {
+			compatible = "generic-uio";
+			reg = <0 0x1c064000 0 0x1000>;
+			interrupts = <GIC_SPI 4139 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_OSTM4>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_OSTM4>;
+			linux,uio-name = "ostm_04";
+		};
+
+		ostm5: ostm@1c065000 {
+			compatible = "generic-uio";
+			reg = <0 0x1c065000 0 0x1000>;
+			interrupts = <GIC_SPI 4140 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_OSTM5>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PD_APL>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_OSTM5>;
+			linux,uio-name = "ostm_05";
+		};
+
 		vin_00: video@c4900000 {
 			compatible = "generic-uio";
 			reg = <0 0xc4900000 0 0x1000>;
