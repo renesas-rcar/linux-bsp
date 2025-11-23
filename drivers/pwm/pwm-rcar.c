@@ -42,6 +42,7 @@
 struct rcar_pwm_chip {
 	void __iomem *base;
 	struct clk *clk;
+	struct clk *bus_clk;
 };
 
 static inline struct rcar_pwm_chip *to_rcar_pwm_chip(struct pwm_chip *chip)
@@ -223,10 +224,24 @@ static int rcar_pwm_probe(struct platform_device *pdev)
 	if (IS_ERR(rcar_pwm->base))
 		return PTR_ERR(rcar_pwm->base);
 
-	rcar_pwm->clk = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(rcar_pwm->clk)) {
-		dev_err(&pdev->dev, "cannot get clock\n");
+	rcar_pwm->clk = devm_clk_get(&pdev->dev, "counter_clk");
+	if (IS_ERR(rcar_pwm->clk))
 		return PTR_ERR(rcar_pwm->clk);
+
+	rcar_pwm->bus_clk = devm_clk_get(&pdev->dev, "bus_clk");
+	if (IS_ERR(rcar_pwm->bus_clk))
+		return PTR_ERR(rcar_pwm->bus_clk);
+
+	ret = clk_prepare_enable(rcar_pwm->bus_clk);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to enable bus clock: %d\n", ret);
+		goto err_disabled_bus_clock;
+	}
+
+	ret = clk_prepare_enable(rcar_pwm->clk);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to enable counter clock: %d\n", ret);
+		goto err_disabled_counter_clock;
 	}
 
 	chip->ops = &rcar_pwm_ops;
@@ -243,15 +258,27 @@ static int rcar_pwm_probe(struct platform_device *pdev)
 	}
 
 	return 0;
+
+err_disabled_counter_clock:
+	clk_disable_unprepare(rcar_pwm->clk);
+
+err_disabled_bus_clock:
+	clk_disable_unprepare(rcar_pwm->bus_clk);
+
+	return ret;
 }
 
 static void rcar_pwm_remove(struct platform_device *pdev)
 {
 	struct pwm_chip *chip = platform_get_drvdata(pdev);
+	struct rcar_pwm_chip *rcar_pwm = to_rcar_pwm_chip(chip);
 
 	pwmchip_remove(chip);
 
 	pm_runtime_disable(&pdev->dev);
+
+	clk_disable_unprepare(rcar_pwm->clk);
+	clk_disable_unprepare(rcar_pwm->bus_clk);
 }
 
 static const struct of_device_id rcar_pwm_of_table[] = {
