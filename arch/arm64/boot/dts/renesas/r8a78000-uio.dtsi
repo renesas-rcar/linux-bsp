@@ -569,21 +569,15 @@
 			linux,uio-name = "rsip_m_ts_cmd_00";
 		};
 
-		rsipm_reserved_mem3: rsipm@4d000000 {
+		rsipm_reserved_mem1: rsipm@10100000 {
 			compatible = "generic-uio";
-			reg = <0 0x4d000000 0 0x600000>;
-			linux,uio-name = "rsip_m_shared_03";
-		};
-
-		rsipm_reserved_mem1: rsipm@185c0000 {
-			compatible = "generic-uio";
-			reg = <0 0x185c0000 0 0x40000>;
+			reg = <0 0x10100000 0 0x100000>;
 			linux,uio-name = "rsip_m_shared_01";
 		};
 
-		rsipm_reserved_mem2: rsipm@10100000 {
+		rsipm_reserved_mem2: rsipm@4d000000 {
 			compatible = "generic-uio";
-			reg = <0 0x10100000 0 0x100000>;
+			reg = <0 0x4d000000 0 0x600000>;
 			linux,uio-name = "rsip_m_shared_02";
 		};
 
