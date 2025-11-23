@@ -25,7 +25,7 @@
  *      > arecord xxx hoge.wav
  */
 
-
+#include "r8a78000.dtsi"
 #include <dt-bindings/net/ti-dp83869.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/media/video-interfaces.h>
@@ -1779,71 +1779,71 @@
 };
 
 &vin000 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin001 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin010 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin020 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin030 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin031 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin040 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin050 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin060 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin061 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin070 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin080 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin090 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin091 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin100 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin110 {
-	status = "disabled";
+	status = "okay";
 };
 
 &csi40 {
-	status = "disabled";
+	status = "okay";
 
 	ports {
 		#address-cells = <1>;
@@ -1864,7 +1864,7 @@
 };
 
 &csi41 {
-	status = "disabled";
+	status = "okay";
 
 	ports {
 		#address-cells = <1>;
@@ -1885,7 +1885,7 @@
 };
 
 &csi42 {
-	status = "disabled";
+	status = "okay";
 
 	ports {
 		#address-cells = <1>;
@@ -1906,7 +1906,7 @@
 };
 
 &csi43 {
-	status = "disabled";
+	status = "okay";
 
 	ports {
 		#address-cells = <1>;
@@ -1927,19 +1927,19 @@
 };
 
 &isp0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &isp1 {
-	status = "disabled";
+	status = "okay";
 };
 
 &isp2 {
-	status = "disabled";
+	status = "okay";
 };
 
 &isp3 {
-	status = "disabled";
+	status = "okay";
 };
 
 /* FAKRA Overlay */
