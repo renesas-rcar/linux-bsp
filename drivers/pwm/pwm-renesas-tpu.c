@@ -84,6 +84,7 @@ struct tpu_device {
 	void __iomem *base;
 	struct clk *clk;
 	struct tpu_pwm_device tpd[TPU_CHANNEL_MAX];
+	struct clk *bus_clk;
 };
 
 static inline struct tpu_device *to_tpu_device(struct pwm_chip *chip)
@@ -457,9 +458,19 @@ static int tpu_probe(struct platform_device *pdev)
 	if (IS_ERR(tpu->base))
 		return PTR_ERR(tpu->base);
 
-	tpu->clk = devm_clk_get(&pdev->dev, NULL);
+	tpu->bus_clk = devm_clk_get(&pdev->dev, "bus_clk");
+	if (IS_ERR(tpu->bus_clk))
+		return PTR_ERR(tpu->bus_clk);
+
+	tpu->clk = devm_clk_get(&pdev->dev, "counter_clk");
 	if (IS_ERR(tpu->clk))
-		return dev_err_probe(&pdev->dev, PTR_ERR(tpu->clk), "Failed to get clock\n");
+		return PTR_ERR(tpu->clk);
+
+	ret = clk_prepare_enable(tpu->bus_clk);
+	if (ret) {
+		clk_disable_unprepare(tpu->bus_clk);
+		return ret;
+	}
 
 	/* Initialize and register the device. */
 	platform_set_drvdata(pdev, tpu);
