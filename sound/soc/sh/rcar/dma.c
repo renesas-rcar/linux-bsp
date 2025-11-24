@@ -19,6 +19,9 @@
 /* PDMACHCR */
 #define PDMACHCR_DE		(1 << 0)
 
+#define DMAPP_NAME "dmapp"
+#define RSND_DMAPP_NUM 2
+#define RSND_DMAPP_NAME_SIZE 16
 
 struct rsnd_dmaen {
 	struct dma_chan		*chan;
@@ -918,6 +921,31 @@ static void rsnd_dma_of_path(struct rsnd_mod *this,
 	}
 }
 
+static int rsnd_dma_clk_enable(struct device *dev)
+{
+	struct clk *dmapp_clk[RSND_DMAPP_NUM];
+	char name[RSND_DMAPP_NAME_SIZE];
+	int i;
+	int ret = 0;
+
+	for (i = 0; i < RSND_DMAPP_NUM; i++) {
+		snprintf(name, RSND_DMAPP_NAME_SIZE, "%s.%d",
+			 DMAPP_NAME, i);
+
+		dmapp_clk[i] = devm_clk_get(dev, name);
+		if (IS_ERR(dmapp_clk[i])) {
+			ret = PTR_ERR(dmapp_clk[i]);
+			break;
+		}
+
+		ret = clk_prepare_enable(dmapp_clk[i]);
+		if (ret)
+			break;
+	}
+
+	return ret;
+}
+
 static int rsnd_dma_alloc(struct rsnd_dai_stream *io, struct rsnd_mod *mod,
 			  struct rsnd_mod **dma_mod)
 {
@@ -951,6 +979,13 @@ static int rsnd_dma_alloc(struct rsnd_dai_stream *io, struct rsnd_mod *mod,
 		attach	= rsnd_dmapp_attach;
 		dma_id	= dmac->dmapp_num;
 		type	= RSND_MOD_AUDMAPP;
+		if (rsnd_is_gen5(priv)) {
+			ret = rsnd_dma_clk_enable(dev);
+			if (ret) {
+				dev_err(dev, "failed to enable clock\n");
+				return ret;
+			}
+		}
 	} else {
 		ops	= &rsnd_dmaen_ops;
 		attach	= rsnd_dmaen_attach;

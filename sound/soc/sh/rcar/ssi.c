@@ -78,6 +78,7 @@
 
 struct rsnd_ssi {
 	struct rsnd_mod mod;
+	struct clk *ssi_clk;
 
 	u32 flags;
 	u32 cr_own;
@@ -1254,11 +1255,25 @@ int rsnd_ssi_probe(struct rsnd_priv *priv)
 skip:
 		i++;
 	}
+	if (rsnd_is_gen5(priv)) {
+		ssi->ssi_clk = devm_clk_get(dev, "ssi-all");
+		if (IS_ERR(ssi->ssi_clk))
+			return PTR_ERR(clk);
+
+		ret = clk_prepare_enable(ssi->ssi_clk);
+		if (ret)
+			goto err_disable_ssi_clk;
+	}
 
 	ret = 0;
 
 rsnd_ssi_probe_done:
 	of_node_put(node);
+
+	return ret;
+
+err_disable_ssi_clk:
+	clk_disable_unprepare(ssi->ssi_clk);
 
 	return ret;
 }
@@ -1271,4 +1286,7 @@ void rsnd_ssi_remove(struct rsnd_priv *priv)
 	for_each_rsnd_ssi(ssi, priv, i) {
 		rsnd_mod_quit(rsnd_mod_get(ssi));
 	}
+
+	if (rsnd_is_gen5(priv))
+		clk_disable_unprepare(ssi->ssi_clk);
 }

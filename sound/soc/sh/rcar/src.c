@@ -35,6 +35,7 @@ struct rsnd_src {
 	struct rsnd_kctrl_cfg_s sen;  /* sync convert enable */
 	struct rsnd_kctrl_cfg_s sync; /* sync convert */
 	u32 current_sync_rate;
+	struct clk *scu_clk;
 	int irq;
 };
 
@@ -815,8 +816,23 @@ skip:
 
 	ret = 0;
 
+	if (rsnd_is_gen5(priv)) {
+		src->scu_clk = devm_clk_get(dev, "scu-all");
+		if (IS_ERR(src->scu_clk))
+			return PTR_ERR(src->scu_clk);
+
+		ret = clk_prepare_enable(src->scu_clk);
+		if (ret)
+			goto err_disable_scu_clk;
+	}
+
 rsnd_src_probe_done:
 	of_node_put(node);
+
+	return ret;
+
+err_disable_scu_clk:
+	clk_disable_unprepare(src->scu_clk);
 
 	return ret;
 }

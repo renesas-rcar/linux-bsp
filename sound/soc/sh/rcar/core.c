@@ -199,7 +199,17 @@ int rsnd_mod_init(struct rsnd_priv *priv,
 		  enum rsnd_mod_type type,
 		  int id)
 {
-	int ret = clk_prepare(clk);
+	int ret;
+
+	if (!priv) {
+		/* dma dummy mem mod for debug */
+		ret = clk_prepare(clk);
+	} else {
+		if (rsnd_is_gen5(priv))
+			ret = clk_prepare_enable(clk);
+		else
+			ret = clk_prepare(clk);
+	}
 
 	if (ret)
 		return ret;
@@ -215,7 +225,17 @@ int rsnd_mod_init(struct rsnd_priv *priv,
 
 void rsnd_mod_quit(struct rsnd_mod *mod)
 {
-	clk_unprepare(mod->clk);
+	struct rsnd_priv *priv = rsnd_mod_to_priv(mod);
+
+	if (!priv) {
+		/* dma dummy mem mod for debug */
+		clk_unprepare(mod->clk);
+	} else {
+		if (rsnd_is_gen5(priv))
+			clk_disable_unprepare(mod->clk);
+		else
+			clk_unprepare(mod->clk);
+	}
 	mod->clk = NULL;
 }
 
