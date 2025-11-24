@@ -1989,6 +1989,40 @@ static const struct of_device_id renesas_eth_sw_of_table[] = {
 };
 MODULE_DEVICE_TABLE(of, renesas_eth_sw_of_table);
 
+static u32 rsw3_calc_psmcs(struct rsw3_private *priv)
+{
+	unsigned long rate = 0;
+	bool relaxed;
+	u32 psmcs;
+
+	relaxed = of_property_read_bool(priv->pdev->dev.of_node, "renesas,mdc-relaxed");
+
+	if (priv->clk)
+		rate = clk_get_rate(priv->clk);
+
+	if (!rate) {
+		rate = relaxed ? RSW3_FALLBACK_CLK_RELAX : RSW3_FALLBACK_CLK_SPEC;
+		dev_warn(&priv->pdev->dev,
+			 "clk_get_rate() returned 0, using fallback %lu.%06lu MHz%s\n",
+			 rate / 1000000, rate % 1000000,
+			 relaxed ? " (relaxed)" : " (specific)");
+	}
+
+	/*
+	 * PSMCS = round( clk / (MDC * 2) ) - 1
+	 * Use rounding to minimize MDC error; clamp to field width if needed.
+	 */
+	psmcs = DIV_ROUND_CLOSEST(rate, (RSW3_MDC_HZ * 2));
+	if (psmcs)
+		psmcs -= 1;
+
+	/* If MPIC_PSMCS field has a max width (e.g. 10 bits), clamp here.
+	 * Example: psmcs &= MPIC_PSMCS_MASK;
+	 * (left as-is if macro not available)
+	 */
+	return psmcs;
+}
+
 static void rsw3_etha_init(struct rsw3_private *priv, unsigned int index)
 {
 	struct rsw3_etha *etha = &priv->etha[index];
@@ -2004,11 +2038,12 @@ static void rsw3_etha_init(struct rsw3_private *priv, unsigned int index)
 	etha_mii->addr = priv->addr + RSWITCH3_ETHA_OFFSET + index * RSWITCH3_ETHA_SIZE;
 	etha_mii->coma_addr = priv->addr;
 
-	/* MPIC.PSMCS = (clk [MHz] / (MDC frequency [MHz] * 2) - 1.
-	 * Calculating PSMCS value as MDC frequency = 2.5MHz. So, multiply
-	 * both the numerator and the denominator by 10.
+	/*
+	 * MPIC.PSMCS = clk / (MDC * 2) - 1
+	 * where MDC = 2.5 MHz. Compute using Hz and round safely.
+	 * If clk rate is unavailable (0), fall back to a known-good SoC rate.
 	 */
-	etha_mii->psmcs = clk_get_rate(priv->clk) / 100000 / (25 * 2) - 1;
+	etha_mii->psmcs = rsw3_calc_psmcs(priv);
 }
 
 static int rsw3_device_alloc(struct rsw3_private *priv, unsigned int index)
@@ -2196,6 +2231,23 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	struct resource *res, *res_ptp;
 	int ret;
 
+	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
+	if (!priv)
+		return -ENOMEM;
+
+	priv->clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(priv->clk)) {
+		dev_warn(&pdev->dev, "no input clock; will use fallback frequency for PSMCS (%pe)\n",
+			 priv->clk);
+		priv->clk = NULL;
+	} else {
+		ret = clk_prepare_enable(priv->clk);
+		if (ret) {
+			dev_warn(&pdev->dev, "Clock enable failed (%d); using fallback\n", ret);
+			priv->clk = NULL;
+		}
+	}
+
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "secure_base");
 	if (!res)
 		return -EINVAL;
@@ -2203,10 +2255,6 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	res_ptp = platform_get_resource_byname(pdev, IORESOURCE_MEM, "gptp_base");
 	if (!res_ptp)
 		return -EINVAL;
-
-	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
-	if (!priv)
-		return -ENOMEM;
 
 	if (!parallel_mode)
 		parallel_mode = of_property_read_bool(pdev->dev.of_node, "parallel_mode");
@@ -2290,6 +2338,9 @@ static void rsw3_deinit(struct rsw3_private *priv)
 static void renesas_eth_sw_remove(struct platform_device *pdev)
 {
 	struct rsw3_private *priv = platform_get_drvdata(pdev);
+
+	if (priv->clk)
+		clk_disable_unprepare(priv->clk);
 
 	rsw3_deinit(priv);
 

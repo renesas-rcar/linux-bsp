@@ -26,7 +26,11 @@
 #define RSWITCH3_GWCA_IDX_TO_HW_NUM(i)	((i) + RSWITCH3_NUM_PORTS)
 #define RSWITCH3_HW_NUM_TO_GWCA_IDX(i)	((i) - RSWITCH3_NUM_PORTS)
 
-#define rswitch_for_each_enabled_port(priv, i)		\
+#define RSW3_MDC_HZ		2500000		/* 2.5 MHz */
+#define RSW3_FALLBACK_CLK_SPEC	712500000	/* 712.5 MHz */
+#define RSW3_FALLBACK_CLK_RELAX	687500000	/* 687.5 MHz */
+
+#define rsw3_for_each_enabled_port(priv, i)		\
 	for (i = 0; i < RSWITCH3_NUM_PORTS; i++)	\
 		if (priv->rdev[i]->disabled)		\
 			continue;			\
