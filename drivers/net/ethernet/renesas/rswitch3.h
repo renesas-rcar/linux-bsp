@@ -821,8 +821,13 @@ enum rsw3_etha_mode {
 #define MPIC_LSC_5G		4
 #define MPIC_LSC_10G		5
 
-#define MPIC_PSMCS		GENMASK(22, 16)
+#define MPIC_PSMCS_LO		GENMASK(22, 16)  /* bits [6:0]  -> MPIC[22:16] */
+#define MPIC_PSMCS_HI		GENMASK(15, 13)  /* bits [9:7]  -> MPIC[15:13] */
 #define MPIC_PSMHT		GENMASK(26, 24)
+
+#define MPIC_PSMCS_ENC(v) \
+	(FIELD_PREP(MPIC_PSMCS_LO, ((v) & 0x7f)) | \
+	FIELD_PREP(MPIC_PSMCS_HI, (((v) >> 7) & 0x7)))
 
 #define MPSM_PSME		BIT(0)
 #define MPSM_MFF		BIT(2)

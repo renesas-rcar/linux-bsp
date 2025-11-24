@@ -1169,9 +1169,10 @@ static void rsw3_rmac_setting(struct rsw3_etha *etha, const u8 *mac)
 
 static void rsw3_etha_enable_mii(struct rsw3_etha *etha)
 {
-	rsw3_modify(etha->addr, MPIC, MPIC_PSMCS | MPIC_PSMHT,
-		    FIELD_PREP(MPIC_PSMCS, etha->psmcs) |
-		    FIELD_PREP(MPIC_PSMHT, 0x06));
+	u32 psmcs10 = etha->psmcs & 0x3ff;
+
+	rsw3_modify(etha->addr, MPIC, MPIC_PSMCS_LO | MPIC_PSMCS_HI | MPIC_PSMHT,
+		    MPIC_PSMCS_ENC(psmcs10) | FIELD_PREP(MPIC_PSMHT, 0x06));
 }
 
 static int rsw3_etha_mii_hw_init(struct rsw3_etha *etha)
