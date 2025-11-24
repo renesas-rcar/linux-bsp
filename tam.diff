@@ -1,0 +1,38 @@
+diff --git a/arch/arm64/configs/defconfig b/arch/arm64/configs/defconfig
+index f3f4f6e39d6f0..2a7ffda86154f 100644
+--- a/arch/arm64/configs/defconfig
++++ b/arch/arm64/configs/defconfig
+@@ -272,6 +272,7 @@ CONFIG_TEGRA_ACONNECT=m
+ CONFIG_ARM_SCMI_PROTOCOL=y
+ CONFIG_ARM_SCPI_PROTOCOL=y
+ CONFIG_RASPBERRYPI_FIRMWARE=y
++CONFIG_EXTRA_FIRMWARE="rcar_gen5_mp_phy.bin"
+ CONFIG_INTEL_STRATIX10_SERVICE=y
+ CONFIG_INTEL_STRATIX10_RSU=m
+ CONFIG_EFI_CAPSULE_LOADER=y
+diff --git a/drivers/net/ethernet/renesas/rswitch3.c b/drivers/net/ethernet/renesas/rswitch3.c
+index 436e739d130a8..1cdaadbeed3ea 100644
+--- a/drivers/net/ethernet/renesas/rswitch3.c
++++ b/drivers/net/ethernet/renesas/rswitch3.c
+@@ -1168,7 +1168,7 @@ static void rsw3_rmac_setting(struct rsw3_etha *etha, const u8 *mac)
+ static void rsw3_etha_enable_mii(struct rsw3_etha *etha)
+ {
+ 	rsw3_modify(etha->addr, MPIC, MPIC_PSMCS | MPIC_PSMHT,
+-		      FIELD_PREP(MPIC_PSMCS, etha->psmcs) |
++		      FIELD_PREP(MPIC_PSMCS, 0xD) |
+ 		      FIELD_PREP(MPIC_PSMHT, 0x06));
+ }
+ 
+@@ -2000,12 +2000,6 @@ static void rsw3_etha_init(struct rsw3_private *priv, unsigned int index)
+ 	etha_mii->index = index;
+ 	etha_mii->addr = priv->addr + RSWITCH3_ETHA_OFFSET + index * RSWITCH3_ETHA_SIZE;
+ 	etha_mii->coma_addr = priv->addr;
+-
+-	/* MPIC.PSMCS = (clk [MHz] / (MDC frequency [MHz] * 2) - 1.
+-	 * Calculating PSMCS value as MDC frequency = 2.5MHz. So, multiply
+-	 * both the numerator and the denominator by 10.
+-	 */
+-	etha_mii->psmcs = clk_get_rate(priv->clk) / 100000 / (25 * 2) - 1;
+ }
+ 
+ static int rsw3_device_alloc(struct rsw3_private *priv, unsigned int index)
