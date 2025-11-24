@@ -2566,6 +2566,29 @@ static int rcsi2_startup_sequence_x5h(struct rcar_csi2 *priv, int msps)
 {
 	const struct rcsi2_msps_lut *conf;
 	int ret, i, j;
+	u32 phy_ctrl_data, stop_state0_data;
+
+	switch (priv->lanes) {
+	case 1:
+		phy_ctrl_data = (X5H_PHY_ENABLE_DCK_PHY1 | X5H_PHY_ENABLE_DCK | X5H_PHY_ENABLE_0);
+		stop_state0_data = (X5H_ST_STOPSTATE_DCK | X5H_ST_STOPSTATE_0);
+		break;
+	case 2:
+		phy_ctrl_data = (X5H_PHY_ENABLE_DCK_PHY1 | X5H_PHY_ENABLE_DCK | X5H_PHY_ENABLE_1 | X5H_PHY_ENABLE_0);
+		stop_state0_data = (X5H_ST_STOPSTATE_DCK | X5H_ST_STOPSTATE_1 | X5H_ST_STOPSTATE_0);
+		break;
+	case 3:
+		phy_ctrl_data = (X5H_PHY_ENABLE_DCK_PHY1 | X5H_PHY_ENABLE_DCK | X5H_PHY_ENABLE_2 | X5H_PHY_ENABLE_1 | X5H_PHY_ENABLE_0);
+		stop_state0_data = (X5H_ST_STOPSTATE_DCK | X5H_ST_STOPSTATE_2 | X5H_ST_STOPSTATE_1 | X5H_ST_STOPSTATE_0);
+		break;
+	case 4:
+		phy_ctrl_data = (X5H_PHY_ENABLE_DCK_PHY1 | X5H_PHY_ENABLE_DCK | X5H_PHY_ENABLE_3 | X5H_PHY_ENABLE_2 | X5H_PHY_ENABLE_1 | X5H_PHY_ENABLE_0);
+		stop_state0_data = (X5H_ST_STOPSTATE_DCK | X5H_ST_STOPSTATE_3 | X5H_ST_STOPSTATE_2 | X5H_ST_STOPSTATE_1 | X5H_ST_STOPSTATE_0);
+		break;
+	default:
+		dev_err(priv->dev, "Unsupported number of data-lanes: %d\n", priv->lanes);
+		return -EINVAL;
+	}
 
 	// T0: preset_n = 1’b0; rst_n = 1’b0; shutdown_n = 1’b0.
 	rcsi2_write(priv, X5H_PHY_EN_REG, 0x0);
@@ -2576,9 +2599,7 @@ static int rcsi2_startup_sequence_x5h(struct rcar_csi2 *priv, int msps)
 	// T1: top level static inputs must be set to the desired configuration.
 	rcsi2_modify(priv, X5H_PHYSET_REG, 0x0000004c, X5H_PHY_MODE_IP |
 		X5H_PRESET_N_PHY1 | X5H_PRESET_N);
-	rcsi2_modify(priv, X5H_PHY_CTRL_REG, 0x00001f00, X5H_PHY_ENABLE_DCK_PHY1 |
-		X5H_PHY_ENABLE_DCK | X5H_PHY_ENABLE_3 | X5H_PHY_ENABLE_2 |
-		X5H_PHY_ENABLE_1 | X5H_PHY_ENABLE_0);
+	rcsi2_modify(priv, X5H_PHY_CTRL_REG, 0x00001f00, phy_ctrl_data);
 	rcsi2_write(priv, X5H_FORCEPHYMODE_REG, 0x003f0000);
 
 	if(msps >= 3500){
@@ -2739,11 +2760,7 @@ static int rcsi2_startup_sequence_x5h(struct rcar_csi2 *priv, int msps)
 	// No registers to program.
 
 	// T7: wait for stopstate_N assertion. (see register ST_PHYST)
-	if (rcsi2_wait_phy_start_x5h(priv, X5H_ST_STOPSTATE_0 |
-				 X5H_ST_STOPSTATE_1 |
-				 X5H_ST_STOPSTATE_2 |
-				 X5H_ST_STOPSTATE_3 |
-				 X5H_ST_STOPSTATE_DCK)) {
+	if (rcsi2_wait_phy_start_x5h(priv, stop_state0_data)) {
 		dev_err(priv->dev, "PHY stopstate_N assertion failed\n");
 		return -ETIMEDOUT;
 	}
@@ -3047,6 +3064,12 @@ static int rcsi2_parse_v4l2(struct rcar_csi2 *priv,
 		return -ENOTCONN;
 
 	priv->lanes = vep->bus.mipi_csi2.num_data_lanes;
+	if (priv->lanes < 1 || priv->lanes > 4) {
+			dev_err(priv->dev,
+				"Unsupported number of data-lanes for CD-PHY: %u\n",
+				priv->lanes);
+			return -EINVAL;
+	}
 
 	switch (vep->bus_type) {
 	case V4L2_MBUS_CSI2_DPHY:
@@ -3054,14 +3077,6 @@ static int rcsi2_parse_v4l2(struct rcar_csi2 *priv,
 			dev_err(priv->dev, "D-PHY not supported\n");
 			return -EINVAL;
 		}
-
-		if (priv->lanes != 1 && priv->lanes != 2 && priv->lanes != 4) {
-			dev_err(priv->dev,
-				"Unsupported number of data-lanes for D-PHY: %u\n",
-				priv->lanes);
-			return -EINVAL;
-		}
-
 		priv->cphy = false;
 		break;
 	case V4L2_MBUS_CSI2_CPHY:
@@ -3069,14 +3084,6 @@ static int rcsi2_parse_v4l2(struct rcar_csi2 *priv,
 			dev_err(priv->dev, "C-PHY not supported\n");
 			return -EINVAL;
 		}
-
-		if (priv->lanes < 3) {
-			dev_err(priv->dev,
-				"Unsupported number of data-lanes for C-PHY: %u\n",
-				priv->lanes);
-			return -EINVAL;
-		}
-
 		priv->cphy = true;
 		break;
 	default:
