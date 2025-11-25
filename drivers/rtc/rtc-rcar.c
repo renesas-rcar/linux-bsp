@@ -72,6 +72,7 @@ struct rcar_rtc_priv {
 	void __iomem		*base;
 	struct rtc_device	*rtc_dev;
 	struct clk		*ref_clk;
+	struct clk		*pclk;
 	unsigned int ref_clk_freq;
 	int alarm_irq, update_irq, periodic_irq;
 	int irq_freq;
@@ -717,11 +718,12 @@ static int rcar_rtc_probe(struct platform_device *pdev)
 	}
 
 	rtc->ref_clk = devm_clk_get(dev, "ref_clk");
-	if (IS_ERR(rtc->ref_clk)) {
-		dev_err(dev,
-			"Failed to retrieve the reference clock, %d\n", ret);
+	if (IS_ERR(rtc->ref_clk))
 		return PTR_ERR(rtc->ref_clk);
-	}
+
+	rtc->pclk = devm_clk_get(dev, "pclk");
+	if (IS_ERR(rtc->pclk))
+		return PTR_ERR(rtc->pclk);
 
 	rtc->rtc_dev = devm_rtc_allocate_device(&pdev->dev);
 	if (IS_ERR(rtc->rtc_dev))
@@ -734,6 +736,13 @@ static int rcar_rtc_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev,
 			"Failed to enable the reference clock, %d\n", ret);
 		goto err_disable_ref_clk;
+	}
+
+	ret = clk_prepare_enable(rtc->pclk);
+	if (ret) {
+		dev_err(&pdev->dev,
+			"Failed to enable the module clock, %d\n", ret);
+		goto err_disable_pclk;
 	}
 
 	rtc->ref_clk_freq = clk_get_rate(rtc->ref_clk);
@@ -782,6 +791,9 @@ static int rcar_rtc_probe(struct platform_device *pdev)
 
 err_disable_wakeup:
 	device_init_wakeup(&pdev->dev, false);
+
+err_disable_pclk:
+	clk_disable_unprepare(rtc->pclk);
 
 err_disable_ref_clk:
 	clk_disable_unprepare(rtc->ref_clk);
