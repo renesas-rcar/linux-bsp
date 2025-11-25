@@ -2876,14 +2876,13 @@ static int rcsi2_start(struct rcar_csi2 *priv)
 
 static void rcsi2_stop(struct rcar_csi2 *priv)
 {
-	rcsi2_enter_standby(priv);
-
 #ifdef CONFIG_VIDEO_SNPS_CSI2_CAMERA
 	csi2cam_stop(priv->cam);
 #else
-	v4l2_subdev_call(priv->remote, video, enable_link, 0);
 	v4l2_subdev_call(priv->remote, video, s_stream, 0);
+	v4l2_subdev_call(priv->remote, video, enable_link, 0);
 #endif
+	rcsi2_enter_standby(priv);
 }
 
 static int rcsi2_s_stream(struct v4l2_subdev *sd, int enable)
