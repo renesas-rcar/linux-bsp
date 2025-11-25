@@ -24,7 +24,8 @@
 	cmem {
 		memory-region = <&vdsp0_region>, <&vdsp1_region>,
 				<&vdsp2_region>, <&vdsp3_region>,
-				<&pap_region>, <&region_40bit>;
+				<&pap_region>, <&region_40bit>,
+				<&region_40bit_ecc_off_0>, <&region_40bit_ecc_off_1>;
 	};
 
 	dsi-con0 {
@@ -108,20 +109,32 @@
 			linux,cma-default;
 		};
 
+		region_40bit_ecc_off_0: ecc_off_region@4b00000000 {
+			compatible = "shared-dma-pool";
+			no-map;
+			reg = <0x4 0xb0000000 0x0 0x10000000>;
+		};
+
+		region_40bit_ecc_off_1: ecc_off_region@4c00000000 {
+			compatible = "shared-dma-pool";
+			no-map;
+			reg = <0x4 0xc0000000 0x0 0x10000000>;
+		};
+
 		region_40bit: linux,region_40bit@500000000 {
 			compatible = "shared-dma-pool";
 			reusable;
 			reg = <0x5 0x00000000 0x0 0x40000000>;
 		};
 
-		ecc_data_region@4cccc0000 {
+		ecc_data_region@4d0000000 {
 			no-map;
-			reg = <0x4 0xcccc0000 0x0 0x33340000>;
+			reg = <0x4 0xd0000000 0x0 0x30000000>;
 		};
 
-		ecc_data_region@5cccc0000 {
+		ecc_data_region@5b0000000 {
 			no-map;
-			reg = <0x5 0xcccc0000 0x0 0x33340000>;
+			reg = <0x5 0xb0000000 0x0 0x50000000>;
 		};
 	};
 
