@@ -3365,8 +3365,8 @@
 		rtca: rtca@c1394000 {
 			compatible = "renesas,rtc-r8a78000", "renesas,rtc-rcar";
 			reg = <0 0xc1394000 0 0x70>;
-			clocks = <&dummy_tcki>;
-			clock-names = "ref_clk";
+			clocks = <&scmi_clk X5H_CLOCK_ID_RTCA>, <&dummy_tcki>;
+			clock-names = "pclk", "ref_clk";
 			status = "disabled";
 		};
 
