@@ -25,7 +25,8 @@
 		memory-region = <&vdsp0_region>, <&vdsp1_region>,
 				<&vdsp2_region>, <&vdsp3_region>,
 				<&pap_region>, <&region_40bit>,
-				<&qm_region>;
+				<&qm_region>,
+				<&region_40bit_ecc_off_0>, <&region_40bit_ecc_off_1>;
 	};
 
 	dsi-con0 {
@@ -125,20 +126,32 @@
 			reg = <0x25 0x00000000 0x0 0x40000000>;
 		};
 
-		ecc_data_region@24cccc0000 {
+		ecc_data_region@24d0000000 {
 			no-map;
-			reg = <0x24 0xcccc0000 0x0 0x33340000>;
+			reg = <0x24 0xd0000000 0x0 0x30000000>;
 		};
 
-		ecc_data_region@25cccc0000 {
+		ecc_data_region@25b0000000 {
 			no-map;
-			reg = <0x25 0xcccc0000 0x0 0x33340000>;
+			reg = <0x25 0xb0000000 0x0 0x50000000>;
 		};
 
 		qm_region: linux,qm_region@5080000000 {
 			compatible = "shared-dma-pool";
 			reusable;
 			reg = <0x50 0x80000000 0x0 0x20000000>;
+		};
+
+		region_40bit_ecc_off_0: ecc_off_region@24b00000000 {
+			compatible = "shared-dma-pool";
+			no-map;
+			reg = <0x24 0xb0000000 0x0 0x10000000>;
+		};
+
+		region_40bit_ecc_off_1: ecc_off_region@24c00000000 {
+			compatible = "shared-dma-pool";
+			no-map;
+			reg = <0x24 0xc0000000 0x0 0x10000000>;
 		};
 	};
 
