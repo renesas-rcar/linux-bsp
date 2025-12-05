@@ -118,6 +118,10 @@
 			};
 		};
 	};
+
+	vspm_if {
+		compatible = "renesas,vspm_if";
+	};
 };
 
 /* Enable serial console */
@@ -302,6 +306,42 @@
 
 &vcon_group2 {
         status = "okay";
+};
+
+&vspi0 {
+	status = "okay";
+};
+
+&vspi1 {
+	status = "okay";
+};
+
+&vspi2 {
+	status = "okay";
+};
+
+&vspi3 {
+	status = "okay";
+};
+
+&vspb0 {
+	status = "okay";
+};
+
+&vspb1 {
+	status = "okay";
+};
+
+&vspb2 {
+	status = "okay";
+};
+
+&vspb3 {
+	status = "okay";
+};
+
+&vspb4 {
+	status = "okay";
 };
 
 &rswitch3 {
