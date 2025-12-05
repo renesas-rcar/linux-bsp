@@ -1412,6 +1412,10 @@ static int rsw3_mii_register(struct rsw3_device *rdev)
 	struct mii_bus *mii_bus;
 	int err;
 
+	if (rdev->etha->mii) {
+		return 0;
+	}
+
 	mii_bus = mdiobus_alloc();
 	if (!mii_bus)
 		return -ENOMEM;
