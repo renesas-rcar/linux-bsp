@@ -1081,6 +1081,12 @@ static int mp_phy_resume_noirq(struct device *dev)
 	udelay(1000);
 	mp_phy_module_power_run();
 
+	ret = mp_phy_pre_init(priv);
+        if (ret < 0) {
+                dev_err(dev, "Failed to pre-init during resume: %d\n", ret);
+                return ret;
+        }
+
 	dev_info(dev, "Multi-Protocol PHY resumed \n");
 
 	return 0;
