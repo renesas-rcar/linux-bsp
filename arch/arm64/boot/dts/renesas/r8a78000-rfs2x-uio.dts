@@ -109,3 +109,39 @@
 &isp3 {
 	status = "disabled";
 };
+
+&vspi0 {
+	status = "disabled";
+};
+
+&vspi1 {
+	status = "disabled";
+};
+
+&vspi2 {
+	status = "disabled";
+};
+
+&vspi3 {
+	status = "disabled";
+};
+
+&vspb0 {
+	status = "disabled";
+};
+
+&vspb1 {
+	status = "disabled";
+};
+
+&vspb2 {
+	status = "disabled";
+};
+
+&vspb3 {
+	status = "disabled";
+};
+
+&vspb4 {
+	status = "disabled";
+};
