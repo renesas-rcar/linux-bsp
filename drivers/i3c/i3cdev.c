@@ -297,10 +297,49 @@ static const struct file_operations i3cdev_fops = {
 
 static struct class *i3cdev_class;
 
+/* Enable or disable IBI for I3C device */
+static ssize_t enable_ibi_store(struct device *dev, struct device_attribute *attr,
+				const char *buf, size_t size)
+{
+	struct i3c_device *i3c;
+	unsigned int val1;
+	int ret;
+
+	i3c = dev_to_i3cdev(dev);
+
+	ret = kstrtouint(buf, 0, &val1);
+	if (ret)
+		return ret;
+
+	if (val1 == 0) {
+		i3c_device_disable_ibi(i3c);
+	} else if (val1 == 1) {
+		ret = i3c_device_enable_ibi(i3c);
+		if (ret)
+			return ret;
+	}
+
+	return size;
+}
+
+static DEVICE_ATTR_WO(enable_ibi);
+
+static void i3c_device_ibi_handler(struct i3c_device *dev,
+				   const struct i3c_ibi_payload *payload)
+{
+	 pr_info("IBI received from device: %s, payload size: %u\n",
+		 dev_name(&dev->dev), payload->len);
+}
+
 static int i3cdev_attach(struct device *dev, void *dummy)
 {
 	struct i3c_device *i3c;
 	struct i3cdev_data *i3cdev;
+	struct i3c_ibi_setup ibireq = {
+		.handler = i3c_device_ibi_handler,
+		.max_payload_len = 32,
+		.num_slots = 10,
+	};
 	int res;
 
 	if (dev->type == &i3c_masterdev_type || dev->driver)
@@ -323,12 +362,25 @@ static int i3cdev_attach(struct device *dev, void *dummy)
 	i3cdev->dev = device_create(i3cdev_class, &i3c->dev,
 				    i3cdev->devt, NULL,
 				    "i3c-%s", dev_name(&i3c->dev));
+
 	if (IS_ERR(i3cdev->dev)) {
 		res = PTR_ERR(i3cdev->dev);
 		goto error;
 	}
-	pr_debug("i3c-cdev: I3C device [%s] registered as minor %d\n",
-		 dev_name(&i3c->dev), MINOR(i3cdev->devt));
+
+	res = i3c_device_request_ibi(i3c, &ibireq);
+	if (res)
+		return res;
+
+	res = device_create_file(dev, &dev_attr_enable_ibi);
+	if (res) {
+		dev_err(dev, "Failed to create sysfs entry for %s\n", dev_name(dev));
+		return res;
+	}
+
+	pr_info("i3c-cdev: I3C device [%s] registered as minor %d\n",
+		dev_name(&i3c->dev), MINOR(i3cdev->devt));
+
 	return 0;
 
 error:
@@ -351,6 +403,8 @@ static int i3cdev_detach(struct device *dev, void *dummy)
 	i3cdev = i3cdev_get_by_i3c(i3c);
 	if (!i3cdev)
 		return 0;
+
+	i3c_device_free_ibi(i3c);
 
 	clear_bit(MINOR(i3cdev->devt), minors);
 	cdev_del(&i3cdev->cdev);
