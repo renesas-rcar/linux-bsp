@@ -19,7 +19,6 @@
 #include <linux/pagemap.h>
 #include <linux/scatterlist.h>
 #include <linux/sys_soc.h>
-#include <linux/delay.h>
 
 #include "renesas_sdhi.h"
 #include "tmio_mmc.h"
@@ -282,106 +281,6 @@ static const struct of_device_id renesas_sdhi_internal_dmac_of_match[] = {
 	{},
 };
 MODULE_DEVICE_TABLE(of, renesas_sdhi_internal_dmac_of_match);
-
-/* Hardcoded for enable module clock */
-#define MDLC_BASE		0xC08F0000
-#define MMC_PDID		(0)
-#define MMC_CLK_MASK(n)	GENMASK((n) + 1, n)
-#define MMC_CLK_SHIFT(n)	(n)
-
-#define MDLC_PKCPROT0		(MDLC_BASE + 0x0cf0)
-#define MDLC_PKCPROT1		(MDLC_BASE + 0x0cf4)
-
-#define _MDLC_MPDG(k)		(MDLC_BASE + 0x0200 + (k) * 4)
-#define _MDLC_MPDGS(k)		(MDLC_BASE + 0x0300 + (k) * 4)
-#define MDLC_MPIER0		(MDLC_BASE + 0x0110)
-#define MDLC_MPIMR0		(MDLC_BASE + 0x0120)
-
-#define MDLC_MPDG		_MDLC_MPDG(MMC_PDID)
-#define MDLC_MPDGS		_MDLC_MPDGS(MMC_PDID)
-
-#define MDLC_MSRES(i)		(MDLC_BASE + 0x0900 + (i) * 4)
-#define MDLC_MSRESS(i)	(	MDLC_BASE + 0x0960 + (i) * 4)
-
-static void mmc_module_power_gating_set(u8 pdid, u8 mode)
-{
-	void __iomem *unlock = ioremap(MDLC_PKCPROT0, 4);
-	void __iomem *mpdg = ioremap(_MDLC_MPDG(pdid), 4);
-	void __iomem *mpdgs = ioremap(_MDLC_MPDGS(pdid), 4);
-	void __iomem *mpier0 = ioremap(MDLC_MPIER0, 4);
-	void __iomem *mpimr0 = ioremap(MDLC_MPIMR0, 4);
-
-	writel(0xA5A5A501, unlock);
-
-	if ((readl(mpdgs) & 0x3) == mode)
-			goto unmap;
-
-	while (readl(mpdgs) != readl(mpdg))
-			udelay(1000);
-
-	writel(0, mpier0);
-	writel(0x1, mpimr0);
-
-	writel(0x1, mpdg);
-
-	while (readl(mpdgs) != readl(mpdg))
-			udelay(1000);
-
-	writel(mode, mpdg);
-
-	while (readl(mpdgs) != readl(mpdg))
-			udelay(1000);
-
-unmap:
-	iounmap(unlock);
-	iounmap(mpdg);
-	iounmap(mpdgs);
-	iounmap(mpier0);
-	iounmap(mpimr0);
-}
-
-static void mmc_module_standy_set(u8 clk_reg_no, u8 pos, u8 mode)
-{
-	void __iomem *unlock = ioremap(MDLC_PKCPROT1, 4);
-	void __iomem *msress = ioremap(MDLC_MSRESS(clk_reg_no), 4);
-	void __iomem *msres = ioremap(MDLC_MSRES(clk_reg_no), 4);
-	u32 val;
-
-	writel(0xA5A5A501, unlock);
-
-	if ((readl(msress) & MMC_CLK_MASK(pos)) == (mode << MMC_CLK_SHIFT(pos)))
-			goto unmap;
-
-	while ((readl(msress) & MMC_CLK_MASK(pos)) != (readl(msres) & MMC_CLK_MASK(pos)))
-			udelay(1000);
-
-	val = readl(msres);
-	val &= ~MMC_CLK_MASK(pos);
-	val |= mode << MMC_CLK_SHIFT(pos);
-	writel(val, msres);
-
-	while ((readl(msress) & MMC_CLK_MASK(pos)) != (readl(msres) & MMC_CLK_MASK(pos)))
-			udelay(1000);
-
-unmap:
-	iounmap(unlock);
-	iounmap(msress);
-	iounmap(msres);
-}
-
-static void __maybe_unused mmc_module_power_reset(void)
-{
-	mmc_module_power_gating_set(0, 0x03);
-	mmc_module_standy_set(7, 0, 0x01);
-}
-
-static void __maybe_unused mmc_module_power_run(void)
-{
-	mmc_module_power_gating_set(0, 0x03);
-	mmc_module_standy_set(7, 0, 0x03);
-}
-
-
 
 static void
 renesas_sdhi_internal_dmac_dm_write(struct tmio_mmc_host *host,
@@ -710,17 +609,9 @@ static int renesas_sdhi_internal_dmac_probe(struct platform_device *pdev)
 #endif
 }
 
-static int renesas_mmc_resume(struct device *dev)
-{
-	mmc_module_power_reset();
-	mmc_module_power_run();
-
-	return pm_runtime_force_resume(dev);
-}
-
 static const struct dev_pm_ops renesas_sdhi_internal_dmac_dev_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
-				renesas_mmc_resume)
+				pm_runtime_force_resume)
 	SET_RUNTIME_PM_OPS(tmio_mmc_host_runtime_suspend,
 			   tmio_mmc_host_runtime_resume,
 			   NULL)
