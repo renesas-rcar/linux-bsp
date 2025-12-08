@@ -108,11 +108,8 @@ static int renesas_sdhi_clk_enable(struct tmio_mmc_host *host)
 	 * was missing, assume the current frequency is the maximum.
 	 */
 	if (!mmc->f_max)
-#if !defined(CONFIG_RCAR_SCP_FIXUP)
 		mmc->f_max = clk_get_rate(priv->clk);
-#else
-		mmc->f_max = 52000000;
-#endif
+
 	/*
 	 * Minimum frequency is the minimum input clock frequency
 	 * divided by our maximum divider.
@@ -141,11 +138,7 @@ static unsigned int renesas_sdhi_clk_update(struct tmio_mmc_host *host,
 	 * clock during tuning, so we don't change the external clock setup.
 	 */
 	if (!(host->pdata->flags & TMIO_MMC_MIN_RCAR2) || mmc_doing_tune(host->mmc))
-#if !defined(CONFIG_RCAR_SCP_FIXUP)
 		return clk_get_rate(priv->clk);
-#else
-		return 52000000;
-#endif
 
 	if (priv->clkh) {
 		/* HS400 with 4TAP needs different clock settings */
@@ -191,11 +184,7 @@ static unsigned int renesas_sdhi_clk_update(struct tmio_mmc_host *host,
 	if (priv->clkh)
 		clk_set_rate(priv->clk, best_freq >> clkh_shift);
 
-#if !defined(CONFIG_RCAR_SCP_FIXUP)
 	return clk_get_rate(priv->clk);
-#else
-	return 52000000;
-#endif
 }
 
 static void renesas_sdhi_set_clock(struct tmio_mmc_host *host,
