@@ -185,6 +185,34 @@
 
 #define NTDTBP0			0x158 /* Normal Transfer Data Buffer */
 #define NIBIQP			0x17c /* Normal IBI Queue */
+#define NIBIQP_RCV_ST		BIT(31)
+#define NIBIQP_ERR_STATUS(x)            (((x) & GENMASK(28, 26)) >> 26)
+#define NIBIQP_TS		BIT(25)
+#define NIBIQP_LAST_ST		BIT(24)
+#define NIBIQP_IBI_ID(x)	(((x) & GENMASK(15, 8)) >> 8)
+#define NIBIQP_IBI_ADDR(x)	(NIBIQP_IBI_ID(x) >> 1)
+#define NIBIQP_IBI_RNW(x)	(NIBIQP_IBI_ID(x) & BIT(0))
+
+#define IBI_TYPE_MR(x) ({	\
+	typeof(x) __x = (x);	\
+	(NIBIQP_IBI_ADDR(__x) != I3C_HOT_JOIN_ADDR) && \
+	!NIBIQP_IBI_RNW(__x);	\
+})
+
+#define IBI_TYPE_HJ(x) ({	\
+	typeof(x) __x = (x);	\
+	(NIBIQP_IBI_ADDR(__x) == I3C_HOT_JOIN_ADDR) && \
+	!NIBIQP_IBI_RNW(__x);	\
+})
+
+#define IBI_TYPE_SIRQ(x) ({	\
+	typeof(x) __x = (x);	\
+	(NIBIQP_IBI_ADDR(__x) != I3C_HOT_JOIN_ADDR) && \
+	NIBIQP_IBI_RNW(__x);	\
+})
+
+#define NIBIQP_DATA_LENGTH(x)	((x) & GENMASK(7, 0))
+
 #define NRSQP			0x180 /* Normal Receive Status Queue */
 
 #define NQTHCTL			0x190
@@ -285,10 +313,10 @@
 #define DATBAS_DVTYP		BIT(31)
 
 #define NQSTLV			0x394
-#define NQSTLV_CMDQFLV(x)	(((x) & 0xff) << 0)
-#define NQSTLV_RSPQLV(x)	(((x) & 0xff) << 8)
-#define NQSTLV_IBIQLV(x)	(((x) & 0xff) << 16)
-#define NQSTLV_IBISCNT(x)	(((x) & 0x1f) << 24)
+#define NQSTLV_CMDQFLV(x)	((x) & GENMASK(7, 0))
+#define NQSTLV_RSPQLV(x)	(((x) & GENMASK(15, 8)) >> 8)
+#define NQSTLV_IBIQLV(x)	(((x) & GENMASK(23, 16)) >> 16)
+#define NQSTLV_IBISCNT(x)	(((x) & GENMASK(28, 24)) >> 24)
 
 #define NDBSTLV0		0x398
 #define NDBSTLV0_TDBFLV(x)	(((x) >> 0) & 0xff)
@@ -376,13 +404,18 @@ struct rcar_i3c_master {
 	u32 STDBR_I3C_MODE;
 	u8 addrs[RCAR_I3C_MAX_DEVS];
 	enum i3c_internal_state internal_state;
-
 	struct {
 		struct list_head list;
 		struct rcar_i3c_xfer *cur;
 		/* Lock used to protect the critical section */
 		spinlock_t lock;
 	} xferqueue;
+	struct {
+		unsigned int num_slots;
+		struct i3c_dev_desc **slots;
+		/* Prevent races within IBI handlers */
+		spinlock_t lock;
+	} ibi;
 	struct i2c_adapter adapt;
 	void __iomem *regs;
 	struct clk *tclk;
@@ -393,8 +426,16 @@ struct rcar_i3c_master {
 
 };
 
+/**
+ * struct rcar_i3c_i2c_dev_data - Device specific data
+ * @index: Index in the master tables corresponding to this device
+ * @ibi: IBI slot index in the master structure
+ * @ibi_pool: IBI pool associated to this device
+ */
 struct rcar_i3c_i2c_dev_data {
 	u8 index;
+	int ibi;
+	struct i3c_generic_ibi_pool *ibi_pool;
 };
 
 static inline void i3c_reg_update(u32 mask, u32 val, u32 __iomem *reg)
@@ -791,7 +832,7 @@ static int rcar_i3c_master_bus_init(struct i3c_master_controller *m)
 	i3c_reg_write(master->regs, SVCTL, 0);
 
 	/* Setting Queue/Buffer threshold. */
-	i3c_reg_write(master->regs, NQTHCTL, 0);
+	i3c_reg_write(master->regs, NQTHCTL, NQTHCTL_IBIDSSZ(6));
 
 	/* Setting High Priority Queue/Buffer threshold.*/
 	i3c_reg_write(master->regs, HQTHCTL, 0);
@@ -1294,6 +1335,131 @@ static void rcar_i3c_master_detach_i2c_dev(struct i2c_dev_desc *dev)
 	kfree(data);
 }
 
+static int rcar_i3c_master_request_ibi(struct i3c_dev_desc *dev,
+				       const struct i3c_ibi_setup *req)
+{
+	struct rcar_i3c_i2c_dev_data *data = i3c_dev_get_master_data(dev);
+	struct i3c_master_controller *m = i3c_dev_get_master(dev);
+	struct rcar_i3c_master *master = to_rcar_i3c_master(m);
+	unsigned long flags;
+	int i;
+
+	if (!(dev->info.bcr & I3C_BCR_IBI_REQ_CAP)) {
+		dev_info(&dev->dev->dev, "IBI request not capable");
+		return -EBUSY;
+	}
+
+	if (dev->ibi->max_payload_len > NTDTBP0_DEPTH) {
+		dev_err(&dev->dev->dev, "IBI max payload %d should be < %d\n",
+			dev->ibi->max_payload_len, NTDTBP0_DEPTH);
+		return -ERANGE;
+	}
+
+	data->ibi_pool = i3c_generic_ibi_alloc_pool(dev, req);
+	if (IS_ERR(data->ibi_pool))
+		return PTR_ERR(data->ibi_pool);
+
+	spin_lock_irqsave(&master->ibi.lock, flags);
+	for (i = 0; i < master->ibi.num_slots; i++) {
+		if (!master->ibi.slots[i]) {
+			data->ibi = i;
+			master->ibi.slots[i] = dev;
+			break;
+		}
+	}
+	spin_unlock_irqrestore(&master->ibi.lock, flags);
+
+	if (i < master->ibi.num_slots)
+		return 0;
+
+	i3c_generic_ibi_free_pool(data->ibi_pool);
+	data->ibi_pool = NULL;
+
+	return -ENOSPC;
+}
+
+static void rcar_i3c_master_free_ibi(struct i3c_dev_desc *dev)
+{
+	struct rcar_i3c_i2c_dev_data *data = i3c_dev_get_master_data(dev);
+	struct i3c_master_controller *m = i3c_dev_get_master(dev);
+	struct rcar_i3c_master *master = to_rcar_i3c_master(m);
+
+	scoped_guard(spinlock_irqsave, &master->ibi.lock) {
+		master->ibi.slots[data->ibi] = NULL;
+	}
+
+	i3c_generic_ibi_free_pool(data->ibi_pool);
+}
+
+static int rcar_i3c_master_enable_ibi(struct i3c_dev_desc *dev)
+{
+	struct rcar_i3c_i2c_dev_data *data = i3c_dev_get_master_data(dev);
+	struct i3c_master_controller *m = i3c_dev_get_master(dev);
+	struct rcar_i3c_master *master = to_rcar_i3c_master(m);
+	unsigned long flags;
+	int ret, pos;
+
+	ret = i3c_master_enec_locked(m, dev->info.dyn_addr, I3C_CCC_EVENT_SIR);
+	if (ret)
+		return ret;
+
+	spin_lock_irqsave(&master->ibi.lock, flags);
+	pos = data->index;
+	if (dev->info.bcr & I3C_BCR_IBI_PAYLOAD)
+		i3c_reg_set_bit(master->regs, DATBAS(pos), DATBAS_DVIBIPL);
+	i3c_reg_clear_bit(master->regs, DATBAS(pos), DATBAS_DVSIRRJ);
+
+	/* Enable the Queue Empty/Full Interrupt.*/
+	i3c_reg_set_bit(master->regs, NTSTE, NTSTE_IBIQEFE);
+	i3c_reg_set_bit(master->regs, NTIE, NTIE_IBIQEFIE);
+
+	/* Clear the Normal IBI Queue Empty/Full FLag */
+	i3c_reg_clear_bit(master->regs, NTST, NTST_IBIQEFF);
+
+	spin_unlock_irqrestore(&master->ibi.lock, flags);
+
+	if (ret) {
+		spin_lock_irqsave(&master->ibi.lock, flags);
+
+		/* Disable the Queue Empty/Full Interrupt.*/
+		i3c_reg_clear_bit(master->regs, NTIE, NTIE_IBIQEFIE);
+		i3c_reg_clear_bit(master->regs, NTSTE, NTSTE_IBIQEFE);
+		i3c_reg_clear_bit(master->regs, NTST, NTST_IBIQEFF);
+
+		/* Disable IBI Payload and SIR Ack */
+		i3c_reg_clear_bit(master->regs, DATBAS(pos), DATBAS_DVIBIPL);
+		i3c_reg_set_bit(master->regs, DATBAS(pos), DATBAS_DVSIRRJ);
+
+		spin_unlock_irqrestore(&master->ibi.lock, flags);
+	}
+
+	return ret;
+}
+
+static int rcar_i3c_master_disable_ibi(struct i3c_dev_desc *dev)
+{
+	struct i3c_master_controller *m = i3c_dev_get_master(dev);
+	struct rcar_i3c_master *master = to_rcar_i3c_master(m);
+	int ret;
+
+	/* Disable the Queue Empty/Full Interrupt.*/
+	i3c_reg_clear_bit(master->regs, NTIE, NTIE_IBIQEFIE);
+	i3c_reg_clear_bit(master->regs, NTSTE, NTSTE_IBIQEFE);
+	i3c_reg_clear_bit(master->regs, NTST, NTST_IBIQEFF);
+
+	ret = i3c_master_disec_locked(m, dev->info.dyn_addr, I3C_CCC_EVENT_SIR);
+
+	return ret;
+}
+
+static void rcar_i3c_master_recycle_ibi_slot(struct i3c_dev_desc *dev,
+					     struct i3c_ibi_slot *slot)
+{
+	struct rcar_i3c_i2c_dev_data *data = i3c_dev_get_master_data(dev);
+
+	i3c_generic_ibi_recycle_slot(data->ibi_pool, slot);
+}
+
 static irqreturn_t rcar_i3c_master_resp_isr(struct rcar_i3c_master *master, u32 isr)
 {
 	struct rcar_i3c_xfer *xfer = master->xferqueue.cur;
@@ -1553,6 +1719,107 @@ static irqreturn_t i3c_stop_isr(struct rcar_i3c_master *master, u32 isr)
 	return IRQ_HANDLED;
 }
 
+static void rcar_i3c_master_drain_ibi_queue(struct rcar_i3c_master *master, int len)
+{
+	int i;
+
+	for (i = 0; i < DIV_ROUND_UP(len, 4); i++)
+		readl(master->regs + NIBIQP);
+}
+
+static void rcar_i3c_master_handle_ibi_sir(struct rcar_i3c_master *master, u32 status)
+{
+	struct rcar_i3c_i2c_dev_data *data;
+	struct i3c_ibi_slot *slot;
+	struct i3c_dev_desc *dev;
+	unsigned long flags;
+	u8 addr, len;
+	int id;
+
+	addr = NIBIQP_IBI_ADDR(status);
+	len = NIBIQP_DATA_LENGTH(status);
+
+	spin_lock_irqsave(&master->ibi.lock, flags);
+	for (id = 0; id < master->ibi.num_slots; id++) {
+		if (master->ibi.slots[id] &&
+		    master->ibi.slots[id]->info.dyn_addr == addr) {
+			break;
+		}
+	}
+
+	if (id == master->ibi.num_slots)
+		return;
+
+	dev = master->ibi.slots[id];
+	if (!dev || !dev->ibi) {
+		dev_dbg_ratelimited(&master->base.dev,
+				    "IBI from non-requested dev index %d\n", id);
+		goto err_drain;
+	}
+
+	data = i3c_dev_get_master_data(dev);
+	slot = i3c_generic_ibi_get_free_slot(data->ibi_pool);
+	if (!slot) {
+		dev_dbg_ratelimited(&master->base.dev,
+				    "No IBI slots available\n");
+		goto err_drain;
+	}
+
+	if (dev->ibi->max_payload_len < len) {
+		dev_dbg_ratelimited(&master->base.dev,
+				    "IBI payload len %d greater than max %d\n",
+				    len, dev->ibi->max_payload_len);
+		goto err_drain;
+	}
+
+	/* Read IBI data payload */
+	if (len) {
+		readsl(master->regs + NIBIQP, slot->data, len / 4);
+		if (len & 3) {
+			u32 tmp;
+
+			readsl(master->regs + NIBIQP, &tmp, 1);
+			memcpy(slot->data + (len & ~3), &tmp, len & 3);
+		}
+		slot->len = min_t(unsigned int, len, dev->ibi->max_payload_len);
+	}
+	i3c_master_queue_ibi(dev, slot);
+	spin_unlock_irqrestore(&master->ibi.lock, flags);
+
+	return;
+
+err_drain:
+	rcar_i3c_master_drain_ibi_queue(master, len);
+
+	spin_unlock_irqrestore(&master->ibi.lock, flags);
+}
+
+static irqreturn_t rcar_i3c_master_handle_ibis(struct rcar_i3c_master *master)
+{
+	u32 ibi_desc;
+	u8 i, len, n_ibis;
+
+	n_ibis = NQSTLV_IBISCNT(i3c_reg_read(master->regs, NQSTLV));
+	if (!n_ibis)
+		return IRQ_NONE;
+
+	for (i = 0; i < n_ibis; i++) {
+		/* Read the IBI status descriptor. */
+		ibi_desc = i3c_reg_read(master->regs, NIBIQP);
+		if (IBI_TYPE_SIRQ(ibi_desc)) {
+			rcar_i3c_master_handle_ibi_sir(master, ibi_desc);
+		} else {
+			len = NIBIQP_DATA_LENGTH(ibi_desc);
+			dev_info(&master->base.dev,
+				 "unsupported IBI type 0x%lx len %d\n",
+				 NIBIQP_IBI_ID(ibi_desc), len);
+			rcar_i3c_master_drain_ibi_queue(master, len);
+		}
+	}
+
+	return IRQ_HANDLED;
+}
+
 static irqreturn_t rcar_i3c_master_irq_handler(int irq, void *data)
 {
 	struct rcar_i3c_master *master = data;
@@ -1574,15 +1841,19 @@ static irqreturn_t rcar_i3c_master_irq_handler(int irq, void *data)
 
 		if (ntst_flt & NTST_TDBEF0) {
 			ret = rcar_i3c_master_tx_isr(master, ntst_flt);
-			i3c_reg_clear_bit(master->regs, INTCLR, INTCLR_INTTX0);
+			i3c_reg_set_bit(master->regs, INTCLR, INTCLR_INTTX0);
 		}
 		if (ntst_flt & NTST_RDBFF0) {
 			ret = rcar_i3c_master_rx_isr(master, ntst_flt);
-			i3c_reg_clear_bit(master->regs, INTCLR, INTCLR_INTRX0);
+			i3c_reg_set_bit(master->regs, INTCLR, INTCLR_INTRX0);
 		}
 		if (ntst_flt & NTST_RSPQFF) {
 			ret = rcar_i3c_master_resp_isr(master, ntst_flt);
-			i3c_reg_clear_bit(master->regs, INTCLR, INTCLR_INTRESP);
+			i3c_reg_set_bit(master->regs, INTCLR, INTCLR_INTRESP);
+		}
+		if (ntst_flt & NTST_IBIQEFF) {
+			ret = rcar_i3c_master_handle_ibis(master);
+			i3c_reg_set_bit(master->regs, INTCLR, INTCLR_INTIBI);
 		} else {
 			i3c_reg_write(master->regs, INTCLR, INTCLR_ALL);
 			ret = IRQ_HANDLED;
@@ -1615,6 +1886,11 @@ static const struct i3c_master_controller_ops rcar_i3c_master_ops = {
 	.i2c_xfers = rcar_i3c_master_i2c_legacy_xfers,
 	.attach_i2c_dev = rcar_i3c_master_attach_i2c_dev,
 	.detach_i2c_dev = rcar_i3c_master_detach_i2c_dev,
+	.request_ibi = rcar_i3c_master_request_ibi,
+	.free_ibi = rcar_i3c_master_free_ibi,
+	.enable_ibi = rcar_i3c_master_enable_ibi,
+	.disable_ibi = rcar_i3c_master_disable_ibi,
+	.recycle_ibi_slot = rcar_i3c_master_recycle_ibi_slot,
 };
 
 static u32 rcar_i3c_master_i2c_func(struct i2c_adapter *adap)
@@ -1672,6 +1948,10 @@ static int rcar_i3c_master_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_disable_tclk;
 
+	master->ibi.num_slots = RCAR_I3C_MAX_DEVS;
+	master->ibi.slots = devm_kcalloc(&pdev->dev, master->ibi.num_slots,
+					 sizeof(*master->ibi.slots),
+					 GFP_KERNEL);
 	platform_set_drvdata(pdev, master);
 
 	adap = &master->adapt;
