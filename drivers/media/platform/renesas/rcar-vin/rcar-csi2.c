@@ -978,6 +978,7 @@ static const struct rcsi2_cphy_setting cphy_setting_table_r8a78000[] = {
 	{ .msps = 5500, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
 	{ .msps = 6000, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
 	{ .msps = 6500, .rx2 = 0x0000, .trio0 = 0x0000, .trio1 = 0x0000, .trio2 = 0x0000, .lane27 = 0x0000, .lane29 = 0x0000 },
+	{ /* sentinel */ },
 };
 
 struct rcsi2_msps_lut {
@@ -991,36 +992,36 @@ struct rcsi2_msps_lut {
 };
 
 static const struct rcsi2_msps_lut rcsi2_msps_cphy_spec_lut_r8a78000[] = {
-	{ .msps = 6500,	.coarse = 406, .en_delay_deass = 4,   .det_delay = 1   },
-	{ .msps = 4500,	.coarse = 404, .en_delay_deass = 4,   .det_delay = 1   },
-	{ .msps = 3500,	.coarse = 218, .en_delay_deass = 4,   .det_delay = 1   },
-	{ .msps = 2500,	.coarse = 156, .en_delay_deass = 4,   .det_delay = 1   },
-	{ .msps = 2000,	.coarse = 124, .en_delay_deass = 4,   .det_delay = 7   },
-	{ .msps = 1500,	.coarse = 93 , .en_delay_deass = 4,   .det_delay = 7   },
-	{ .msps = 1000,	.coarse = 95 , .en_delay_deass = 10,  .det_delay = 22  },
-	{ .msps = 900 ,	.coarse = 56 , .en_delay_deass = 10,  .det_delay = 22  },
-	{ .msps = 400 ,	.coarse = 56 , .en_delay_deass = 22,  .det_delay = 66  },
-	{ .msps = 300 ,	.coarse = 56 , .en_delay_deass = 29,  .det_delay = 91  },
-	{ .msps = 200 ,	.coarse = 56 , .en_delay_deass = 43,  .det_delay = 140 },
-	{ .msps = 100 ,	.coarse = 56 , .en_delay_deass = 85,  .det_delay = 287 },
 	{ .msps = 80  ,	.coarse = 56 , .en_delay_deass = 106, .det_delay = 360 },
+	{ .msps = 100 ,	.coarse = 56 , .en_delay_deass = 85,  .det_delay = 287 },
+	{ .msps = 200 ,	.coarse = 56 , .en_delay_deass = 43,  .det_delay = 140 },
+	{ .msps = 300 ,	.coarse = 56 , .en_delay_deass = 29,  .det_delay = 91  },
+	{ .msps = 400 ,	.coarse = 56 , .en_delay_deass = 22,  .det_delay = 66  },
+	{ .msps = 900 ,	.coarse = 56 , .en_delay_deass = 10,  .det_delay = 22  },
+	{ .msps = 1000,	.coarse = 95 , .en_delay_deass = 10,  .det_delay = 22  },
+	{ .msps = 1500,	.coarse = 93 , .en_delay_deass = 4,   .det_delay = 7   },
+	{ .msps = 2000,	.coarse = 124, .en_delay_deass = 4,   .det_delay = 7   },
+	{ .msps = 2500,	.coarse = 156, .en_delay_deass = 4,   .det_delay = 1   },
+	{ .msps = 3500,	.coarse = 218, .en_delay_deass = 4,   .det_delay = 1   },
+	{ .msps = 4500,	.coarse = 404, .en_delay_deass = 4,   .det_delay = 1   },
+	{ .msps = 6500,	.coarse = 406, .en_delay_deass = 4,   .det_delay = 1   },
 	{ /* sentinel */ },
 };
 
 static const struct rcsi2_msps_lut rcsi2_msps_hsrx_lut_r8a78000[] = {
-	{ .msps = 6500,	.equal_ovr = 2, .gmode = 2, .fbk_cap = 15 },
-	{ .msps = 4500,	.equal_ovr = 2, .gmode = 2, .fbk_cap = 14 },
-	{ .msps = 3500,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 11 },
-	{ .msps = 2500,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 2 },
-	{ .msps = 2000,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 2 },
-	{ .msps = 1500,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 2 },
-	{ .msps = 1000,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
-	{ .msps = 900,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
-	{ .msps = 400,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
-	{ .msps = 300,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
-	{ .msps = 200,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
-	{ .msps = 100,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
 	{ .msps = 80,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
+	{ .msps = 100,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
+	{ .msps = 200,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
+	{ .msps = 300,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
+	{ .msps = 400,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
+	{ .msps = 900,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
+	{ .msps = 1000,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
+	{ .msps = 1500,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 2 },
+	{ .msps = 2000,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 2 },
+	{ .msps = 2500,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 2 },
+	{ .msps = 3500,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 11 },
+	{ .msps = 4500,	.equal_ovr = 2, .gmode = 2, .fbk_cap = 14 },
+	{ .msps = 6500,	.equal_ovr = 2, .gmode = 2, .fbk_cap = 15 },
 	{ /* sentinel */ },
 };
 
