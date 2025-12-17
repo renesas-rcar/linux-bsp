@@ -21,121 +21,6 @@
 #include <linux/types.h>
 #include <linux/pm_domain.h>
 
-/* Hardcoded for enable module clock */
-#define MDLC_BASE		0xc9c90000
-#define MPPHY_PDID		(0)
-#define MPPHY_CLK_MASK(n)	GENMASK((n) + 1, n)
-#define MPPHY_CLK_SHIFT(n)	(n)
-
-#define MDLC_PKCPROT0		(MDLC_BASE + 0x0cf0)
-#define MDLC_PKCPROT1		(MDLC_BASE + 0x0cf4)
-
-#define _MDLC_MPDG(k)		(MDLC_BASE + 0x0200 + (k) * 4)
-#define _MDLC_MPDGS(k)		(MDLC_BASE + 0x0300 + (k) * 4)
-#define MDLC_MPIER0		(MDLC_BASE + 0x0110)
-#define MDLC_MPIMR0		(MDLC_BASE + 0x0120)
-
-#define MDLC_MPDG		_MDLC_MPDG(MPPHY_PDID)
-#define MDLC_MPDGS		_MDLC_MPDGS(MPPHY_PDID)
-
-#define MDLC_MSRES(i)		(MDLC_BASE + 0x0900 + (i) * 4)
-#define MDLC_MSRESS(i)	(	MDLC_BASE + 0x0960 + (i) * 4)
-
-static void mp_phy_module_power_gating_set(u8 pdid, u8 mode)
-{
-	void __iomem *unlock = ioremap(MDLC_PKCPROT0, 4);
-	void __iomem *mpdg = ioremap(_MDLC_MPDG(pdid), 4);
-	void __iomem *mpdgs = ioremap(_MDLC_MPDGS(pdid), 4);
-	void __iomem *mpier0 = ioremap(MDLC_MPIER0, 4);
-	void __iomem *mpimr0 = ioremap(MDLC_MPIMR0, 4);
-
-	writel(0xA5A5A501, unlock);
-
-	if ((readl(mpdgs) & 0x3) == mode)
-			goto unmap;
-
-	while (readl(mpdgs) != readl(mpdg))
-			udelay(1000);
-
-	writel(0, mpier0);
-	writel(0x1, mpimr0);
-
-	writel(0x1, mpdg);
-
-	while (readl(mpdgs) != readl(mpdg))
-			udelay(1000);
-
-	writel(mode, mpdg);
-
-	while (readl(mpdgs) != readl(mpdg))
-			udelay(1000);
-
-unmap:
-	iounmap(unlock);
-	iounmap(mpdg);
-	iounmap(mpdgs);
-	iounmap(mpier0);
-	iounmap(mpimr0);
-}
-
-static void mp_phy_module_standy_set(u8 clk_reg_no, u8 pos, u8 mode)
-{
-	void __iomem *unlock = ioremap(MDLC_PKCPROT1, 4);
-	void __iomem *msress = ioremap(MDLC_MSRESS(clk_reg_no), 4);
-	void __iomem *msres = ioremap(MDLC_MSRES(clk_reg_no), 4);
-	u32 val;
-
-	writel(0xA5A5A501, unlock);
-
-	if ((readl(msress) & MPPHY_CLK_MASK(pos)) == (mode << MPPHY_CLK_SHIFT(pos)))
-			goto unmap;
-
-	while ((readl(msress) & MPPHY_CLK_MASK(pos)) != (readl(msres) & MPPHY_CLK_MASK(pos)))
-			udelay(1000);
-
-	val = readl(msres);
-	val &= ~MPPHY_CLK_MASK(pos);
-	val |= mode << MPPHY_CLK_SHIFT(pos);
-	writel(val, msres);
-
-	while ((readl(msress) & MPPHY_CLK_MASK(pos)) != (readl(msres) & MPPHY_CLK_MASK(pos)))
-			udelay(1000);
-
-unmap:
-	iounmap(unlock);
-	iounmap(msress);
-	iounmap(msres);
-}
-
-static void __maybe_unused mp_phy_module_power_reset(void)
-{
-	mp_phy_module_power_gating_set(3, 0x03);
-	mp_phy_module_power_gating_set(4, 0x03);
-	mp_phy_module_power_gating_set(5, 0x03);
-	mp_phy_module_power_gating_set(6, 0x03);
-
-	mp_phy_module_standy_set(6, 8, 0x01);
-	mp_phy_module_standy_set(6, 10, 0x01);
-	mp_phy_module_standy_set(6, 12, 0x01);
-	mp_phy_module_standy_set(6, 14, 0x01);
-	mp_phy_module_standy_set(6, 16, 0x01);
-}
-
-static void __maybe_unused mp_phy_module_power_run(void)
-{
-	mp_phy_module_power_gating_set(3, 0x03);
-	mp_phy_module_power_gating_set(4, 0x03);
-	mp_phy_module_power_gating_set(5, 0x03);
-	mp_phy_module_power_gating_set(6, 0x03);
-
-	mp_phy_module_standy_set(6, 8, 0x03);
-	mp_phy_module_standy_set(6, 10, 0x03);
-	mp_phy_module_standy_set(6, 12, 0x03);
-	mp_phy_module_standy_set(6, 14, 0x03);
-	mp_phy_module_standy_set(6, 16, 0x03);
-}
-//--------------------------------------------------
-
 #define MPPHY_NUM_CHANNELS	4
 
 /* Common registers */
@@ -248,6 +133,11 @@ struct mp_phy_chan_priv {
 	int speed;
 };
 
+struct mpphy_pwr_dev {
+	int no_pwr_devs;
+	struct device **devs;
+};
+
 struct mp_phy_priv {
 	void __iomem *base;
 	struct device *dev;
@@ -257,6 +147,7 @@ struct mp_phy_priv {
 	int num_clks;
 	const struct firmware *fw;
 	struct mp_phy_chan_priv chan[MPPHY_NUM_CHANNELS];
+	struct mpphy_pwr_dev pwr_devs;
 };
 
 static void mp_phy_write(void __iomem *base, u32 offset, u32 value)
@@ -309,6 +200,25 @@ static void mp_phy_update_firmware(struct mp_phy_priv *priv, u32 channel_id)
 	}
 }
 
+static int mp_phy_exit(struct phy *phy)
+{
+	struct mp_phy_priv *priv = phy_get_drvdata(phy);
+	struct mp_phy_chan_priv *chan = &priv->chan[phy->id];
+	u32 channel_id = phy->id;
+
+	if (!chan->initialized)
+		return 0;
+
+	chan->initialized = false;
+	chan->current_protocol = PHY_MODE_INVALID;
+
+	if (channel_id < priv->pwr_devs.no_pwr_devs &&
+	    priv->pwr_devs.devs[channel_id])
+		pm_runtime_put_sync(priv->pwr_devs.devs[channel_id]);
+
+	return 0;
+}
+
 static int mp_phy_init_ethernet(struct mp_phy_priv *priv, u32 channel_id)
 {
 	mp_phy_update_firmware(priv, channel_id);
@@ -331,8 +241,6 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 	dev_info(priv->dev, "PCIe4 PHY initialization on channel %d, link_width: %d\n",
 		 channel_id, link_width);
 
-	mp_phy_module_standy_set(6, 16, 0x03);
-
 	switch(link_width) {
 	case 1:
 	case 2:
@@ -343,8 +251,6 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x1, 0x1);
-			mp_phy_module_standy_set(6, 8, 0x03);
-			mp_phy_module_standy_set(6, 10, 0x03);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x202);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x0);
 		}
@@ -355,8 +261,6 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(2), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(2), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(2), 0x1, 0x1);
-			mp_phy_module_standy_set(6, 12, 0x03);
-			mp_phy_module_standy_set(6, 14, 0x03);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(2), 0x202, 0x202);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(2), 0x202, 0x0);
 		}
@@ -375,8 +279,6 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(1), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(1), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(1), 0x1, 0x1);
-			mp_phy_module_standy_set(6, 8, 0x03);
-			mp_phy_module_standy_set(6, 10, 0x03);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x202);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(1), 0x202, 0x202);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x0);
@@ -395,8 +297,6 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(3), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(3), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(3), 0x1, 0x1);
-			mp_phy_module_standy_set(6, 12, 0x03);
-			mp_phy_module_standy_set(6, 14, 0x03);
 
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(2), 0x202, 0x202);
 			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(3), 0x202, 0x202);
@@ -422,11 +322,6 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 		mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(1), 0x202, 0x202);
 		mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(2), 0x202, 0x202);
 		mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(3), 0x202, 0x202);
-
-		mp_phy_module_standy_set(6, 8, 0x03);
-		mp_phy_module_standy_set(6, 10, 0x03);
-		mp_phy_module_standy_set(6, 12, 0x03);
-		mp_phy_module_standy_set(6, 14, 0x03);
 
 		mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x202);
 		mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(1), 0x202, 0x202);
@@ -481,6 +376,16 @@ static int mp_phy_init(struct phy *phy)
 	if (channel_id > 3) {
 		dev_err(priv->dev, "Invalid channel ID: %d\n", channel_id);
 		return -EINVAL;
+	}
+
+	if (channel_id < priv->pwr_devs.no_pwr_devs &&
+	    priv->pwr_devs.devs[channel_id]) {
+		ret = pm_runtime_get_sync(priv->pwr_devs.devs[channel_id]);
+		if (ret < 0) {
+			dev_err(priv->dev, "Failed to power on domain for channel %d: %d\n",
+				channel_id, ret);
+			return ret;
+		}
 	}
 
 	/* Check if initialized with same protocol then skip */
@@ -655,7 +560,6 @@ static int mp_phy_set_mode(struct phy *phy, enum phy_mode mode, int submode)
 		return -EOPNOTSUPP;
 	}
 
-	/* Check for protocol conflicts if initialized with another protocol */
 	if (chan->initialized && chan->current_protocol != new_protocol) {
 		if (new_protocol != PHY_MODE_USB_HOST && new_protocol != PHY_MODE_USB_DEVICE &&
 		    new_protocol != PHY_MODE_USB_OTG) {
@@ -665,7 +569,6 @@ static int mp_phy_set_mode(struct phy *phy, enum phy_mode mode, int submode)
 		}
 	}
 
-	/* If same protocol and initialized then return success*/
 	if (chan->initialized) {
 		/* Skip if same protocol */
 		if (chan->current_protocol == new_protocol) {
@@ -674,7 +577,6 @@ static int mp_phy_set_mode(struct phy *phy, enum phy_mode mode, int submode)
 			return 0;
 		}
 
-		/* Also skip if switching between USB modes */
 		bool is_current_usb = (chan->current_protocol == PHY_MODE_USB_HOST ||
 					chan->current_protocol == PHY_MODE_USB_DEVICE ||
 					chan->current_protocol == PHY_MODE_USB_OTG);
@@ -704,7 +606,6 @@ static int mp_phy_config_usb(struct phy *phy, int speed)
 
 	switch(speed) {
 	case HIGH_SPEED:
-		/* Setting TCA VBUS CTRL registers. */
 		mp_phy_write(priv->base, TCA_VBUS_CTRL_OFFSET(chan->lane_id), 0x0000003E);
 		break;
 	case SUPER_SPEED_PLUS:
@@ -739,6 +640,7 @@ static int mp_phy_config_usb(struct phy *phy, int speed)
 
 static const struct phy_ops mp_phy_ops = {
 	.init		= mp_phy_init,
+	.exit		= mp_phy_exit,
 	.power_on	= mp_phy_late_init,
 	.set_mode	= mp_phy_set_mode,
 	.set_speed	= mp_phy_config_usb,
@@ -764,7 +666,6 @@ static struct phy *mp_phy_xlate(struct device *dev, struct of_phandle_args *args
 		return phy;
 	}
 
-	/* Set channel ID from first argument if available */
 	if (args->args_count >= 1)
 		phy->id = args->args[0];
 	else
@@ -784,7 +685,6 @@ static struct phy *mp_phy_xlate(struct device *dev, struct of_phandle_args *args
 
 	chan->num_lanes = num_lanes;
 
-	/* Set lane ID from second argument if available */
 	if (args->args_count >= 2)
 		chan->lane_id = args->args[1];
 	else
@@ -875,7 +775,6 @@ static int mp_phy_probe(struct platform_device *pdev)
 	static uint8_t rst_control_get_retries = 5;
 	struct device_node *np = dev->of_node;
 	int num_power_domains;
-	struct of_phandle_args pd_args;
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
@@ -887,7 +786,6 @@ static int mp_phy_probe(struct platform_device *pdev)
 	if (ret < 0)
 		return ret;
 
-	/* Get base address from device tree */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		dev_err(dev, "Invalid resource\n");
@@ -906,8 +804,6 @@ static int mp_phy_probe(struct platform_device *pdev)
 		priv->chan[i].protocol_id = PHY_MODE_INVALID;
 	}
 
-	/* TODO: Enable reset control when DTS binding is ready */
-	/* Get reset control */
 	for (int i = 0; i < NUM_OF_MPPHY_RST - 1; ++i) {
 		char rst_name[16] = {0};
 		sprintf(rst_name, "mpphy%d1", i);
@@ -930,38 +826,54 @@ static int mp_phy_probe(struct platform_device *pdev)
 		return PTR_ERR(priv->resets[NUM_OF_MPPHY_RST - 1]);
 	}
 
-	/* Get clocks */
 	priv->num_clks = devm_clk_bulk_get_all(dev, &priv->clks);
 	if (priv->num_clks < 1) {
 		dev_err(dev, "Failed to get mp_phy clocks\n");
 		return -ENODEV;
 	}
 
-	/* Get number of power domains */
 	num_power_domains = of_count_phandle_with_args(np, "power-domains", "#power-domain-cells");
-	if (num_power_domains <= 0) {
+	if (num_power_domains < 0) {
 		dev_err(dev, "Failed to get number of power domains (%d)\n", num_power_domains);
 		return num_power_domains;
 	}
 
-	/* Attach MP-PHY to multi power domains */
-	for (int i = 0; i < num_power_domains; i++) {
-		ret = of_parse_phandle_with_args(np, "power-domains", "#power-domain-cells", i, &pd_args);
-        if (ret) {
-            dev_err(dev, "Failed to parse power domain index %d\n", i);
-            return ret;
-        }
-		if (IS_ERR(dev_pm_domain_attach_by_id(dev, pd_args.args[0]))) {
-            dev_err(dev, "Failed to attach to power domain %d (%d)\n",
-					pd_args.args[0], ret);
-            return -EINVAL;
-        }
+	priv->pwr_devs.no_pwr_devs = num_power_domains;
+	priv->pwr_devs.devs = devm_kcalloc(dev, num_power_domains,
+					sizeof(*priv->pwr_devs.devs), GFP_KERNEL);
+
+	if (!priv->pwr_devs.devs) {
+		dev_err(dev, "Failed to allocate power domain devices\n");
+		return -ENOMEM;
 	}
 
-	/* TODO: Reset and enable clock control when clock is available */
+	for (int i = 0; i < num_power_domains; i++) {
+		priv->pwr_devs.devs[i] = dev_pm_domain_attach_by_id(dev, i);
+		if (IS_ERR(priv->pwr_devs.devs[i])) {
+			dev_err(dev, "Failed to attach power domain index %d\n", i);
+			for (int j = 0; j < i; j++) {
+				if (priv->pwr_devs.devs[j] &&
+				    !IS_ERR(priv->pwr_devs.devs[j])) {
+					pm_runtime_put_sync(priv->pwr_devs.devs[j]);
+					dev_pm_domain_detach(priv->pwr_devs.devs[j], true);
+				}
+			}
+			return PTR_ERR(priv->pwr_devs.devs[i]);
+		}
+		ret = pm_runtime_get_sync(priv->pwr_devs.devs[i]);
+		if (ret < 0) {
+			dev_err(dev, "Failed to power on domain %d: %d\n", i, ret);
+			dev_pm_domain_detach(priv->pwr_devs.devs[i], true);
+			priv->pwr_devs.devs[i] = NULL;
+			for (int j = 0; j < i; j++) {
+				pm_runtime_put_sync(priv->pwr_devs.devs[j]);
+				dev_pm_domain_detach(priv->pwr_devs.devs[j], true);
+			}
+			return ret;
+		}
+	}
+
 	for (int i = 0; i < NUM_OF_MPPHY_RST - 1; ++i) {
-		char rst_name[16] = {0};
-		sprintf(rst_name, "mpphy%d1", i);
 		ret = reset_control_assert(priv->resets[i]);
 		if (ret) {
 			dev_err(dev, "Failed to assert mpphy%d1", i);
@@ -975,8 +887,6 @@ static int mp_phy_probe(struct platform_device *pdev)
 	}
 
 	for (int i = 0; i < NUM_OF_MPPHY_RST - 1; ++i) {
-		char rst_name[16] = {0};
-		sprintf(rst_name, "mpphy%d1", i);
 		ret = reset_control_deassert(priv->resets[i]);
 		if (ret) {
 			dev_err(dev, "Failed to deassert mpphy%d1", i);
@@ -1013,6 +923,24 @@ static int mp_phy_probe(struct platform_device *pdev)
 
 static int mp_phy_remove(struct platform_device *pdev)
 {
+	struct mp_phy_priv *priv = dev_get_drvdata(&pdev->dev);
+	int i;
+
+	clk_bulk_disable_unprepare(priv->num_clks, priv->clks);
+
+	if (priv->fw) {
+		release_firmware(priv->fw);
+		priv->fw = NULL;
+	}
+
+	for (i = priv->pwr_devs.no_pwr_devs - 1; i >= 0; i--) {
+		if (priv->pwr_devs.devs[i]) {
+			pm_runtime_put_sync(priv->pwr_devs.devs[i]);
+			dev_pm_domain_detach(priv->pwr_devs.devs[i], true);
+			priv->pwr_devs.devs[i] = NULL;
+		}
+	}
+
 	pm_runtime_put(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 
@@ -1042,6 +970,13 @@ static int mp_phy_suspend_noirq(struct device *dev)
 		dev_dbg(dev, "Firmware released during suspend\n");
 	}
 
+	clk_bulk_disable_unprepare(priv->num_clks, priv->clks);
+
+	for (int i = 0; i < priv->pwr_devs.no_pwr_devs; i++) {
+		if (priv->pwr_devs.devs[i])
+			pm_runtime_put_sync(priv->pwr_devs.devs[i]);
+	}
+
 	dev_info(dev, "Multi-Protocol PHY suspended \n");
 
 	return 0;
@@ -1059,9 +994,36 @@ static int mp_phy_resume_noirq(struct device *dev)
 	}
 	dev_dbg(dev, "Firmware loaded during resume\n");
 
-	mp_phy_module_power_reset();
-	udelay(1000);
-	mp_phy_module_power_run();
+	for (int i = 0; i < NUM_OF_MPPHY_RST; ++i) {
+		ret = reset_control_assert(priv->resets[i]);
+		if (ret) {
+			dev_err(dev, "Failed to assert mpphy %d", i);
+			return ret;
+		}
+	}
+	for (int i = 0; i < NUM_OF_MPPHY_RST; ++i) {
+		ret = reset_control_deassert(priv->resets[i]);
+		if (ret) {
+			dev_err(dev, "Failed to deassert mpphy %d", i);
+			return ret;
+		}
+	}
+
+	ret = clk_bulk_prepare_enable(priv->num_clks, priv->clks);
+	if (ret) {
+		dev_err(dev, "Failed to enable bulk clocks: %d\n", ret);
+		return ret;
+	}
+
+	for (int i = 0; i < priv->pwr_devs.no_pwr_devs; i++) {
+		if (priv->pwr_devs.devs[i]) {
+			ret = pm_runtime_get_sync(priv->pwr_devs.devs[i]);
+			if (ret < 0) {
+				dev_err(dev, "Failed to resume domain %d: %d\n", i, ret);
+				return ret;
+			}
+		}
+	}
 
 	ret = mp_phy_pre_init(priv);
         if (ret < 0) {
