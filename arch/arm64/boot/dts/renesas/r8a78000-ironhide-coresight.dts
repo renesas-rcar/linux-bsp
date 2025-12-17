@@ -1,0 +1,440 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+/*
+ * Device Tree Source fragment for Coresight support on the R-Car X5H
+ * (R8A78000) SoC
+ *
+ * Copyright (C) 2025 Renesas Electronics Corp.
+ */
+
+/dts-v1/;
+#include "r8a78000-coresight.dtsi"
+#include "r8a78000-ironhide-common.dtsi"
+
+/ {
+	model = "Renesas Ironhide board based on r8a78000";
+	compatible = "renesas,ironhide", "renesas,r8a78000", "renesas,r8a78000-coresight";
+};
+
+&csd_rep2 {
+	status = "okay";
+};
+
+&csd_fun1 {
+	status = "okay";
+};
+
+&csd_fun2 {
+	status = "okay";
+};
+
+&csd_fun5 {
+	status = "okay";
+};
+
+&csd_stm0 {
+	status = "okay";
+};
+
+&csd_tpi1 {
+	status = "okay";
+};
+
+&csd_etf1 {
+	status = "okay";
+};
+
+&csd_rep1 {
+	status = "okay";
+};
+
+&csd_etr1 {
+	status = "okay";
+};
+
+&csd_cti3 {
+	status = "okay";
+};
+
+&a0_dbg0 {
+	status = "okay";
+};
+
+&a0_dbg1 {
+	status = "okay";
+};
+
+&a0_dbg2 {
+	status = "okay";
+};
+
+&a0_dbg3 {
+	status = "okay";
+};
+
+&a1_dbg0 {
+	status = "okay";
+};
+
+&a1_dbg1 {
+	status = "okay";
+};
+
+&a1_dbg2 {
+	status = "okay";
+};
+
+&a1_dbg3 {
+	status = "okay";
+};
+
+&a2_dbg0 {
+	status = "okay";
+};
+
+&a2_dbg1 {
+	status = "okay";
+};
+
+&a2_dbg2 {
+	status = "okay";
+};
+
+&a2_dbg3 {
+	status = "okay";
+};
+
+&a3_dbg0 {
+	status = "okay";
+};
+
+&a3_dbg1 {
+	status = "okay";
+};
+
+&a3_dbg2 {
+	status = "okay";
+};
+
+&a3_dbg3 {
+	status = "okay";
+};
+
+&a4_dbg0 {
+	status = "okay";
+};
+
+&a4_dbg1 {
+	status = "okay";
+};
+
+&a4_dbg2 {
+	status = "okay";
+};
+
+&a4_dbg3 {
+	status = "okay";
+};
+
+&a5_dbg0 {
+	status = "okay";
+};
+
+&a5_dbg1 {
+	status = "okay";
+};
+
+&a5_dbg2 {
+	status = "okay";
+};
+
+&a5_dbg3 {
+	status = "okay";
+};
+
+&a6_dbg0 {
+	status = "okay";
+};
+
+&a6_dbg1 {
+	status = "okay";
+};
+
+&a6_dbg2 {
+	status = "okay";
+};
+
+&a6_dbg3 {
+	status = "okay";
+};
+
+&a7_dbg0 {
+	status = "okay";
+};
+
+&a7_dbg1 {
+	status = "okay";
+};
+
+&a7_dbg2 {
+	status = "okay";
+};
+
+&a7_dbg3 {
+	status = "okay";
+};
+
+&a0_ete0 {
+	status = "okay";
+};
+
+&a0_ete1 {
+	status = "okay";
+};
+
+&a0_ete2 {
+	status = "okay";
+};
+
+&a0_ete3 {
+	status = "okay";
+};
+
+&a1_ete0 {
+	status = "okay";
+};
+
+&a1_ete1 {
+	status = "okay";
+};
+
+&a1_ete2 {
+	status = "okay";
+};
+
+&a1_ete3 {
+	status = "okay";
+};
+
+&a2_ete0 {
+	status = "okay";
+};
+
+&a2_ete1 {
+	status = "okay";
+};
+
+&a2_ete2 {
+	status = "okay";
+};
+
+&a2_ete3 {
+	status = "okay";
+};
+
+&a3_ete0 {
+	status = "okay";
+};
+
+&a3_ete1 {
+	status = "okay";
+};
+
+&a3_ete2 {
+	status = "okay";
+};
+
+&a3_ete3 {
+	status = "okay";
+};
+
+&a4_ete0 {
+	status = "okay";
+};
+
+&a4_ete1 {
+	status = "okay";
+};
+
+&a4_ete2 {
+	status = "okay";
+};
+
+&a4_ete3 {
+	status = "okay";
+};
+
+&a5_ete0 {
+	status = "okay";
+};
+
+&a5_ete1 {
+	status = "okay";
+};
+
+&a5_ete2 {
+	status = "okay";
+};
+
+&a5_ete3 {
+	status = "okay";
+};
+
+&a6_ete0 {
+	status = "okay";
+};
+
+&a6_ete1 {
+	status = "okay";
+};
+
+&a6_ete2 {
+	status = "okay";
+};
+
+&a6_ete3 {
+	status = "okay";
+};
+
+&a7_ete0 {
+	status = "okay";
+};
+
+&a7_ete1 {
+	status = "okay";
+};
+
+&a7_ete2 {
+	status = "okay";
+};
+
+&a7_ete3 {
+	status = "okay";
+};
+
+&a0_cti0 {
+	status = "okay";
+};
+
+&a0_cti1 {
+	status = "okay";
+};
+
+&a0_cti2 {
+	status = "okay";
+};
+
+&a0_cti3 {
+	status = "okay";
+};
+
+&a1_cti0 {
+	status = "okay";
+};
+
+&a1_cti1 {
+	status = "okay";
+};
+
+&a1_cti2 {
+	status = "okay";
+};
+
+&a1_cti3 {
+	status = "okay";
+};
+
+&a2_cti0 {
+	status = "okay";
+};
+
+&a2_cti1 {
+	status = "okay";
+};
+
+&a2_cti2 {
+	status = "okay";
+};
+
+&a2_cti3 {
+	status = "okay";
+};
+
+&a3_cti0 {
+	status = "okay";
+};
+
+&a3_cti1 {
+	status = "okay";
+};
+
+&a3_cti2 {
+	status = "okay";
+};
+
+&a3_cti3 {
+	status = "okay";
+};
+
+&a4_cti0 {
+	status = "okay";
+};
+
+&a4_cti1 {
+	status = "okay";
+};
+
+&a4_cti2 {
+	status = "okay";
+};
+
+&a4_cti3 {
+	status = "okay";
+};
+
+&a5_cti0 {
+	status = "okay";
+};
+
+&a5_cti1 {
+	status = "okay";
+};
+
+&a5_cti2 {
+	status = "okay";
+};
+
+&a5_cti3 {
+	status = "okay";
+};
+
+&a6_cti0 {
+	status = "okay";
+};
+
+&a6_cti1 {
+	status = "okay";
+};
+
+&a6_cti2 {
+	status = "okay";
+};
+
+&a6_cti3 {
+	status = "okay";
+};
+
+&a7_cti0 {
+	status = "okay";
+};
+
+&a7_cti1 {
+	status = "okay";
+};
+
+&a7_cti2 {
+	status = "okay";
+};
+
+&a7_cti3 {
+	status = "okay";
+};
