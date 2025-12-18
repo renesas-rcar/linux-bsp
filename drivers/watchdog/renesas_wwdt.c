@@ -94,15 +94,6 @@ static void wwdt_setup(struct watchdog_device *wdev)
 {
 	struct wwdt_priv *priv = watchdog_get_drvdata(wdev);
 	struct device_node *np = priv->wdev.parent->of_node;
-	u8 val;
-
-	val = wwdt_read(priv, WDTA0MD);
-	if (!priv->error_mode)
-		val &= ~WDTA0ERM;
-	val |= (WDTA0OVF(priv->interval_time)) | WSIZE(priv->wsize);
-	if (priv->wdt_wie)
-		val |= WDTA0WIE;
-	wwdt_write(priv, val, WDTA0MD);
 
 	/* Setting ECM for WWDT20 */
 	if (of_find_property(np, "ecm", NULL))
@@ -192,10 +183,15 @@ static int wwdt_probe(struct platform_device *pdev)
 		priv->wdt_wie = 0;
 	}
 
-	/* Default state after reset release */
 	val = wwdt_read(priv, WDTA0MD);
 	val &= ~WDTA0WIE;
 	val |= WSIZE(0);
+
+	if (!priv->error_mode)
+		val &= ~WDTA0ERM;
+	val |= (WDTA0OVF(priv->interval_time)) | WSIZE(priv->wsize);
+	if (priv->wdt_wie)
+		val |= WDTA0WIE;
 	wwdt_write(priv, val, WDTA0MD);
 
 	watchdog_set_nowayout(&priv->wdev, nowayout);
