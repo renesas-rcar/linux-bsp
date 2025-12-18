@@ -21,42 +21,47 @@
 		stdout-path = "serial0:115200n8";
 	};
 
-	memory_00@1080000000 {
+	memory_00@40000000 {
+		device_type = "memory";
+		reg = <0x0 0x40000000 0x0 0x80000000>;
+	};
+
+	memory_01@1080000000 {
 		device_type = "memory";
 		reg = <0x10 0x80000000 0x0 0x80000000>;
 	};
 
-	memory_01@1200000000 {
+	memory_02@1200000000 {
 		device_type = "memory";
 		reg = <0x12 0x00000000 0x1 0x00000000>;
 	};
 
-	memory_02@1400000000 {
+	memory_03@1400000000 {
 		device_type = "memory";
 		reg = <0x14 0x00000000 0x1 0x00000000>;
 	};
 
-	memory_03@1600000000 {
+	memory_04@1600000000 {
 		device_type = "memory";
 		reg = <0x16 0x00000000 0x1 0x00000000>;
 	};
 
-	memory_04@1800000000 {
+	memory_05@1800000000 {
 		device_type = "memory";
 		reg = <0x18 0x00000000 0x1 0x00000000>;
 	};
 
-	memory_05@1a00000000 {
+	memory_06@1a00000000 {
 		device_type = "memory";
 		reg = <0x1a 0x00000000 0x1 0x00000000>;
 	};
 
-	memory_06@1c00000000 {
+	memory_07@1c00000000 {
 		device_type = "memory";
 		reg = <0x1c 0x00000000 0x1 0x00000000>;
 	};
 
-	memory_07@1e00000000 {
+	memory_08@1e00000000 {
 		device_type = "memory";
 		reg = <0x1e 0x00000000 0x1 0x00000000>;
 	};
