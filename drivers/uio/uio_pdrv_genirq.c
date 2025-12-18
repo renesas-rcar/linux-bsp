@@ -81,7 +81,7 @@ static int local_pm_runtime_put_sync(struct uio_pdrv_genirq_platdata *priv)
 		priv->pwr_cnt--;
 		priv->clk_cnt--;
 		if ((priv->clk != NULL) && (priv->clk_cnt < 0)) {
-			clk_enable(priv->clk);
+			clk_prepare_enable(priv->clk);
 			priv->clk_cnt = 0;
 		}
 
@@ -96,7 +96,7 @@ static int local_clk_enable(struct uio_pdrv_genirq_platdata *priv)
 	int ret = 0;
 
 	if (priv->clk_cnt == 0) {
-		ret = clk_enable(priv->clk);
+		ret = clk_prepare_enable(priv->clk);
 		priv->clk_cnt++;
 	}
 
@@ -106,7 +106,7 @@ static int local_clk_enable(struct uio_pdrv_genirq_platdata *priv)
 static void local_clk_disable(struct uio_pdrv_genirq_platdata *priv)
 {
 	if (priv->clk_cnt > 0) {
-		clk_disable(priv->clk);
+		clk_disable_unprepare(priv->clk);
 		priv->clk_cnt--;
 	}
 }
