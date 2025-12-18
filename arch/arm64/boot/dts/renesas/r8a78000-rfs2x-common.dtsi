@@ -81,6 +81,11 @@
 		#size-cells = <2>;
 		ranges;
 
+		ldr: ldr@8e400000 {
+			no-map;
+			reg = <0x0 0x8e400000 0x0 0x100000>;
+		};
+
 		cr52_ram0: cr52_ram0@96600000 {
 			no-map;
 			reg = <0x0 0x96600000 0x0 0x50000>;
