@@ -548,3 +548,193 @@
 &rpmsg_ipi0 {
 	status = "okay";
 };
+
+&wwdt0 {
+	interval-time = <7>;
+	error-mode = <1>;
+	wsize = <3>;
+	irq_75p = <1>;
+
+	status = "okay";
+};
+
+&wwdt1 {
+       interval-time = <7>;
+       error-mode = <1>;
+       wsize = <0>;
+       irq_75p = <0>;
+
+       status = "okay";
+};
+
+&wwdt2 {
+       interval-time = <7>;
+       error-mode = <1>;
+       wsize = <1>;
+       irq_75p = <0>;
+
+       status = "okay";
+};
+
+&wwdt3 {
+       interval-time = <7>;
+       error-mode = <1>;
+       wsize = <2>;
+       irq_75p = <0>;
+
+       status = "okay";
+};
+
+&wwdt4 {
+       interval-time = <7>;
+       error-mode = <1>;
+       wsize = <3>;
+       irq_75p = <0>;
+
+       status = "okay";
+};
+
+&wwdt5 {
+       interval-time = <7>;
+       error-mode = <0>;
+       wsize = <3>;
+       irq_75p = <0>;
+
+       status = "okay";
+};
+
+&wwdt6 {
+       interval-time = <7>;
+       error-mode = <1>;
+       wsize = <3>;
+       irq_75p = <0>;
+
+       status = "okay";
+};
+
+&wwdt7 {
+       interval-time = <7>;
+       error-mode = <1>;
+       wsize = <3>;
+       irq_75p = <0>;
+
+       status = "okay";
+};
+
+&wwdt8 {
+       interval-time = <7>;
+       error-mode = <1>;
+       wsize = <3>;
+       irq_75p = <0>;
+
+       status = "okay";
+};
+
+&wwdt9 {
+       interval-time = <7>;
+       error-mode = <1>;
+       wsize = <3>;
+       irq_75p = <0>;
+
+       status = "okay";
+};
+
+&wwdt10 {
+       interval-time = <7>;
+       error-mode = <1>;
+       wsize = <3>;
+       irq_75p = <0>;
+
+       status = "okay";
+};
+
+&wwdt11 {
+       interval-time = <7>;
+       error-mode = <1>;
+       wsize = <3>;
+       irq_75p = <0>;
+
+       status = "okay";
+};
+
+&wwdt12 {
+       interval-time = <7>;
+       error-mode = <1>;
+       wsize = <3>;
+       irq_75p = <0>;
+
+       status = "okay";
+};
+
+&wwdt13 {
+       interval-time = <7>;
+       error-mode = <1>;
+       wsize = <3>;
+       irq_75p = <0>;
+
+       status = "okay";
+};
+
+&wwdt14 {
+       interval-time = <7>;
+       error-mode = <1>;
+       wsize = <3>;
+       irq_75p = <0>;
+
+       status = "okay";
+};
+
+&wwdt15 {
+       interval-time = <7>;
+       error-mode = <1>;
+       wsize = <3>;
+       irq_75p = <0>;
+
+       status = "okay";
+};
+
+&wwdt16 {
+       interval-time = <7>;
+       error-mode = <1>;
+       wsize = <3>;
+       irq_75p = <0>;
+
+       status = "okay";
+};
+
+&wwdt17 {
+       interval-time = <7>;
+       error-mode = <1>;
+       wsize = <3>;
+       irq_75p = <0>;
+
+       status = "okay";
+};
+
+&wwdt18 {
+       interval-time = <7>;
+       error-mode = <1>;
+       wsize = <3>;
+       irq_75p = <0>;
+
+       status = "okay";
+};
+
+&wwdt19 {
+       interval-time = <7>;
+       error-mode = <1>;
+       wsize = <3>;
+       irq_75p = <0>;
+
+       status = "okay";
+};
+
+&wwdt20 {
+	status = "okay";
+
+	interval-time = <7>;
+	error-mode = <1>;
+	irq_75p = <0>;
+	wsize = <3>;
+	ecm;
+};
