@@ -4930,6 +4930,7 @@
 				 <&scmi_clk X5H_CLOCK_ID_PCI402>,
 				 <&scmi_clk X5H_CLOCK_ID_PCI412>, <&pcie4_bus_clk>;
 			clock-names = "pci401", "pci411", "pci402", "pci412", "pcie4_bus";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_U266_PCIE4>;
 			num-lanes = <1>;
 			max-link-speed = <1>;
 			status = "disabled";
@@ -4962,6 +4963,7 @@
 					 0 0 0 4 &gic GIC_SPI 751 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&pcie6_bus_clk>;
 			clock-names = "pcie6_bus";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_U266_PCIE6>;
 			max-link-speed = <4>;
 			num-lanes = <2>;
 			channel-id = <0>;
