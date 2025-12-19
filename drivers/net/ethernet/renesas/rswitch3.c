@@ -35,6 +35,8 @@
 
 static u8 cached_mac_addresses[RSWITCH3_NUM_PORTS][ETH_ALEN];
 static bool mac_cache_valid[RSWITCH3_NUM_PORTS];
+static int rsw3_rx_poll(struct napi_struct *napi, int budget);
+static int rsw3_tx_poll(struct napi_struct *napi, int budget);
 
 static int rsw3_reg_wait(void __iomem *addr, u32 offs, u32 mask, u32 expected)
 {
@@ -638,7 +640,7 @@ static int rsw3_txdmac_alloc(struct net_device *ndev)
 		return err;
 	}
 
-	rdev->tx_queue->napi = &rdev->tx_napi;
+	netif_napi_add_tx(ndev, &rdev->tx_queue->napi, rsw3_tx_poll);
 
 	return 0;
 }
@@ -649,6 +651,7 @@ static void rsw3_txdmac_free(struct net_device *ndev)
 
 	rsw3_gwca_queue_free(ndev, rdev->tx_queue);
 	rsw3_gwca_put(rdev->priv, rdev->tx_queue);
+	netif_napi_del(&rdev->tx_queue->napi);
 }
 
 static int rsw3_txdmac_init(struct rsw3_private *priv, unsigned int index)
@@ -674,7 +677,7 @@ static int rsw3_rxdmac_alloc(struct net_device *ndev)
 		return err;
 	}
 
-	rdev->rx_queue->napi = &rdev->rx_napi;
+	netif_napi_add(ndev, &rdev->rx_queue->napi, rsw3_rx_poll);
 
 	return 0;
 }
@@ -685,6 +688,7 @@ static void rsw3_rxdmac_free(struct net_device *ndev)
 
 	rsw3_gwca_queue_free(ndev, rdev->rx_queue);
 	rsw3_gwca_put(rdev->priv, rdev->rx_queue);
+	netif_napi_del(&rdev->rx_queue->napi);
 }
 
 static int rsw3_rxdmac_init(struct rsw3_private *priv, unsigned int index)
@@ -875,7 +879,7 @@ static bool rsw3_rx(struct net_device *ndev, int *quota)
 		}
 
 		skb->protocol = eth_type_trans(skb, ndev);
-		napi_gro_receive(&rdev->rx_napi, skb);
+		napi_gro_receive(&rdev->rx_queue->napi, skb);
 		rdev->ndev->stats.rx_packets++;
 		rdev->ndev->stats.rx_bytes += gq->pkt_len;
 
@@ -1039,9 +1043,9 @@ static irqreturn_t rsw3_data_irq(struct rsw3_private *priv, u32 *dis)
 		rsw3_ack_data_irq(priv, gq->index);
 
 		if (gq->dir_tx)
-			rsw3_queue_interrupt(gq->napi, true);
+			rsw3_queue_interrupt(&gq->napi, true);
 		else
-			rsw3_queue_interrupt(gq->napi, false);
+			rsw3_queue_interrupt(&gq->napi, false);
 	}
 
 	return IRQ_HANDLED;
@@ -1744,8 +1748,8 @@ static int rsw3_open(struct net_device *ndev)
 		}
 	}
 
-	napi_enable(&rdev->tx_napi);
-	napi_enable(&rdev->rx_napi);
+	napi_enable(&rdev->tx_queue->napi);
+	napi_enable(&rdev->rx_queue->napi);
 
 	spin_lock_irqsave(&rdev->priv->lock, flags);
 	bitmap_set(rdev->priv->opened_ports, rdev->port, 1);
@@ -1773,8 +1777,8 @@ static int rsw3_stop(struct net_device *ndev)
 	bitmap_clear(rdev->priv->opened_ports, rdev->port, 1);
 	spin_unlock_irqrestore(&rdev->priv->lock, flags);
 
-	napi_disable(&rdev->tx_napi);
-	napi_disable(&rdev->rx_napi);
+	napi_disable(&rdev->tx_queue->napi);
+	napi_disable(&rdev->rx_queue->napi);
 
 	return 0;
 }
@@ -2116,9 +2120,6 @@ static int rsw3_device_alloc(struct rsw3_private *priv, unsigned int index)
 	ndev->max_mtu = RSWITCH3_MAX_MTU;
 	ndev->min_mtu = ETH_MIN_MTU;
 
-	netif_napi_add_tx(ndev, &rdev->tx_napi, rsw3_tx_poll);
-	netif_napi_add(ndev, &rdev->rx_napi, rsw3_rx_poll);
-
 	rdev->np_port = rsw3_get_port_node(rdev);
 	rdev->disabled = !rdev->np_port;
 	err = of_get_ethdev_address(rdev->np_port, ndev);
@@ -2152,8 +2153,6 @@ out_txdmac:
 out_rxdmac:
 out_get_params:
 	of_node_put(rdev->np_port);
-	netif_napi_del(&rdev->tx_napi);
-	netif_napi_del(&rdev->rx_napi);
 	free_netdev(ndev);
 
 	return err;
@@ -2170,8 +2169,6 @@ static void rsw3_device_free(struct rsw3_private *priv, unsigned int index)
 	}
 
 	of_node_put(rdev->np_port);
-	netif_napi_del(&rdev->tx_napi);
-	netif_napi_del(&rdev->rx_napi);
 	free_netdev(ndev);
 }
 
