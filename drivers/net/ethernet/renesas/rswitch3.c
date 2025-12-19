@@ -383,7 +383,6 @@ static int rsw3_gwca_queue_alloc(struct net_device *ndev,
 
 	gq->dir_tx = dir_tx;
 	gq->ring_size = ring_size;
-	gq->ndev = ndev;
 
 	if (!dir_tx) {
 		gq->rx_bufs = kcalloc(gq->ring_size, sizeof(*gq->rx_bufs), GFP_KERNEL);
@@ -639,6 +638,8 @@ static int rsw3_txdmac_alloc(struct net_device *ndev)
 		return err;
 	}
 
+	rdev->tx_queue->napi = &rdev->tx_napi;
+
 	return 0;
 }
 
@@ -672,6 +673,8 @@ static int rsw3_rxdmac_alloc(struct net_device *ndev)
 		rsw3_gwca_put(priv, rdev->rx_queue);
 		return err;
 	}
+
+	rdev->rx_queue->napi = &rdev->rx_napi;
 
 	return 0;
 }
@@ -872,7 +875,7 @@ static bool rsw3_rx(struct net_device *ndev, int *quota)
 		}
 
 		skb->protocol = eth_type_trans(skb, ndev);
-		napi_gro_receive(&rdev->napi, skb);
+		napi_gro_receive(&rdev->rx_napi, skb);
 		rdev->ndev->stats.rx_packets++;
 		rdev->ndev->stats.rx_bytes += gq->pkt_len;
 
@@ -904,15 +907,16 @@ err:
 	return 0;
 }
 
-static void rsw3_tx_free(struct net_device *ndev)
+static int rsw3_tx_free(struct rsw3_gwca_queue *gq, int budget)
 {
 	struct rsw3_device *rdev = netdev_priv(ndev);
 	struct rsw3_gwca_queue *gq = rdev->tx_queue;
 	struct rsw3_ext_desc *desc;
 	struct sk_buff *skb;
+	int done = 0;
 
 	desc = &gq->tx_ring[gq->dirty];
-	while ((desc->desc.die_dt & DT_MASK) == DT_FEMPTY) {
+	while (done < budget && (desc->desc.die_dt & DT_MASK) == DT_FEMPTY) {
 		dma_rmb();
 		skb = gq->skbs[gq->dirty];
 		if (skb) {
@@ -937,10 +941,39 @@ static void rsw3_tx_free(struct net_device *ndev)
 		desc->desc.die_dt = DT_EEMPTY;
 		gq->dirty = rsw3_next_queue_index(gq, false, 1);
 		desc = &gq->tx_ring[gq->dirty];
+		done++;
 	}
+
+	return done;
 }
 
-static int rsw3_poll(struct napi_struct *napi, int budget)
+static int rsw3_tx_poll(struct napi_struct *napi, int budget)
+{
+	struct net_device *ndev = napi->dev;
+	struct rsw3_private *priv;
+	struct rsw3_device *rdev;
+	int done;
+
+	rdev = netdev_priv(ndev);
+	priv = rdev->priv;
+
+	done = rsw3_tx_free(gq, budget);
+
+	netif_wake_subqueue(ndev, 0);
+
+	if (done < budget && napi_complete_done(napi, done)) {
+		unsigned long flags;
+
+		spin_lock_irqsave(&priv->lock, flags);
+		if (test_bit(rdev->port, priv->opened_ports))
+			rsw3_enadis_data_irq(priv, rdev->tx_queue->index, true);
+		spin_unlock_irqrestore(&priv->lock, flags);
+	}
+
+	return done;
+}
+
+static int rsw3_rx_poll(struct napi_struct *napi, int budget)
 {
 	struct net_device *ndev = napi->dev;
 	struct rsw3_private *priv;
@@ -952,8 +985,6 @@ static int rsw3_poll(struct napi_struct *napi, int budget)
 	priv = rdev->priv;
 
 retry:
-	rsw3_tx_free(ndev);
-
 	if (rsw3_rx(ndev, &quota))
 		goto out;
 	else if (rdev->priv->gwca_halt)
@@ -961,14 +992,10 @@ retry:
 	else if (rsw3_is_queue_rxed(rdev->rx_queue))
 		goto retry;
 
-	netif_wake_subqueue(ndev, 0);
-
 	if (napi_complete_done(napi, budget - quota)) {
 		spin_lock_irqsave(&priv->lock, flags);
-		if (test_bit(rdev->port, priv->opened_ports)) {
-			rsw3_enadis_data_irq(priv, rdev->tx_queue->index, true);
+		if (test_bit(rdev->port, priv->opened_ports))
 			rsw3_enadis_data_irq(priv, rdev->rx_queue->index, true);
-		}
 		spin_unlock_irqrestore(&priv->lock, flags);
 	}
 
@@ -981,16 +1008,19 @@ err:
 	return 0;
 }
 
-static void rsw3_queue_interrupt(struct net_device *ndev)
+static void rsw3_queue_interrupt(struct napi_struct *napi, bool dir_tx)
 {
+	struct net_device *ndev = napi->dev;
 	struct rsw3_device *rdev = netdev_priv(ndev);
 
-	if (napi_schedule_prep(&rdev->napi)) {
+	if (napi_schedule_prep(napi)) {
 		spin_lock(&rdev->priv->lock);
-		rsw3_enadis_data_irq(rdev->priv, rdev->tx_queue->index, false);
-		rsw3_enadis_data_irq(rdev->priv, rdev->rx_queue->index, false);
+		if (dir_tx)
+			rsw3_enadis_data_irq(rdev->priv, rdev->tx_queue->index, false);
+		else
+			rsw3_enadis_data_irq(rdev->priv, rdev->rx_queue->index, false);
 		spin_unlock(&rdev->priv->lock);
-		__napi_schedule(&rdev->napi);
+		__napi_schedule(napi);
 	}
 }
 
@@ -1007,7 +1037,11 @@ static irqreturn_t rsw3_data_irq(struct rsw3_private *priv, u32 *dis)
 			continue;
 
 		rsw3_ack_data_irq(priv, gq->index);
-		rsw3_queue_interrupt(gq->ndev);
+
+		if (gq->dir_tx)
+			rsw3_queue_interrupt(gq->napi, true);
+		else
+			rsw3_queue_interrupt(gq->napi, false);
 	}
 
 	return IRQ_HANDLED;
@@ -1710,7 +1744,8 @@ static int rsw3_open(struct net_device *ndev)
 		}
 	}
 
-	napi_enable(&rdev->napi);
+	napi_enable(&rdev->tx_napi);
+	napi_enable(&rdev->rx_napi);
 
 	spin_lock_irqsave(&rdev->priv->lock, flags);
 	bitmap_set(rdev->priv->opened_ports, rdev->port, 1);
@@ -1738,7 +1773,8 @@ static int rsw3_stop(struct net_device *ndev)
 	bitmap_clear(rdev->priv->opened_ports, rdev->port, 1);
 	spin_unlock_irqrestore(&rdev->priv->lock, flags);
 
-	napi_disable(&rdev->napi);
+	napi_disable(&rdev->tx_napi);
+	napi_disable(&rdev->rx_napi);
 
 	return 0;
 }
@@ -2080,7 +2116,8 @@ static int rsw3_device_alloc(struct rsw3_private *priv, unsigned int index)
 	ndev->max_mtu = RSWITCH3_MAX_MTU;
 	ndev->min_mtu = ETH_MIN_MTU;
 
-	netif_napi_add(ndev, &rdev->napi, rsw3_poll);
+	netif_napi_add_tx(ndev, &rdev->tx_napi, rsw3_tx_poll);
+	netif_napi_add(ndev, &rdev->rx_napi, rsw3_rx_poll);
 
 	rdev->np_port = rsw3_get_port_node(rdev);
 	rdev->disabled = !rdev->np_port;
@@ -2115,7 +2152,8 @@ out_txdmac:
 out_rxdmac:
 out_get_params:
 	of_node_put(rdev->np_port);
-	netif_napi_del(&rdev->napi);
+	netif_napi_del(&rdev->tx_napi);
+	netif_napi_del(&rdev->rx_napi);
 	free_netdev(ndev);
 
 	return err;
@@ -2132,7 +2170,8 @@ static void rsw3_device_free(struct rsw3_private *priv, unsigned int index)
 	}
 
 	of_node_put(rdev->np_port);
-	netif_napi_del(&rdev->napi);
+	netif_napi_del(&rdev->tx_napi);
+	netif_napi_del(&rdev->rx_napi);
 	free_netdev(ndev);
 }
 

@@ -1046,7 +1046,7 @@ struct rsw3_gwca_queue {
 	unsigned int cur;
 	unsigned int dirty;
 
-	struct net_device *ndev;	/* queue to ndev for irq */
+	struct napi_struct *napi;	/* queue to tx/rx_napi for irq */
 
 	union {
 		/* For TX */
@@ -1080,7 +1080,8 @@ struct rsw3_gwca {
 struct rsw3_device {
 	struct rsw3_private *priv;
 	struct net_device *ndev;
-	struct napi_struct napi;
+	struct napi_struct tx_napi;
+	struct napi_struct rx_napi;
 	void __iomem *addr;
 	struct rsw3_gwca_queue *tx_queue;
 	struct rsw3_gwca_queue *rx_queue;
