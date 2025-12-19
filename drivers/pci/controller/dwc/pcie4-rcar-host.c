@@ -77,9 +77,9 @@ struct rcar_pcie4 {
 	enum dw_pcie_device_mode	mode;
 	void __iomem			*base;
 	void __iomem			*phy_base;
-	struct reset_control		*rst;
+	struct reset_control	*perst;
+	struct reset_control	*rst;
 	struct clk			*bus_clk;
-	struct gpio_desc		*perst;
 };
 
 static void rcar_gen5_pcie_ltssm_enable(struct rcar_pcie4 *rcar_pcie4,
@@ -347,6 +347,9 @@ static int rcar_gen5_pcie_host_init(struct dw_pcie_rp *pp)
 	int ret;
 	u32 val;
 
+	if (reset_control_assert(rcar_pcie4->perst))
+		dev_err(pci->dev, "Failed to assert PERST#");
+
 	rcar_gen5_pcie_module_run(pci);
 
 	ret = clk_prepare_enable(rcar_pcie4->bus_clk);
@@ -411,6 +414,10 @@ static int rcar_gen5_pcie_host_init(struct dw_pcie_rp *pp)
 	val |= GENMASK(11, 10) | GENMASK(6, 5);
 	writel(val, rcar_pcie4->base + PCIEPWRMNGCTRL);
 
+	msleep(100);
+	if (reset_control_deassert(rcar_pcie4->perst))
+		dev_err(pci->dev, "Failed to deassert PERST#");
+
 	return 0;
 }
 
@@ -421,13 +428,21 @@ static const struct dw_pcie_host_ops rcar_gen5_pcie_host_ops = {
 static int rcar_gen5_pcie_devm_reset_get(struct rcar_pcie4 *rcar_pcie4,
 				  struct device *dev)
 {
-/*	rcar_pcie4->rst = devm_reset_control_get(dev, NULL);
+	rcar_pcie4->perst = devm_reset_control_get(dev, "perst");
+	if (IS_ERR(rcar_pcie4->perst)) {
+		if (PTR_ERR(rcar_pcie4->perst) != -EPROBE_DEFER)
+			dev_err(dev, "Failed to get PERST#\n");
+		return PTR_ERR(rcar_pcie4->perst);
+	}
+
+	rcar_pcie4->rst = devm_reset_control_get(dev, "rst");
 	if (IS_ERR(rcar_pcie4->rst)) {
-		dev_err(dev, "Failed to get Cold-reset\n");
+		if (PTR_ERR(rcar_pcie4->rst) != -EPROBE_DEFER)
+			dev_err(dev, "Failed to get PCIe4 reset#\n");
 		return PTR_ERR(rcar_pcie4->rst);
 	}
-*/
-	rcar_pcie4->bus_clk = devm_clk_get(dev, "pcie4_bus");
+
+	rcar_pcie4->bus_clk = devm_clk_get(dev, NULL);
 	if (IS_ERR(rcar_pcie4->bus_clk)) {
 		dev_err(dev, "Cannot get pcie bus clock\n");
 		return PTR_ERR(rcar_pcie4->bus_clk);
@@ -489,17 +504,18 @@ static int rcar_gen5_pcie_probe(struct platform_device *pdev)
 	pp->ops = &rcar_gen5_pcie_host_ops;
 	rcar_pcie4->pci = pci;
 
+	ret = rcar_gen5_pcie_get_resources(rcar_pcie4, pdev);
+	if (ret < 0) {
+		if (ret != -EPROBE_DEFER)
+			dev_err(dev, "Failed to request resource: %d\n", ret);
+		return ret;
+	}
+
 	pm_runtime_enable(pci->dev);
 	ret = pm_runtime_get_sync(pci->dev);
 	if (ret < 0) {
 		dev_err(pci->dev, "pm_runtime_get_sync failed\n");
 		goto err_pm_put;
-	}
-
-	ret = rcar_gen5_pcie_get_resources(rcar_pcie4, pdev);
-	if (ret < 0) {
-		dev_err(dev, "Failed to request resource: %d\n", ret);
-		return ret;
 	}
 
 	platform_set_drvdata(pdev, rcar_pcie4);
