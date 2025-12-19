@@ -173,10 +173,11 @@ static void rsw3_top_init(struct rsw3_private *priv)
 }
 
 /* Forwarding engine block (MFWD) */
-static void rsw3_fwd_init(struct rsw3_private *priv)
+static int rsw3_fwd_init(struct rsw3_private *priv)
 {
 	u32 all_ports_mask = GENMASK(RSWITCH3_NUM_AGENTS - 1, 0);
 	unsigned int i;
+	int ret;
 
 	/* Start with empty configuration */
 	for (i = 0; i < RSWITCH3_NUM_AGENTS; i++) {
@@ -186,7 +187,7 @@ static void rsw3_fwd_init(struct rsw3_private *priv)
 		iowrite32(FIELD_PREP(FWCP1_LTHFW, all_ports_mask),
 			  priv->addr + FWPC1(i));
 		/* Disallow L2 forwarding */
-		iowrite32(FIELD_PREP(FWCP2_LTWFW, all_ports_mask),
+		iowrite32(FIELD_PREP(FWPC2_LTWFM, all_ports_mask),
 			  priv->addr + FWPC2(i));
 		/* Disallow port based forwarding */
 		iowrite32(0, priv->addr + FWPBFC(i));
@@ -194,19 +195,29 @@ static void rsw3_fwd_init(struct rsw3_private *priv)
 
 	/* For enabled ETHA ports, setup port based forwarding */
 	rsw3_for_each_enabled_port(priv, i) {
-		/* Port based forwarding from port i to GWCA port */
 		rsw3_modify(priv->addr, FWPBFC(i), FWPBFC_PBDV,
 			    FIELD_PREP(FWPBFC_PBDV, BIT(priv->gwca.index)));
-		/* Within GWCA port, forward to Rx queue for port i */
+
 		if (priv->rdev[i]->disabled)
 			continue;
 
-		iowrite32(priv->rdev[i]->rx_queue->index,
+		iowrite32(priv->rdev[i]->rx_queue[0]->index,
 			  priv->addr + FWPBFCSDC(GWCA_INDEX, i));
+
+		/* Allow L2 forwarding */
+		iowrite32(FWPC0_MACSDA, priv->addr + FWPC0(i));
+		rsw3_modify(priv->addr, FWPC2(i), FWPC2_LTWFM_TO_PORT(BIT(priv->gwca.index)), 0);
 	}
 
 	/* For GWCA port, allow direct descriptor forwarding */
 	rsw3_modify(priv->addr, FWPC1(priv->gwca.index), FWPC1_DDE, FWPC1_DDE);
+
+	/* Initialize MAC table */
+	iowrite32(FWMACTIM_MACTIOG, priv->addr + FWMACTIM);
+	ret = rsw3_reg_wait(priv->addr, FWMACTIM, FWMACTIM_MACTR, FWMACTIM_MACTR);
+
+	return ret;
+
 }
 
 /* gPTP timer (gPTP) */
@@ -628,19 +639,27 @@ static int rsw3_txdmac_alloc(struct net_device *ndev)
 {
 	struct rsw3_device *rdev = netdev_priv(ndev);
 	struct rsw3_private *priv = rdev->priv;
-	int err;
+	int i, err;
 
-	rdev->tx_queue = rsw3_gwca_get(priv);
-	if (!rdev->tx_queue)
-		return -EBUSY;
+	for (i = 0; i < NUM_QUEUES_TX_PER_NDEV; i++) {
+		rdev->tx_queue[i] = rsw3_gwca_get(priv);
+		if (!rdev->tx_queue[i]) {
+			for (; i-- > 0; )
+				rsw3_gwca_put(priv, rdev->tx_queue[i]);
 
-	err = rsw3_gwca_queue_alloc(ndev, priv, rdev->tx_queue, true, TX_RING_SIZE);
-	if (err < 0) {
-		rsw3_gwca_put(priv, rdev->tx_queue);
-		return err;
+			return -EBUSY;
+		}
+
+		err = rsw3_gwca_queue_alloc(ndev, priv, rdev->tx_queue[i], true, TX_RING_SIZE);
+		if (err < 0) {
+			for (; i >= 0; i--)
+				rsw3_gwca_put(priv, rdev->tx_queue[i]);
+
+			return err;
+		}
+
+		netif_napi_add_tx(ndev, &rdev->tx_queue[i]->napi, rsw3_tx_poll);
 	}
-
-	netif_napi_add_tx(ndev, &rdev->tx_queue->napi, rsw3_tx_poll);
 
 	return 0;
 }
@@ -648,36 +667,55 @@ static int rsw3_txdmac_alloc(struct net_device *ndev)
 static void rsw3_txdmac_free(struct net_device *ndev)
 {
 	struct rsw3_device *rdev = netdev_priv(ndev);
+	int i;
 
-	rsw3_gwca_queue_free(ndev, rdev->tx_queue);
-	rsw3_gwca_put(rdev->priv, rdev->tx_queue);
-	netif_napi_del(&rdev->tx_queue->napi);
+	for (i = 0; i < NUM_QUEUES_TX_PER_NDEV; i++) {
+		rsw3_gwca_queue_free(ndev, rdev->tx_queue[i]);
+		rsw3_gwca_put(rdev->priv, rdev->tx_queue[i]);
+		netif_napi_del(&rdev->tx_queue[i]->napi);
+	}
 }
 
 static int rsw3_txdmac_init(struct rsw3_private *priv, unsigned int index)
 {
 	struct rsw3_device *rdev = priv->rdev[index];
+	int i, err;
 
-	return rsw3_gwca_queue_format(rdev->ndev, priv, rdev->tx_queue);
+	for (i = 0; i < NUM_QUEUES_TX_PER_NDEV; i++) {
+		err = rsw3_gwca_queue_format(rdev->ndev, priv, rdev->tx_queue[i]);
+		if (err)
+			return err;
+	}
+
+	return 0;
 }
 
 static int rsw3_rxdmac_alloc(struct net_device *ndev)
 {
 	struct rsw3_device *rdev = netdev_priv(ndev);
 	struct rsw3_private *priv = rdev->priv;
-	int err;
+	int i, err;
 
-	rdev->rx_queue = rsw3_gwca_get(priv);
-	if (!rdev->rx_queue)
-		return -EBUSY;
+	for (i = 0; i < NUM_QUEUES_RX_PER_NDEV; i++) {
+		rdev->rx_queue[i] = rsw3_gwca_get(priv);
+		if (!rdev->rx_queue[i]) {
+			for (; i-- > 0; )
+				rsw3_gwca_put(priv, rdev->rx_queue[i]);
 
-	err = rsw3_gwca_queue_alloc(ndev, priv, rdev->rx_queue, false, RX_RING_SIZE);
-	if (err < 0) {
-		rsw3_gwca_put(priv, rdev->rx_queue);
-		return err;
+			return -EBUSY;
+		}
+
+		err = rsw3_gwca_queue_alloc(ndev, priv, rdev->rx_queue[i], false, RX_RING_SIZE);
+		if (err < 0) {
+			for (; i >= 0; i--)
+				rsw3_gwca_put(priv, rdev->rx_queue[i]);
+
+			return err;
+		}
+
+		netif_napi_add(ndev, &rdev->rx_queue[i]->napi, rsw3_rx_poll);
+		rdev->rx_queue[i]->napi_idx = i;
 	}
-
-	netif_napi_add(ndev, &rdev->rx_queue->napi, rsw3_rx_poll);
 
 	return 0;
 }
@@ -685,18 +723,28 @@ static int rsw3_rxdmac_alloc(struct net_device *ndev)
 static void rsw3_rxdmac_free(struct net_device *ndev)
 {
 	struct rsw3_device *rdev = netdev_priv(ndev);
+	int i;
 
-	rsw3_gwca_queue_free(ndev, rdev->rx_queue);
-	rsw3_gwca_put(rdev->priv, rdev->rx_queue);
-	netif_napi_del(&rdev->rx_queue->napi);
+	for (i = 0; i < NUM_QUEUES_RX_PER_NDEV; i++) {
+		rsw3_gwca_queue_free(ndev, rdev->rx_queue[i]);
+		rsw3_gwca_put(rdev->priv, rdev->rx_queue[i]);
+		netif_napi_del(&rdev->rx_queue[i]->napi);
+	}
 }
 
 static int rsw3_rxdmac_init(struct rsw3_private *priv, unsigned int index)
 {
 	struct rsw3_device *rdev = priv->rdev[index];
 	struct net_device *ndev = rdev->ndev;
+	int i, err;
 
-	return rsw3_gwca_queue_ext_ts_format(ndev, priv, rdev->rx_queue);
+	for (i = 0; i < NUM_QUEUES_RX_PER_NDEV; i++) {
+		err = rsw3_gwca_queue_ext_ts_format(ndev, priv, rdev->rx_queue[i]);
+		if (err)
+			return err;
+	}
+
+	return 0;
 }
 
 static int rsw3_gwca_hw_init(struct rsw3_private *priv)
@@ -843,10 +891,9 @@ static struct sk_buff *rsw3_rx_handle_desc(struct net_device *ndev,
 	return skb;
 }
 
-static bool rsw3_rx(struct net_device *ndev, int *quota)
+static bool rsw3_rx(struct net_device *ndev, struct rsw3_gwca_queue *gq, int *quota)
 {
 	struct rsw3_device *rdev = netdev_priv(ndev);
-	struct rsw3_gwca_queue *gq = rdev->rx_queue;
 	struct rsw3_ext_ts_desc *desc;
 	int limit, boguscnt, ret;
 	struct sk_buff *skb;
@@ -879,7 +926,8 @@ static bool rsw3_rx(struct net_device *ndev, int *quota)
 		}
 
 		skb->protocol = eth_type_trans(skb, ndev);
-		napi_gro_receive(&rdev->rx_queue->napi, skb);
+		skb_record_rx_queue(skb, gq->napi_idx);
+		napi_gro_receive(&rdev->rx_queue[gq->napi_idx]->napi, skb);
 		rdev->ndev->stats.rx_packets++;
 		rdev->ndev->stats.rx_bytes += gq->pkt_len;
 
@@ -913,11 +961,14 @@ err:
 
 static int rsw3_tx_free(struct rsw3_gwca_queue *gq, int budget)
 {
-	struct rsw3_device *rdev = netdev_priv(ndev);
-	struct rsw3_gwca_queue *gq = rdev->tx_queue;
+	struct napi_struct *napi = &gq->napi;
+	struct net_device *ndev = napi->dev;
 	struct rsw3_ext_desc *desc;
+	struct rsw3_device *rdev;
 	struct sk_buff *skb;
 	int done = 0;
+
+	rdev = netdev_priv(ndev);
 
 	desc = &gq->tx_ring[gq->dirty];
 	while (done < budget && (desc->desc.die_dt & DT_MASK) == DT_FEMPTY) {
@@ -953,9 +1004,11 @@ static int rsw3_tx_free(struct rsw3_gwca_queue *gq, int budget)
 
 static int rsw3_tx_poll(struct napi_struct *napi, int budget)
 {
+	struct rsw3_gwca_queue *gq = napi_to_gwca_queue(napi);
 	struct net_device *ndev = napi->dev;
 	struct rsw3_private *priv;
 	struct rsw3_device *rdev;
+	int qidx = gq->napi_idx;
 	int done;
 
 	rdev = netdev_priv(ndev);
@@ -963,14 +1016,14 @@ static int rsw3_tx_poll(struct napi_struct *napi, int budget)
 
 	done = rsw3_tx_free(gq, budget);
 
-	netif_wake_subqueue(ndev, 0);
+	netif_wake_subqueue(ndev, qidx);
 
 	if (done < budget && napi_complete_done(napi, done)) {
 		unsigned long flags;
 
 		spin_lock_irqsave(&priv->lock, flags);
 		if (test_bit(rdev->port, priv->opened_ports))
-			rsw3_enadis_data_irq(priv, rdev->tx_queue->index, true);
+			rsw3_enadis_data_irq(priv, rdev->tx_queue[qidx]->index, true);
 		spin_unlock_irqrestore(&priv->lock, flags);
 	}
 
@@ -979,27 +1032,31 @@ static int rsw3_tx_poll(struct napi_struct *napi, int budget)
 
 static int rsw3_rx_poll(struct napi_struct *napi, int budget)
 {
+	struct rsw3_gwca_queue *gq = napi_to_gwca_queue(napi);
 	struct net_device *ndev = napi->dev;
 	struct rsw3_private *priv;
 	struct rsw3_device *rdev;
 	unsigned long flags;
 	int quota = budget;
+	int qidx;
 
 	rdev = netdev_priv(ndev);
 	priv = rdev->priv;
 
+	qidx = gq->napi_idx;
+
 retry:
-	if (rsw3_rx(ndev, &quota))
+	if (rsw3_rx(ndev, gq, &quota))
 		goto out;
 	else if (rdev->priv->gwca_halt)
 		goto err;
-	else if (rsw3_is_queue_rxed(rdev->rx_queue))
+	else if (rsw3_is_queue_rxed(rdev->rx_queue[qidx]))
 		goto retry;
 
 	if (napi_complete_done(napi, budget - quota)) {
 		spin_lock_irqsave(&priv->lock, flags);
 		if (test_bit(rdev->port, priv->opened_ports))
-			rsw3_enadis_data_irq(priv, rdev->rx_queue->index, true);
+			rsw3_enadis_data_irq(priv, rdev->rx_queue[qidx]->index, true);
 		spin_unlock_irqrestore(&priv->lock, flags);
 	}
 
@@ -1014,15 +1071,17 @@ err:
 
 static void rsw3_queue_interrupt(struct napi_struct *napi, bool dir_tx)
 {
+	struct rsw3_gwca_queue *gq = napi_to_gwca_queue(napi);
 	struct net_device *ndev = napi->dev;
 	struct rsw3_device *rdev = netdev_priv(ndev);
+	int qidx = gq->napi_idx;
 
 	if (napi_schedule_prep(napi)) {
 		spin_lock(&rdev->priv->lock);
 		if (dir_tx)
-			rsw3_enadis_data_irq(rdev->priv, rdev->tx_queue->index, false);
+			rsw3_enadis_data_irq(rdev->priv, rdev->tx_queue[qidx]->index, false);
 		else
-			rsw3_enadis_data_irq(rdev->priv, rdev->rx_queue->index, false);
+			rsw3_enadis_data_irq(rdev->priv, rdev->rx_queue[qidx]->index, false);
 		spin_unlock(&rdev->priv->lock);
 		__napi_schedule(napi);
 	}
@@ -1726,7 +1785,7 @@ static int rsw3_open(struct net_device *ndev)
 {
 	struct rsw3_device *rdev = netdev_priv(ndev);
 	unsigned long flags;
-	int err;
+	int i, err;
 
 	/* Init PHY if not already connected */
 	if (!ndev->phydev) {
@@ -1748,13 +1807,18 @@ static int rsw3_open(struct net_device *ndev)
 		}
 	}
 
-	napi_enable(&rdev->tx_queue->napi);
-	napi_enable(&rdev->rx_queue->napi);
+	for (i = 0; i < NUM_QUEUES_TX_PER_NDEV; i++)
+		napi_enable(&rdev->tx_queue[i]->napi);
+
+	for (i = 0; i < NUM_QUEUES_RX_PER_NDEV; i++)
+		napi_enable(&rdev->rx_queue[i]->napi);
 
 	spin_lock_irqsave(&rdev->priv->lock, flags);
 	bitmap_set(rdev->priv->opened_ports, rdev->port, 1);
-	rsw3_enadis_data_irq(rdev->priv, rdev->tx_queue->index, true);
-	rsw3_enadis_data_irq(rdev->priv, rdev->rx_queue->index, true);
+	for (i = 0; i < NUM_QUEUES_TX_PER_NDEV; i++)
+		rsw3_enadis_data_irq(rdev->priv, rdev->tx_queue[i]->index, true);
+	for (i = 0; i < NUM_QUEUES_RX_PER_NDEV; i++)
+		rsw3_enadis_data_irq(rdev->priv, rdev->rx_queue[i]->index, true);
 	spin_unlock_irqrestore(&rdev->priv->lock, flags);
 
 	phy_start(ndev->phydev);
@@ -1767,18 +1831,23 @@ static int rsw3_stop(struct net_device *ndev)
 {
 	struct rsw3_device *rdev = netdev_priv(ndev);
 	unsigned long flags;
+	int i;
 
 	netif_tx_stop_all_queues(ndev);
 	phy_stop(ndev->phydev);
 
 	spin_lock_irqsave(&rdev->priv->lock, flags);
-	rsw3_enadis_data_irq(rdev->priv, rdev->tx_queue->index, false);
-	rsw3_enadis_data_irq(rdev->priv, rdev->rx_queue->index, false);
+	for (i = 0; i < NUM_QUEUES_TX_PER_NDEV; i++)
+		rsw3_enadis_data_irq(rdev->priv, rdev->tx_queue[i]->index, false);
+	for (i = 0; i < NUM_QUEUES_RX_PER_NDEV; i++)
+		rsw3_enadis_data_irq(rdev->priv, rdev->rx_queue[i]->index, false);
 	bitmap_clear(rdev->priv->opened_ports, rdev->port, 1);
 	spin_unlock_irqrestore(&rdev->priv->lock, flags);
 
-	napi_disable(&rdev->tx_queue->napi);
-	napi_disable(&rdev->rx_queue->napi);
+	for (i = 0; i < NUM_QUEUES_TX_PER_NDEV; i++)
+		napi_disable(&rdev->tx_queue[i]->napi);
+	for (i = 0; i < NUM_QUEUES_RX_PER_NDEV; i++)
+		napi_disable(&rdev->rx_queue[i]->napi);
 
 	return 0;
 }
@@ -1850,17 +1919,20 @@ static u16 rsw3_ext_desc_get_len(u8 die_dt, unsigned int orig_len)
 static netdev_tx_t rsw3_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 {
 	struct rsw3_device *rdev = netdev_priv(ndev);
-	struct rsw3_gwca_queue *gq = rdev->tx_queue;
 	dma_addr_t dma_addr, dma_addr_orig;
 	netdev_tx_t ret = NETDEV_TX_OK;
 	struct rsw3_ext_desc *desc;
+	struct rsw3_gwca_queue *gq;
 	unsigned int i, nr_desc;
+	u16 qidx, len;
 	u8 die_dt;
-	u16 len;
+
+	qidx = skb_get_queue_mapping(skb);
+	gq = rdev->tx_queue[qidx];
 
 	nr_desc = (skb->len - 1) / RSWITCH3_DESC_BUF_SIZE + 1;
 	if (rsw3_get_num_cur_queues(gq) >= gq->ring_size - nr_desc) {
-		netif_stop_subqueue(ndev, 0);
+		netif_stop_subqueue(ndev, qidx);
 		return NETDEV_TX_BUSY;
 	}
 
@@ -1991,6 +2063,101 @@ static int rsw3_eth_ioctl(struct net_device *ndev, struct ifreq *req, int cmd)
 	}
 }
 
+static int rsw3_mac_addr_search(struct rsw3_private *priv, const u8 *mac,
+				struct rsw3_dst_mac_search_result *result)
+{
+	u32 val;
+	int ret;
+
+	iowrite32((mac[0] << 8) | mac[1], priv->addr + FWMACTS0);
+	iowrite32((mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5],
+		  priv->addr + FWMACTS1);
+	iowrite32(FWMACTS2_MACTSEA(RSWITCH3_MAX_MAC_ENTRY), priv->addr + FWMACTS2);
+	iowrite32(FWMACTS3_MAC_SEARCH, priv->addr + FWMACTS3);
+
+	ret = rsw3_reg_wait(priv->addr, FWMACTSR0, FWMACTSR0_MACTS, 0);
+	if (ret)
+		return ret;
+
+	val = ioread32(priv->addr + FWMACTSR0);
+	if ((val & FWMACTSR0_MACSNF) == FWMACTSR0_MACSNF_FOUND) {
+		result->found = true;
+		result->qidx = ioread32(priv->addr + FWMACTSR2(GWCA_INDEX));
+		result->entry = ioread32(priv->addr + FWMACTSR6);
+	} else {
+		result->found = false;
+	}
+
+	return 0;
+}
+
+static void rsw3_del_dst_mac_addr(struct rsw3_private *priv, const u8 *mac)
+{
+	iowrite32((mac[0] << 8) | mac[1], priv->addr + FWMACTL5);
+	iowrite32((mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5],
+		  priv->addr + FWMACTL6);
+
+	iowrite32(FWMACTL1_MACED, priv->addr + FWMACTL1);
+
+	iowrite32(FWMACTL8_MACDVL(priv->gwca.index), priv->addr + FWMACTL8);
+
+	rsw3_reg_wait(priv->addr, FWMACTLR, FWMACTLR_MACTL, 0);
+}
+
+static void rsw3_set_dst_mac_addr(struct net_device *ndev, const u8 *mac, unsigned int index)
+{
+	struct rsw3_device *rdev = netdev_priv(ndev);
+	struct rsw3_private *priv = rdev->priv;
+	struct rsw3_dst_mac_search_result mac_found;
+	unsigned int qidx;
+	u16 entry;
+	u32 val;
+
+	mutex_lock(&priv->m_lock);
+
+	qidx = ((index - 1) % (NUM_QUEUES_RX_PER_NDEV - 1)) + 1;
+
+	rsw3_mac_addr_search(priv, mac, &mac_found);
+	if (mac_found.found) {
+		if (mac_found.qidx == rdev->rx_queue[qidx]->index)
+			goto out;
+
+		rsw3_del_dst_mac_addr(priv, mac);
+		entry = mac_found.entry;
+	} else {
+		val = ioread32(priv->addr + FWMACTEM);
+		entry = FWMACTEM_MACTUEN(val) + FWMACTEM_MACTEN(val);
+	}
+
+	iowrite32(entry, priv->addr + FWMACTL0);
+	iowrite32(FWMACTL4_MACDSLVL(rdev->port), priv->addr + FWMACTL4);
+	iowrite32((mac[0] << 8) | mac[1], priv->addr + FWMACTL5);
+	iowrite32((mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5],
+		  priv->addr + FWMACTL6);
+
+	iowrite32(rdev->rx_queue[qidx]->index,
+		  priv->addr + FWMACTL7(GWCA_INDEX));
+
+	iowrite32(FWMACTL8_MACDVL(priv->gwca.index), priv->addr + FWMACTL8);
+
+	rsw3_reg_wait(priv->addr, FWMACTLR, FWMACTLR_MACTL, 0);
+
+out:
+	mutex_unlock(&priv->m_lock);
+}
+
+static void rsw3_set_rx_mode(struct net_device *ndev)
+{
+	struct netdev_hw_addr *ha;
+	unsigned int idx = 1;
+
+	/* Set Unicast MAC address */
+	netdev_for_each_uc_addr(ha, ndev) {
+		rsw3_set_dst_mac_addr(ndev, ha->addr, idx);
+		idx++;
+	}
+}
+
 static const struct net_device_ops rsw3_netdev_ops = {
 	.ndo_open = rsw3_open,
 	.ndo_stop = rsw3_stop,
@@ -1999,6 +2166,7 @@ static const struct net_device_ops rsw3_netdev_ops = {
 	.ndo_eth_ioctl = rsw3_eth_ioctl,
 	.ndo_validate_addr = eth_validate_addr,
 	.ndo_set_mac_address = eth_mac_addr,
+	.ndo_set_rx_mode = rsw3_set_rx_mode,
 };
 
 static int rsw3_get_ts_info(struct net_device *ndev, struct kernel_ethtool_ts_info *info)
@@ -2097,9 +2265,14 @@ static int rsw3_device_alloc(struct rsw3_private *priv, unsigned int index)
 	if (index >= rswitch3_num_ports)
 		return -EINVAL;
 
-	ndev = alloc_etherdev_mqs(sizeof(struct rsw3_device), 1, 1);
+	ndev = alloc_etherdev_mqs(sizeof(struct rsw3_device),
+				  NUM_QUEUES_TX_PER_NDEV,
+				  NUM_QUEUES_RX_PER_NDEV);
 	if (!ndev)
 		return -ENOMEM;
+
+	netif_set_real_num_tx_queues(ndev, NUM_QUEUES_TX_PER_NDEV);
+	netif_set_real_num_rx_queues(ndev, NUM_QUEUES_RX_PER_NDEV);
 
 	SET_NETDEV_DEV(ndev, &pdev->dev);
 	ether_setup(ndev);
@@ -2211,8 +2384,13 @@ static int rsw3_init(struct rsw3_private *priv)
 		}
 	}
 
-	if (!parallel_mode)
-		rsw3_fwd_init(priv);
+	rsw3_top_init(priv);
+
+	if (!parallel_mode) {
+		err = rsw3_fwd_init(priv);
+		if (err < 0)
+			goto err_fwd_init;
+	}
 
 	 err = rcar_gen4_ptp_register(priv->ptp_priv, RCAR_GEN4_PTP_REG_LAYOUT,
 				      RCAR_GEN5_PTP_CLOCK_X5H);
@@ -2256,6 +2434,7 @@ err_gwca_hw_init:
 err_gwca_request_irq:
 	rcar_gen4_ptp_unregister(priv->ptp_priv);
 
+err_fwd_init:
 err_ptp_register:
 	for (i = 0; i < rswitch3_num_ports; i++)
 		rsw3_device_free(priv, i);
@@ -2320,6 +2499,8 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 		if (ret < 0)
 			return ret;
 	}
+
+	mutex_init(&priv->m_lock);
 
 	priv->gwca.index = AGENT_INDEX_GWCA;
 	priv->gwca.num_queues = min(rswitch3_num_ports * NUM_QUEUES_PER_NDEV,

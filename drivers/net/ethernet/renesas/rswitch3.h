@@ -23,6 +23,8 @@
 #define RSWITCH3_NUM_AGENTS	15
 #define RSWITCH3_NUM_PORTS	13
 
+#define RSWITCH3_MAX_MAC_ENTRY	1024
+
 #define RSWITCH3_GWCA_IDX_TO_HW_NUM(i)	((i) + RSWITCH3_NUM_PORTS)
 #define RSWITCH3_HW_NUM_TO_GWCA_IDX(i)	((i) - RSWITCH3_NUM_PORTS)
 
@@ -231,7 +233,7 @@ enum rsw3_reg {
 	FWMACTIM		= FWRO + 0x4680,
 	FWMACTEM		= FWRO + 0x4684,
 	FWMACTS0		= FWRO + 0x4690,
-	FWMACTS1		= FWRO + 0x4693,
+	FWMACTS1		= FWRO + 0x4694,
 	FWMACTS2		= FWRO + 0x4698,
 	FWMACTS3		= FWRO + 0x469c,
 	FWMACTSR0		= FWRO + 0x46a0,
@@ -923,12 +925,34 @@ enum rsw3_gwca_mode {
 #define FWPC1_DDE		BIT(0)
 
 #define FWPC2(i)		(FWPC20 + (i) * 0x10)
-#define FWCP2_LTWFW		GENMASK(16 + (RSWITCH3_NUM_AGENTS - 1), 16)
+#define FWPC2_LTWFM		GENMASK(16 + (RSWITCH3_NUM_AGENTS - 1), 16)
+#define FWPC2_LTWFM_TO_PORT(p)	FIELD_PREP(FWPC2_LTWFM, (p))
 
 #define FWPBFC(i)		(FWPBFC00 + (i) * 0x10)
 #define FWPBFC_PBDV		GENMASK(RSWITCH3_NUM_AGENTS - 1, 0)
 
 #define FWPBFCSDC(j, i)		(FWPBFCSDC00 + (i) * 0x20 + (j) * 0x04)
+
+#define FWMACTL1_MACED		BIT(31)
+#define FWMACTL4_MACDSLVL(p)	(BIT(p) << 16)
+#define FWMACTL7(i)		(FWMACTL70 + (i) * 4)
+#define FWMACTL8_MACDVL(p)	BIT(p)
+#define FWMACTLR_MACTL		BIT(31)
+
+#define FWMACTIM_MACTIOG	BIT(0)
+#define FWMACTIM_MACTR		BIT(1)
+
+#define FWMACTEM_MACTUEN(val)	FIELD_GET(GENMASK(26, 16), (val))
+#define FWMACTEM_MACTEN(val)	FIELD_GET(GENMASK(10, 0),  (val))
+
+#define FWMACTS2_MACTSEA(val)	((val) << 16)
+#define FWMACTS3_MAC_SEARCH	(0)
+
+#define FWMACTSR0_MACSNF	BIT(1)
+#define FWMACTSR0_MACSNF_FOUND	((0))
+#define FWMACTSR0_MACSNF_NFOUND	BIT(1)
+#define FWMACTSR0_MACTS		(BIT(31))
+#define FWMACTSR2(i)		(FWMACTSR20 + (i) * 4)
 
 /* TOP */
 #define  TPDEMIMC0(queue)	(TPDEMIMC0 + (queue) * 4)
@@ -1030,6 +1054,8 @@ struct rsw3_etha {
 	bool connect_to_xpcs;
 };
 
+#define napi_to_gwca_queue(n)	container_of(n, struct rsw3_gwca_queue, napi)
+
 /* The datasheet said descriptor "chain" and/or "queue". For consistency of
  * name, this driver calls "queue".
  */
@@ -1047,6 +1073,7 @@ struct rsw3_gwca_queue {
 	unsigned int dirty;
 
 	struct napi_struct napi;
+	int napi_idx;
 
 	union {
 		/* For TX */
@@ -1076,13 +1103,15 @@ struct rsw3_gwca {
 	u32 rx_irq_bits[RSWITCH3_NUM_IRQ_REGS];
 };
 
-#define NUM_QUEUES_PER_NDEV	2
+#define NUM_QUEUES_TX_PER_NDEV	4
+#define NUM_QUEUES_RX_PER_NDEV	4
+#define NUM_QUEUES_PER_NDEV	(NUM_QUEUES_TX_PER_NDEV + NUM_QUEUES_RX_PER_NDEV)
 struct rsw3_device {
 	struct rsw3_private *priv;
 	struct net_device *ndev;
 	void __iomem *addr;
-	struct rsw3_gwca_queue *tx_queue;
-	struct rsw3_gwca_queue *rx_queue;
+	struct rsw3_gwca_queue *tx_queue[NUM_QUEUES_TX_PER_NDEV];
+	struct rsw3_gwca_queue *rx_queue[NUM_QUEUES_RX_PER_NDEV];
 	u8 ts_tag;
 	bool disabled;
 
@@ -1118,12 +1147,19 @@ struct rsw3_private {
 	struct rsw3_mfwd mfwd;
 
 	spinlock_t lock;	/* lock interrupt registers' control */
+	struct mutex m_lock;
 	struct clk *clk;
 
 	bool gwca_halt;
 
 	struct clk *rsw_clk;
 	struct clk *phy_clk;
+};
+
+struct rsw3_dst_mac_search_result {
+	bool found;
+	unsigned int entry;
+	unsigned int qidx;
 };
 
 static int rswitch3_num_ports = 13;
