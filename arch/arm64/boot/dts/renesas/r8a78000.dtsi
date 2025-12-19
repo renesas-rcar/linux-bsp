@@ -5314,7 +5314,7 @@
 			renesas,has-shp;
 			renesas,#read_outstanding = <2>;
 			renesas,#start_reservation = <2>;
-			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPI0>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVI0>;
 			reset-names = "vsp", "fcp";
@@ -5343,7 +5343,7 @@
 			renesas,has-shp;
 			renesas,#read_outstanding = <2>;
 			renesas,#start_reservation = <2>;
-			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPI1>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVI1>;
 			reset-names = "vsp", "fcp";
@@ -5372,7 +5372,7 @@
 			renesas,has-shp;
 			renesas,#read_outstanding = <2>;
 			renesas,#start_reservation = <2>;
-			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPI2>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVI2>;
 			reset-names = "vsp", "fcp";
@@ -5401,7 +5401,7 @@
 			renesas,has-shp;
 			renesas,#read_outstanding = <2>;
 			renesas,#start_reservation = <2>;
-			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPI3>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVI3>;
 			reset-names = "vsp", "fcp";
@@ -5423,7 +5423,7 @@
 			renesas,#read_outstanding = <0>;
 			renesas,#start_reservation = <2>;
 			renesas,#burst_access = <0>;
-			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPB0>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVB0>;
 			reset-names = "vsp", "fcp";
@@ -5445,7 +5445,7 @@
 			renesas,#read_outstanding = <0>;
 			renesas,#start_reservation = <2>;
 			renesas,#burst_access = <0>;
-			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPB1>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVB1>;
 			reset-names = "vsp", "fcp";
@@ -5467,7 +5467,7 @@
 			renesas,#read_outstanding = <0>;
 			renesas,#start_reservation = <2>;
 			renesas,#burst_access = <0>;
-			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPB2>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVB2>;
 			reset-names = "vsp", "fcp";
@@ -5489,7 +5489,7 @@
 			renesas,#read_outstanding = <0>;
 			renesas,#start_reservation = <2>;
 			renesas,#burst_access = <0>;
-			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPB3>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVB3>;
 			reset-names = "vsp", "fcp";
@@ -5511,7 +5511,7 @@
 			renesas,#read_outstanding = <0>;
 			renesas,#start_reservation = <2>;
 			renesas,#burst_access = <0>;
-			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			//power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPB4>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVB4>;
 			reset-names = "vsp", "fcp";
