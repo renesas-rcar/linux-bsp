@@ -166,10 +166,39 @@ static void rsw3_coma_init(struct rsw3_private *priv)
 /* R-Switch-3 block (TOP) */
 static void rsw3_top_init(struct rsw3_private *priv)
 {
-	unsigned int i;
+	unsigned int i, j;
 
-	for (i = 0; i < RSWITCH3_MAX_NUM_QUEUES; i++)
-		iowrite32((i / 16) << (GWCA_INDEX * 8), priv->addr + TPDEMIMC0(i));
+	rsw3_for_each_enabled_port(priv, i) {
+		struct rsw3_device *rdev = priv->rdev[i];
+		unsigned int reg, bit;
+
+		if (rdev->disabled)
+			continue;
+
+		for (j = 0; j < NUM_QUEUES_TX_PER_NDEV; j++) {
+			struct rsw3_gwca_queue *gq = rdev->tx_queue[j];
+			unsigned int irq_idx = j % GWCA_NUM_IRQS;
+
+			iowrite32(TPDEMIMC_GDICM(GWCA_INDEX, irq_idx),
+				  priv->addr + TPDEMIMC(gq->index));
+
+			reg = gq->index / 32;
+			bit = BIT(gq->index % 32);
+			priv->irq[irq_idx].irq_bits[reg] |= bit;
+		}
+
+		for (j = 0; j < NUM_QUEUES_RX_PER_NDEV; j++) {
+			struct rsw3_gwca_queue *gq = rdev->rx_queue[j];
+			unsigned int irq_idx = (j + NUM_QUEUES_TX_PER_NDEV) % GWCA_NUM_IRQS;
+
+			iowrite32(TPDEMIMC_GDICM(GWCA_INDEX, irq_idx),
+				  priv->addr + TPDEMIMC(gq->index));
+
+			reg = gq->index / 32;
+			bit = BIT(gq->index % 32);
+			priv->irq[irq_idx].irq_bits[reg] |= bit;
+		}
+	}
 }
 
 /* Forwarding engine block (MFWD) */
@@ -260,9 +289,8 @@ static int rsw3_gwca_axi_ram_reset(struct rsw3_private *priv)
 	return rsw3_reg_wait(priv->addr, GWARIRM, GWARIRM_ARR, GWARIRM_ARR);
 }
 
-static bool rsw3_is_any_data_irq(struct rsw3_private *priv, u32 *dis, bool tx)
+static bool rsw3_is_any_data_irq(struct rsw3_private *priv, u32 *dis, u32 *mask)
 {
-	u32 *mask = tx ? priv->gwca.tx_irq_bits : priv->gwca.rx_irq_bits;
 	unsigned int i;
 
 	for (i = 0; i < RSWITCH3_NUM_IRQ_REGS; i++) {
@@ -297,7 +325,9 @@ static void rsw3_ack_data_irq(struct rsw3_private *priv, int index)
 {
 	u32 offs = GWDIS0 + (index / 32) * 0x10;
 
+	spin_lock(&priv->lock);
 	iowrite32(BIT(index % 32), priv->addr + offs);
+	spin_unlock(&priv->lock);
 }
 
 static unsigned int rsw3_next_queue_index(struct rsw3_gwca_queue *gq,
@@ -392,8 +422,6 @@ static int rsw3_gwca_queue_alloc(struct net_device *ndev,
 				 struct rsw3_gwca_queue *gq,
 				 bool dir_tx, unsigned int ring_size)
 {
-	unsigned int i, bit;
-
 	gq->dir_tx = dir_tx;
 	gq->ring_size = ring_size;
 
@@ -421,13 +449,6 @@ static int rsw3_gwca_queue_alloc(struct net_device *ndev,
 
 	if (!gq->rx_ring && !gq->tx_ring)
 		goto out;
-
-	i = gq->index / 32;
-	bit = BIT(gq->index % 32);
-	if (dir_tx)
-		priv->gwca.tx_irq_bits[i] |= bit;
-	else
-		priv->gwca.rx_irq_bits[i] |= bit;
 
 	return 0;
 
@@ -1087,7 +1108,7 @@ static void rsw3_queue_interrupt(struct napi_struct *napi, bool dir_tx)
 	}
 }
 
-static irqreturn_t rsw3_data_irq(struct rsw3_private *priv, u32 *dis)
+static irqreturn_t rsw3_data_irq(struct rsw3_private *priv, u32 *dis, u32 *mask)
 {
 	struct rsw3_gwca_queue *gq;
 	unsigned int i, index, bit;
@@ -1096,7 +1117,7 @@ static irqreturn_t rsw3_data_irq(struct rsw3_private *priv, u32 *dis)
 		gq = &priv->gwca.queues[i];
 		index = gq->index / 32;
 		bit = BIT(gq->index % 32);
-		if (!(dis[index] & bit))
+		if (!(dis[index] & bit) || !(mask[index] & bit))
 			continue;
 
 		rsw3_ack_data_irq(priv, gq->index);
@@ -1115,12 +1136,23 @@ static irqreturn_t rsw3_gwca_irq(int irq, void *dev_id)
 	struct rsw3_private *priv = dev_id;
 	irqreturn_t ret = IRQ_NONE;
 	u32 dis[RSWITCH3_NUM_IRQ_REGS];
+	unsigned int i;
+	u32 *mask;
 
 	rsw3_get_data_irq_status(priv, dis);
 
-	if (rsw3_is_any_data_irq(priv, dis, true) ||
-	    rsw3_is_any_data_irq(priv, dis, false))
-		ret = rsw3_data_irq(priv, dis);
+	for (i = 0; i < GWCA_NUM_IRQS; i++) {
+		if (irq == priv->irq[i].irq_id) {
+			mask = priv->irq[i].irq_bits;
+			break;
+		}
+	}
+
+	if (!mask)
+		return ret;
+
+	if (rsw3_is_any_data_irq(priv, dis, mask))
+		ret = rsw3_data_irq(priv, dis, mask);
 
 	return ret;
 }
@@ -1149,6 +1181,8 @@ static int rsw3_gwca_request_irqs(struct rsw3_private *priv)
 				       0, irq_name, priv);
 		if (ret < 0)
 			return ret;
+
+		priv->irq[i].irq_id = irq;
 	}
 
 	return 0;
@@ -2363,7 +2397,6 @@ static int rsw3_init(struct rsw3_private *priv)
 	if (!parallel_mode)
 		rsw3_clock_enable(priv);
 
-	rsw3_top_init(priv);
 	if (!parallel_mode) {
 		err = rsw3_bpool_config(priv);
 		if (err < 0)
@@ -2607,8 +2640,6 @@ static int renesas_eth_sw_resume(struct device *dev)
 
 	rsw3_clock_enable(priv);
 
-	rsw3_top_init(priv);
-
 	rsw3_bpool_config(priv);
 
 	rsw3_coma_init(priv);
@@ -2621,6 +2652,8 @@ static int renesas_eth_sw_resume(struct device *dev)
 		rsw3_rxdmac_alloc(ndev);
 		rsw3_txdmac_alloc(ndev);
 	}
+
+	rsw3_top_init(priv);
 
 	rsw3_gwca_hw_init(priv);
 

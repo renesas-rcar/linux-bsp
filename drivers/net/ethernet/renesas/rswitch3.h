@@ -69,7 +69,7 @@
 /* TODO: hardcoded ETHA/GWCA1 settings for now */
 #define GWCA_IRQ_RESOURCE_NAME	"gwca1_gwdis%d"
 #define GWCA_IRQ_NAME		"rswitch3: gwca1_gwdis%d"
-#define GWCA_NUM_IRQS		1
+#define GWCA_NUM_IRQS		8
 #define GWCA_INDEX		1
 #define AGENT_INDEX_GWCA	14
 #define GWCA_IPV_NUM		0
@@ -955,7 +955,8 @@ enum rsw3_gwca_mode {
 #define FWMACTSR2(i)		(FWMACTSR20 + (i) * 4)
 
 /* TOP */
-#define  TPDEMIMC0(queue)	(TPDEMIMC0 + (queue) * 4)
+#define TPDEMIMC(queue)		(TPDEMIMC0 + (queue) * 4)
+#define TPDEMIMC_GDICM(t, val)	((val) << ((t) * 4))
 
 /* Descriptors */
 enum RX_DS_CC_BIT {
@@ -1099,8 +1100,6 @@ struct rsw3_gwca {
 	struct rsw3_gwca_queue *queues;
 	int num_queues;
 	DECLARE_BITMAP(used, RSWITCH3_MAX_NUM_QUEUES);
-	u32 tx_irq_bits[RSWITCH3_NUM_IRQ_REGS];
-	u32 rx_irq_bits[RSWITCH3_NUM_IRQ_REGS];
 };
 
 #define NUM_QUEUES_TX_PER_NDEV	4
@@ -1133,6 +1132,11 @@ struct rsw3_mfwd {
 	int num_mac_table_entries;
 };
 
+struct rsw3_irq {
+	int irq_id;
+	u32 irq_bits[RSWITCH3_NUM_IRQ_REGS];
+};
+
 struct rsw3_private {
 	struct platform_device *pdev;
 	void __iomem *addr;
@@ -1154,6 +1158,8 @@ struct rsw3_private {
 
 	struct clk *rsw_clk;
 	struct clk *phy_clk;
+
+	struct rsw3_irq irq[GWCA_NUM_IRQS];
 };
 
 struct rsw3_dst_mac_search_result {
