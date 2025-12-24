@@ -2646,6 +2646,8 @@ static int renesas_eth_sw_suspend(struct device *dev)
 		etha_mii->operated = false;
 	}
 
+	clk_disable_unprepare(priv->clk);
+
 	return 0;
 }
 
@@ -2654,6 +2656,11 @@ static int renesas_eth_sw_resume(struct device *dev)
 	struct rsw3_private *priv = dev_get_drvdata(dev);
 	struct net_device *ndev;
 	unsigned int i;
+
+	if (clk_prepare_enable(priv->clk)) {
+		dev_warn(dev, "Failed to enable clock, will use fallback frequency\n");
+		priv->clk = NULL;
+	}
 
 	rsw3_clock_enable(priv);
 
