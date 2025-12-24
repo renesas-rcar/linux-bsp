@@ -17,119 +17,6 @@
 #include <linux/reset.h>
 #include <linux/clk.h>
 
-/* Hardcoded for enable module clock */
-#define MDLC_BASE		0xc9c90000
-/*
- * PDIDs per HW UM Rev.0.52:
- *  - RSW3 (Ethernet Switch3 / PCS domain) : PDID = 1
- *  - MPPHY                                : PDID = 3..6
- * PCS control here targets the RSW3 power domain.
- */
-#define R8A78000_ETH_PCS_PDID		(1)
-#define R8A78000_ETH_PCS_CLK_MASK(n)	GENMASK((n) + 1, n)
-#define R8A78000_ETH_PCS_CLK_SHIFT(n)	(n)
-
-#define MDLC_PKCPROT0		(MDLC_BASE + 0x0cf0)
-#define MDLC_PKCPROT1		(MDLC_BASE + 0x0cf4)
-
-#define _MDLC_MPDG(k)		(MDLC_BASE + 0x0200 + (k) * 4)
-#define _MDLC_MPDGS(k)		(MDLC_BASE + 0x0300 + (k) * 4)
-#define MDLC_MPIER0		(MDLC_BASE + 0x0110)
-#define MDLC_MPIMR0		(MDLC_BASE + 0x0120)
-
-#define MDLC_MPDG		_MDLC_MPDG(R8A78000_ETH_PCS_PDID)
-#define MDLC_MPDGS		_MDLC_MPDGS(R8A78000_ETH_PCS_PDID)
-
-#define MDLC_MSRES(i)		(MDLC_BASE + 0x0900 + (i) * 4)
-#define MDLC_MSRESS(i)		(MDLC_BASE + 0x0960 + (i) * 4)
-
-static void r8a78000_eth_pcs_module_power_gating_set(u8 mode)
-{
-	void __iomem *unlock = ioremap(MDLC_PKCPROT0, 4);
-	void __iomem *mpdg = ioremap(MDLC_MPDG, 4);
-	void __iomem *mpdgs = ioremap(MDLC_MPDGS, 4);
-	void __iomem *mpier0 = ioremap(MDLC_MPIER0, 4);
-	void __iomem *mpimr0 = ioremap(MDLC_MPIMR0, 4);
-
-	writel(0xA5A5A501, unlock);
-
-	if ((readl(mpdgs) & 0x03) == mode)
-		goto unmap;
-
-	while (readl(mpdgs) != readl(mpdg))
-		usleep_range(1000, 1100);
-
-	writel(0, mpier0);
-	writel(0x1, mpimr0);
-
-	writel(0x1, mpdg);
-
-	while (readl(mpdgs) != readl(mpdg))
-		usleep_range(1000, 1100);
-
-	writel(mode, mpdg);
-
-	while (readl(mpdgs) != readl(mpdg))
-		usleep_range(1000, 1100);
-
-unmap:
-	iounmap(unlock);
-	iounmap(mpdg);
-	iounmap(mpdgs);
-	iounmap(mpier0);
-	iounmap(mpimr0);
-}
-
-static void r8a78000_eth_pcs_module_standy_set(u8 clk_reg_no, u8 pos, u8 mode)
-{
-	void __iomem *unlock = ioremap(MDLC_PKCPROT1, 4);
-	void __iomem *msress = ioremap(MDLC_MSRESS(clk_reg_no), 4);
-	void __iomem *msres = ioremap(MDLC_MSRES(clk_reg_no), 4);
-	u32 val;
-
-	writel(0xA5A5A501, unlock);
-
-	if ((readl(msress) & R8A78000_ETH_PCS_CLK_MASK(pos)) == (mode <<
-								 R8A78000_ETH_PCS_CLK_SHIFT(pos)))
-		goto unmap;
-
-	while ((readl(msress) & R8A78000_ETH_PCS_CLK_MASK(pos)) != (readl(msres) &
-								    R8A78000_ETH_PCS_CLK_MASK(pos)))
-		usleep_range(1000, 1100);
-
-	val = readl(msres);
-	val &= ~R8A78000_ETH_PCS_CLK_MASK(pos);
-	val |= mode << R8A78000_ETH_PCS_CLK_SHIFT(pos);
-	writel(val, msres);
-
-	while ((readl(msress) & R8A78000_ETH_PCS_CLK_MASK(pos)) != (readl(msres) &
-								    R8A78000_ETH_PCS_CLK_MASK(pos)))
-		usleep_range(1000, 1100);
-
-unmap:
-	iounmap(unlock);
-	iounmap(msress);
-	iounmap(msres);
-}
-
-static void r8a78000_eth_pcs_module_reset(void)
-{
-	int i;
-
-	for (i = 0; i < 8; i++)
-		r8a78000_eth_pcs_module_standy_set(3, i * 2, 0x01);
-}
-
-static void r8a78000_eth_pcs_module_run(void)
-{
-	int i;
-
-	for (i = 0; i < 8; i++)
-		r8a78000_eth_pcs_module_standy_set(3, i * 2, 0x03);
-}
-
-//----------------------------------------------------------------
-
 #define R8A78000_ETH_PCS_NUM				8
 #define R8A78000_ETH_PCS_OFFSET				0x0400
 #define R8A78000_ETH_PCS_BANK_SELECT		0x03fc
@@ -616,7 +503,6 @@ static int r8a78000_eth_pcs_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	/* TODO: Reset and enable clock control when clock is available */
 	for (int i = 0; i < R8A78000_ETH_PCS_NUM - 1; ++i) {
 		char rst_name[16] = {0};
 
@@ -670,16 +556,38 @@ static int pcs_suspend(struct device *dev)
 		}
 	}
 
+	clk_bulk_disable_unprepare(dd->num_clks, dd->clks);
+
 	return 0;
 }
 
 static int pcs_resume(struct device *dev)
 {
-	/* Module reset */
-	r8a78000_eth_pcs_module_power_gating_set(0x03);
-	r8a78000_eth_pcs_module_reset();
-	udelay(1000);
-	r8a78000_eth_pcs_module_run();
+	struct platform_device *pdev = to_platform_device(dev);
+	struct r8a78000_eth_pcs_drv_data *dd = platform_get_drvdata(pdev);
+	int ret;
+
+	for (int i = 0; i < R8A78000_ETH_PCS_NUM - 1; ++i) {
+		ret = reset_control_assert(dd->resets[i]);
+		if (ret) {
+			dev_err(&pdev->dev, "Failed to assert pcs%d", i);
+			return ret;
+		}
+	}
+
+	for (int i = 0; i < R8A78000_ETH_PCS_NUM - 1; ++i) {
+		ret = reset_control_deassert(dd->resets[i]);
+		if (ret) {
+			dev_err(&pdev->dev, "Failed to deassert pcs%d", i);
+			return ret;
+		}
+	}
+
+	ret = clk_bulk_prepare_enable(dd->num_clks, dd->clks);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to enable bulk clocks: %d\n", ret);
+		return ret;
+	}
 
 	return 0;
 }
