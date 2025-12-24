@@ -2498,12 +2498,16 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	}
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "secure_base");
-	if (!res)
-		return -EINVAL;
+	if (!res) {
+		ret = -EINVAL;
+		goto err_sw_probe;
+	}
 
 	res_ptp = platform_get_resource_byname(pdev, IORESOURCE_MEM, "gptp_base");
-	if (!res_ptp)
-		return -EINVAL;
+	if (!res_ptp) {
+		ret = -EINVAL;
+		goto err_sw_probe;
+	}
 
 	if (!parallel_mode)
 		parallel_mode = of_property_read_bool(pdev->dev.of_node, "parallel_mode");
@@ -2515,22 +2519,28 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	priv->pdev = pdev;
 
 	priv->addr = devm_ioremap_resource(&pdev->dev, res);
-	if (IS_ERR(priv->addr))
-		return PTR_ERR(priv->addr);
+	if (IS_ERR(priv->addr)) {
+		ret = PTR_ERR(priv->addr);
+		goto err_sw_probe;
+	}
 
 	priv->ptp_priv = rcar_gen4_ptp_alloc(pdev);
-	if (!priv->ptp_priv)
-		return -ENOMEM;
+	if (!priv->ptp_priv) {
+		ret = -ENOMEM;
+		goto err_sw_probe;
+	}
 
 	priv->ptp_priv->addr = devm_ioremap_resource(&pdev->dev, res_ptp);
-	if (IS_ERR(priv->ptp_priv->addr))
-		return PTR_ERR(priv->ptp_priv->addr);
+	if (IS_ERR(priv->ptp_priv->addr)) {
+		ret = PTR_ERR(priv->ptp_priv->addr);
+		goto err_sw_probe;
+	}
 
 	ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(40));
 	if (ret < 0) {
 		ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
 		if (ret < 0)
-			return ret;
+			goto err_sw_probe;
 	}
 
 	mutex_init(&priv->m_lock);
@@ -2540,8 +2550,10 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 				    RSWITCH3_MAX_NUM_QUEUES);
 	priv->gwca.queues = devm_kcalloc(&pdev->dev, priv->gwca.num_queues,
 					 sizeof(*priv->gwca.queues), GFP_KERNEL);
-	if (!priv->gwca.queues)
-		return -ENOMEM;
+	if (!priv->gwca.queues) {
+		ret = -ENOMEM;
+		goto err_sw_probe;
+	}
 
 	if (!parallel_mode) {
 		pm_runtime_enable(&pdev->dev);
@@ -2554,10 +2566,15 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 			pm_runtime_put(&pdev->dev);
 			pm_runtime_disable(&pdev->dev);
 		}
-		return ret;
+		goto err_sw_probe;
 	}
 
 	device_set_wakeup_capable(&pdev->dev, 1);
+
+	return 0;
+
+err_sw_probe:
+	clk_disable_unprepare(priv->clk);
 
 	return ret;
 }
