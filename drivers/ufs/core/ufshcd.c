@@ -108,7 +108,7 @@ enum {
 #define DEFAULT_MAX_NUM_RTT 2
 
 /* UFSHC 4.0 compliant HC support this mode. */
-static bool use_mcq_mode = true;
+static bool use_mcq_mode;
 
 static bool is_mcq_supported(struct ufs_hba *hba)
 {
