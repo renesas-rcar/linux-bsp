@@ -24,8 +24,7 @@
 #define WDTA0ERM	BIT(2)
 #define WDTA0WIE	BIT(3)
 #define WDTA0OVF(x)	(((x) << 4) & GENMASK(6, 4))
-#define WWDTE_KEY	0x2C
-#define WWDTA0RUN	BIT(7)
+#define WWDTE_KEY	0xAC
 
 /* ECM register base and offsets */
 #define ECM_WWDT	22
@@ -37,6 +36,58 @@
 #define ECMWPCNTR	0x0A00
 #define ECM_MAX_SIZE	(ECMWPCNTR + 0x04)
 #define ECM_SET	(0x81 << 22)
+
+/* Hardcoded for enable module clock */
+#define MDLC_BASE_SCP		0xC1330000
+#define WWDT_PDID		(0)
+#define WWDT_CLK_MASK(n)	GENMASK((n) + 1, n)
+#define WWDT_CLK_SHIFT(n)	(n)
+
+#define MDLC_PKCPROT1(x)	((x) + 0x0cf4)
+
+#define MDLC_MPIER0		(MDLC_BASE + 0x0110)
+#define MDLC_MPIMR0		(MDLC_BASE + 0x0120)
+
+#define MDLC_MSRES_SCP(i)		(MDLC_BASE_SCP + 0x0900 + (i) * 4)
+#define MDLC_MSRESS_SCP(i)	(	MDLC_BASE_SCP + 0x0960 + (i) * 4)
+
+static void wwdt_module_standby_set(u8 clk_reg_no, u8 pos, u8 mode)
+{
+	u32 val;
+	void __iomem *unlock_scp = ioremap(MDLC_PKCPROT1(MDLC_BASE_SCP), 4);
+	void __iomem *msress = ioremap(MDLC_MSRESS_SCP(clk_reg_no), 4);
+	void __iomem *msres = ioremap(MDLC_MSRES_SCP(clk_reg_no), 4);
+
+
+	writel(0xA5A5A501, unlock_scp);
+
+	while ((readl(msress) & WWDT_CLK_MASK(pos)) != (readl(msres) & WWDT_CLK_MASK(pos)))
+			udelay(1000);
+
+	val = readl(msres);
+	val &= ~WWDT_CLK_MASK(pos);
+	val |= mode << WWDT_CLK_SHIFT(pos);
+	writel(val, msres);
+
+	while ((readl(msress) & WWDT_CLK_MASK(pos)) != (readl(msres) & WWDT_CLK_MASK(pos)))
+			udelay(1000);
+
+	writel(0xA5A5A500, unlock_scp);
+
+	iounmap(unlock_scp);
+	iounmap(msress);
+	iounmap(msres);
+}
+
+static void wwdt_module_power_run(void)
+{
+		wwdt_module_standby_set(7, 14, 0x01);
+		wwdt_module_standby_set(7, 14, 0x03);
+		mdelay(100);
+		wwdt_module_standby_set(7, 16, 0x01);
+		wwdt_module_standby_set(7, 16, 0x03);
+		mdelay(100);
+}
 
 static bool nowayout = WATCHDOG_NOWAYOUT;
 module_param(nowayout, bool, 0);
@@ -88,26 +139,26 @@ static void wwdt_refresh_counter(struct watchdog_device *wdev)
 {
 	struct wwdt_priv *priv = watchdog_get_drvdata(wdev);
 
-	wwdt_write(priv, WWDTA0RUN | WWDTE_KEY, WWDTE);
+	wwdt_write(priv, 0xAC, WWDTE);
 }
 
 static void wwdt_setup(struct watchdog_device *wdev)
 {
 	struct wwdt_priv *priv = watchdog_get_drvdata(wdev);
 	struct device_node *np = priv->wdev.parent->of_node;
+	u8 val;
+
+	val = wwdt_read(priv, WDTA0MD);
+	if (!priv->error_mode)
+		val &= ~WDTA0ERM;
+	val |= (WDTA0OVF(priv->interval_time)) | WSIZE(priv->wsize);
+	if (priv->wdt_wie)
+		val |= WDTA0WIE;
+	wwdt_write(priv, val, WDTA0MD);
 
 	/* Setting ECM for WWDT20 */
 	if (of_find_property(np, "ecm", NULL))
 		init_ecm_registers();
-}
-
-static irqreturn_t wwdt_pretimeout_irq(int irq, void *dev_id)
-{
-	struct watchdog_device *wdev = dev_id;
-
-	watchdog_notify_pretimeout(wdev);
-
-	return IRQ_HANDLED;
 }
 
 static int wwdt_start(struct watchdog_device *wdev)
@@ -117,7 +168,7 @@ static int wwdt_start(struct watchdog_device *wdev)
 	pm_runtime_get_sync(wdev->parent);
 
 	wwdt_setup(wdev);
-	wwdt_write(priv, WWDTA0RUN | WWDTE_KEY, WWDTE);
+	wwdt_write(priv, 0xAC, WWDTE);
 
 	return 0;
 }
@@ -152,13 +203,10 @@ static int wwdt_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct wwdt_priv *priv;
-	struct watchdog_device *wdev;
-	struct resource *res;
-	unsigned long rate;
-	unsigned int interval, window_size;
 	u8 val;
 	int ret;
 
+	wwdt_module_power_run();
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
@@ -167,8 +215,13 @@ static int wwdt_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->base))
 		return PTR_ERR(priv->base);
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	rate = (res->start == (0xc1380000)) ? 240000 : 32800;
+	pm_runtime_enable(dev);
+	priv->wdev.info = &wwdt_ident;
+	priv->wdev.ops = &wwdt_ops;
+	priv->wdev.parent = dev;
+
+	platform_set_drvdata(pdev, priv);
+	watchdog_set_drvdata(&priv->wdev, priv);
 
 	ret = device_property_read_u32(dev, "interval-time", &priv->interval_time);
 	if (ret)
@@ -192,50 +245,19 @@ static int wwdt_probe(struct platform_device *pdev)
 		priv->wdt_wie = 0;
 	}
 
+	/* Default state after reset release */
 	val = wwdt_read(priv, WDTA0MD);
-	if (val & WWDTA0RUN)
-		set_bit(WDOG_HW_RUNNING, &wdev->status);
-
-	if (!priv->error_mode)
-		val &= ~WDTA0ERM;
-
-	val |= (WDTA0OVF(priv->interval_time)) | WSIZE(priv->wsize);
-	interval = 1 << (9 + (priv->interval_time));
-	window_size = 250 * (3 - (priv->wsize));
-
-	if (priv->wdt_wie) {
-		val |= WDTA0WIE;
-		ret = platform_get_irq_byname(pdev, "pretimeout");
-		if (ret < 0)
-		       return ret;
-
-		ret = devm_request_threaded_irq(dev, ret, NULL, wwdt_pretimeout_irq,
-						IRQF_ONESHOT, NULL, &priv->wdev);
-		if (ret < 0)
-			return ret;
-	}
+	val &= ~WDTA0WIE;
+	val |= WSIZE(0);
 	wwdt_write(priv, val, WDTA0MD);
-
-	wdev = &priv->wdev;
-	wdev->max_hw_heartbeat_ms = 1000 * interval / rate;
-	wdev->min_hw_heartbeat_ms = window_size * interval / rate;
-	wdev->timeout = DIV_ROUND_UP(wdev->max_hw_heartbeat_ms, 1000);
-
-	pm_runtime_enable(dev);
-	wdev->info = &wwdt_ident;
-	wdev->ops = &wwdt_ops;
-	wdev->parent = dev;
-
-	platform_set_drvdata(pdev, priv);
-	watchdog_set_drvdata(&priv->wdev, priv);
 
 	watchdog_set_nowayout(&priv->wdev, nowayout);
 	watchdog_set_restart_priority(&priv->wdev, 0);
 	watchdog_stop_on_unregister(&priv->wdev);
 
-	ret = watchdog_register_device(wdev);
+	ret = watchdog_register_device(&priv->wdev);
 	if (ret < 0)
-		dev_err(dev, "Fail to register device\n");
+		pr_info("Fail to register device\n");
 
 	dev_info(dev, "probed\n");
 	return 0;
