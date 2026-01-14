@@ -98,6 +98,7 @@ struct rcar_pcie6 {
 	void __iomem		*phy_base;
 	struct clk		*bus_clk;
 	u32			ch;
+	struct reset_control	*perst;
 };
 
 #define to_rcar_gen5_pcie6(x)	dev_get_drvdata((x)->dev)
