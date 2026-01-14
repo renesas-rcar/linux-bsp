@@ -26,6 +26,9 @@ static int rcar_gen5_pcie6_host_init(struct dw_pcie6_rp *pp)
 	struct rcar_pcie6 *rcar_pcie6 = to_rcar_gen5_pcie6(pci);
 	u32 val;
 
+	if (reset_control_assert(rcar_pcie6->perst))
+		dev_err(pci->dev, "Failed to assert PERST#");
+
 	val = readl(rcar_pcie6->base + PCIEMSR0);
 	val |= BIT(6);
 	writel(val, rcar_pcie6->base + PCIEMSR0);
@@ -111,6 +114,10 @@ static int rcar_gen5_pcie6_host_init(struct dw_pcie6_rp *pp)
 	val |= BIT(9);
 	writel(val, rcar_pcie6->phy_base + 0x8);
 
+	msleep(100);
+	if (reset_control_deassert(rcar_pcie6->perst))
+		dev_err(pci->dev, "Failed to deassert PERST#");
+
 	dw_pcie6_dbi_ro_wr_dis(pci);
 
 	return 0;
@@ -166,20 +173,20 @@ static int pcie6_rcar_host_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	pci->dev = dev;
-
 	rcar_pcie6->pci = pci;
+
+	ret = rcar_gen5_pcie6_get_resources(rcar_pcie6, pdev);
+	if (ret < 0) {
+		if (ret != -EPROBE_DEFER)
+			dev_err(dev, "Failed to request resource: %d\n", ret);
+		return ret;
+	}
 
 	pm_runtime_enable(dev);
 	ret = pm_runtime_get_sync(dev);
 	if (ret < 0) {
 		dev_err(dev, "pm_runtime_get_sync failed\n");
 		goto err_pm_put;
-	}
-
-	ret = rcar_gen5_pcie6_get_resources(rcar_pcie6, pdev);
-	if (ret < 0) {
-		dev_err(dev, "Failed to request resource: %d\n", ret);
-		return ret;
 	}
 
 	platform_set_drvdata(pdev, rcar_pcie6);
