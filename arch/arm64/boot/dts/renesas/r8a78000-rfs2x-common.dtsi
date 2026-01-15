@@ -17,7 +17,7 @@
 	};
 
 	chosen {
-		bootargs = "console=ttySC0,115200 root=/dev/vda rw uio_pdrv_genirq.of_id=generic-uio rootwait cma=560M";
+		bootargs = "console=ttySC0,115200 root=/dev/vda rw uio_pdrv_genirq.of_id=generic-uio rootwait";
 		stdout-path = "serial0:115200n8";
 	};
 
@@ -101,7 +101,13 @@
 			reg = <0x0 0x966a0000 0x0 0x50000>;
 		};
 
-        };
+		linux,cma@a2600000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x0 0xa2600000 0x0 0x1da00000>;
+			linux,cma-default;
+		};
+    };
 
 	sound_card: sound {
 		compatible = "audio-graph-card";
