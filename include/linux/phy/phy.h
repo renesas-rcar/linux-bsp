@@ -74,6 +74,7 @@ union phy_configure_opts {
  * @post_init_1: operation to be performed for initializing phy
  * @post_init_2: operation to be performed for initializing phy
  * @post_init_3: operation to be performed for initializing phy
+ * @post_init_4: operation to be performed for initializing phy
  * @exit: operation to be performed while exiting
  * @power_on: powering on the phy
  * @power_off: powering off the phy
@@ -91,6 +92,7 @@ struct phy_ops {
 	int	(*post_init_1)(struct phy *phy);
 	int	(*post_init_2)(struct phy *phy);
 	int	(*post_init_3)(struct phy *phy);
+	int	(*post_init_4)(struct phy *phy);
 	int	(*exit)(struct phy *phy);
 	int	(*power_on)(struct phy *phy);
 	int	(*power_off)(struct phy *phy);
@@ -230,11 +232,13 @@ int phy_pm_runtime_put(struct phy *phy);
 int phy_pm_runtime_put_sync(struct phy *phy);
 void phy_pm_runtime_allow(struct phy *phy);
 void phy_pm_runtime_forbid(struct phy *phy);
+int phy_pre_init(struct phy *phy);
 int phy_init(struct phy *phy);
 int phy_post_init(struct phy *phy);
 int phy_post_init_1(struct phy *phy);
 int phy_post_init_2(struct phy *phy);
 int phy_post_init_3(struct phy *phy);
+int phy_post_init_4(struct phy *phy);
 int phy_exit(struct phy *phy);
 int phy_power_on(struct phy *phy);
 int phy_power_off(struct phy *phy);
@@ -362,6 +366,13 @@ static inline int phy_post_init_2(struct phy *phy)
 }
 
 static inline int phy_post_init_3(struct phy *phy)
+{
+	if (!phy)
+		return 0;
+	return -ENOSYS;
+}
+
+static inline int phy_post_init_4(struct phy *phy)
 {
 	if (!phy)
 		return 0;

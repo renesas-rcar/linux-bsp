@@ -332,6 +332,21 @@ int phy_post_init_3(struct phy *phy)
 }
 EXPORT_SYMBOL_GPL(phy_post_init_3);
 
+int phy_post_init_4(struct phy *phy)
+{
+	int ret;
+
+	if (!phy || !phy->ops->post_init_4)
+		return 0;
+
+	mutex_lock(&phy->mutex);
+	ret = phy->ops->post_init_4(phy);
+	mutex_unlock(&phy->mutex);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(phy_post_init_4);
+
 /**
  * phy_exit - Phy internal un-initialization
  * @phy: the phy returned by phy_get()
