@@ -188,6 +188,20 @@ static int rcar_dw_dp_phy_init(struct phy *p)
 {
 	struct rcar_dw_dp *dw_dp = phy_get_drvdata(p);
 
+	/* De-assert DPTX module internal reset */
+	rcar_dw_dp_phy_write(dw_dp, DPTX_CLKGEN_RST_CNT, DPTX_CLKGEN_RST_CNT_DEFAULT);
+	/* Config corresponding clock controlling registers */
+	rcar_dw_dp_phy_write(dw_dp, DPTX_CLKGEN_DIV_AUXCLK, DIV_AUXCLK_DEFAULT);
+	rcar_dw_dp_phy_write(dw_dp, DPTX_CLKGEN_DIV_FWCLK, DIV_FWCLK_DEFAULT);
+	rcar_dw_dp_phy_write(dw_dp, DPTX_CLKGEN_DIV_PXLCLK, DIV_PXLCLK_DEFAULT);
+
+	return 0;
+}
+
+static int rcar_dw_dp_phy_post_init(struct phy *p)
+{
+	struct rcar_dw_dp *dw_dp = phy_get_drvdata(p);
+
 	rcar_dw_dp_phy_modify(dw_dp, DPTX_PHY_PIPE0, PHY_PIPE0_MASK, PHY_PIPE0_DEFAULT);
 	rcar_dw_dp_phy_modify(dw_dp, DPTX_PHY_AUX, PHY_AUX_MASK, PHY_AUX_DEFAULT);
 	rcar_dw_dp_phy_modify(dw_dp, DPTX_PHY_PAD, PHY_PAD_MASK, PHY_PAD_DEFAULT);
@@ -200,26 +214,25 @@ static int rcar_dw_dp_phy_init(struct phy *p)
 
 	rcar_dw_dp_phy_modify(dw_dp, DPTX_DPCTRL_ENCRYPTION_MODE, ENCRYPTION_MODE, ENCRYPTION_DIS);
 
-	rcar_dw_dp_phy_modify(dw_dp, DPTX_DPMODE, PHY_CLK_SEL, PHY_CLK_SEL);
-
-	rcar_dw_dp_phy_modify(dw_dp, DPTX_PHY_CNTMON, GENMASK(12, 11), 0);
-	rcar_dw_dp_phy_modify(dw_dp, DPTX_PHY_CNTMON, GENMASK(10, 9), GENMASK(10, 9));
-
-	usleep_range(100, 101);
-
 	return 0;
 }
 
-static int rcar_dw_dp_phy_post_init(struct phy *p)
+static int rcar_dw_dp_phy_post_init_1(struct phy *p)
 {
 	struct rcar_dw_dp *dw_dp = phy_get_drvdata(p);
+
+	rcar_dw_dp_phy_modify(dw_dp, DPTX_DPMODE, PHY_CLK_SEL, PHY_CLK_SEL);
+	usleep_range(100, 101);
+
+	rcar_dw_dp_phy_modify(dw_dp, DPTX_PHY_CNTMON, GENMASK(12, 11), 0);
+	rcar_dw_dp_phy_modify(dw_dp, DPTX_PHY_CNTMON, GENMASK(10, 9), GENMASK(10, 9));
 
 	rcar_dw_dp_phy_modify(dw_dp, DPTX_DPMODE, BIT(0), BIT(0));
 
 	return 0;
 }
 
-static int rcar_dw_dp_phy_post_init_1(struct phy *p)
+static int rcar_dw_dp_phy_post_init_2(struct phy *p)
 {
 	struct rcar_dw_dp *dw_dp = phy_get_drvdata(p);
 	int ret;
@@ -240,7 +253,7 @@ static int rcar_dw_dp_phy_post_init_1(struct phy *p)
 	return 0;
 }
 
-static int rcar_dw_dp_phy_post_init_2(struct phy *p)
+static int rcar_dw_dp_phy_post_init_3(struct phy *p)
 {
 	struct rcar_dw_dp *dw_dp = phy_get_drvdata(p);
 	u32 val, mask;
@@ -276,7 +289,7 @@ static int rcar_dw_dp_phy_post_init_2(struct phy *p)
 	return 0;
 }
 
-static int rcar_dw_dp_phy_post_init_3(struct phy *p)
+static int rcar_dw_dp_phy_post_init_4(struct phy *p)
 {
 	struct rcar_dw_dp *dw_dp = phy_get_drvdata(p);
 	int ret;
@@ -433,6 +446,7 @@ static const struct phy_ops rcar_dw_dp_phy_ops = {
 	.post_init_1    = rcar_dw_dp_phy_post_init_1,
 	.post_init_2    = rcar_dw_dp_phy_post_init_2,
 	.post_init_3    = rcar_dw_dp_phy_post_init_3,
+	.post_init_4    = rcar_dw_dp_phy_post_init_4,
 	.exit           = rcar_dw_dp_phy_exit,
 	.power_on       = rcar_dw_dp_phy_power_on,
 	.power_off      = rcar_dw_dp_phy_power_off,
@@ -468,13 +482,6 @@ static int rcar_dw_dp_probe(struct platform_device *pdev)
 	phy_set_drvdata(dw_dp->phy, dw_dp);
 	dw_dp->phy->attrs.max_link_rate = 810000;
 	dw_dp->phy->attrs.bus_width = 4;
-
-	/* De-assert DPTX module internal reset */
-	rcar_dw_dp_phy_write(dw_dp, DPTX_CLKGEN_RST_CNT, DPTX_CLKGEN_RST_CNT_DEFAULT);
-	/* Config corresponding clock controlling registers */
-	rcar_dw_dp_phy_write(dw_dp, DPTX_CLKGEN_DIV_AUXCLK, DIV_AUXCLK_DEFAULT);
-	rcar_dw_dp_phy_write(dw_dp, DPTX_CLKGEN_DIV_FWCLK, DIV_FWCLK_DEFAULT);
-	rcar_dw_dp_phy_write(dw_dp, DPTX_CLKGEN_DIV_PXLCLK, DIV_PXLCLK_DEFAULT);
 
 	plat_data.max_link_rate = 810000;
 	dw_dp->dp = dw_dp_bind(dev, NULL, dw_dp->phy, &plat_data);
