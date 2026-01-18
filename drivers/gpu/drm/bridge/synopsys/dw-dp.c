@@ -669,7 +669,7 @@ static int dw_dp_phy_configure(struct dw_dp *dp, unsigned int rate,
 
 	dw_dp_phy_set_rate(dp, rate);
 
-	phy_post_init_2(dp->phy);
+	phy_post_init_3(dp->phy);
 
 	regmap_update_bits(dp->regmap, DW_DP_PHYIF_CTRL, PHY_LANES,
 			   FIELD_PREP(PHY_LANES, lanes / 2));
@@ -1716,24 +1716,28 @@ static int dw_dp_phy_init(struct dw_dp *dp)
 	int ret;
 	u8 num_lanes;
 
+	ret = phy_init(dp->phy);
+	if (ret)
+		goto err;
+
 	regmap_update_bits(dp->regmap, DW_DP_SOFT_RESET_CTRL, PHY_SOFT_RESET,
 			   FIELD_PREP(PHY_SOFT_RESET, 1));
 
-	ret = phy_init(dp->phy);
+	ret = phy_post_init(dp->phy);
 	if (ret)
 		goto err;
 
 	regmap_update_bits(dp->regmap, DW_DP_PHYIF_CTRL, PHY_WIDTH,
 			   FIELD_PREP(PHY_WIDTH, 1));
 
-	ret = phy_post_init(dp->phy);
+	ret = phy_post_init_1(dp->phy);
 	if (ret)
 		goto err;
 
 	regmap_update_bits(dp->regmap, DW_DP_SOFT_RESET_CTRL, PHY_SOFT_RESET,
 			   FIELD_PREP(PHY_SOFT_RESET, 0));
 
-	ret = phy_post_init_1(dp->phy);
+	ret = phy_post_init_2(dp->phy);
 	if (ret)
 		goto err;
 
@@ -1748,7 +1752,7 @@ static int dw_dp_phy_init(struct dw_dp *dp)
 	if (ret)
 		goto err;
 
-	ret = phy_post_init_2(dp->phy);
+	ret = phy_post_init_3(dp->phy);
 	if (ret)
 		goto err;
 
@@ -1759,7 +1763,7 @@ static int dw_dp_phy_init(struct dw_dp *dp)
 	if (ret)
 		goto err;
 
-	ret = phy_post_init_3(dp->phy);
+	ret = phy_post_init_4(dp->phy);
 	if (ret)
 		goto err;
 
