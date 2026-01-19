@@ -165,11 +165,30 @@ static int rpcif_hb_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int rpcif_resume(struct device *dev)
+{
+	struct rpcif_hyperbus *hyperbus = dev_get_drvdata(dev);
+
+	rpcif_hw_init(&hyperbus->rpc, true);
+
+	return 0;
+}
+
+static int rpcif_suspend(struct device *dev)
+{
+	return 0;
+}
+
+static const struct dev_pm_ops rpcif_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(rpcif_suspend, rpcif_resume)
+};
+
 static struct platform_driver rpcif_platform_driver = {
 	.probe	= rpcif_hb_probe,
 	.remove	= rpcif_hb_remove,
 	.driver	= {
 		.name	= "rpc-if-hyperflash",
+		.pm = &rpcif_pm_ops,
 	},
 };
 
