@@ -163,6 +163,24 @@ static void rpcif_hb_remove(struct platform_device *pdev)
 	pm_runtime_disable(hyperbus->rpc.dev);
 }
 
+static int rpcif_resume(struct device *dev)
+{
+	struct rpcif_hyperbus *hyperbus = dev_get_drvdata(dev);
+
+	rpcif_hw_init(hyperbus->rpc.dev, true);
+
+	return 0;
+}
+
+static int rpcif_suspend(struct device *dev)
+{
+	return 0;
+}
+
+static const struct dev_pm_ops rpcif_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(rpcif_suspend, rpcif_resume)
+};
+
 static const struct platform_device_id rpc_if_hyperflash_id_table[] = {
 	{ .name = "rpc-if-hyperflash" },
 	{ /* sentinel */ }
@@ -175,6 +193,7 @@ static struct platform_driver rpcif_platform_driver = {
 	.id_table = rpc_if_hyperflash_id_table,
 	.driver	= {
 		.name	= "rpc-if-hyperflash",
+		.pm = &rpcif_pm_ops,
 	},
 };
 
