@@ -1253,13 +1253,6 @@
 		clock-frequency = <100000000>;
 	};
 
-	rpc_ref_clk: rpc_ref_clk {
-		compatible = "fixed-clock";
-		#clock-cells = <0>;
-		clock-frequency = <160000000>;
-		clock-output-names = "rpc";
-	};
-
 	dummy_clk_sgasyncd16: dummy_clk_sgasyncd16 {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
@@ -3503,7 +3496,8 @@
 				<0 0xc08c8000 0 0x100>;
 			reg-names = "regs", "dirmap", "wbuf";
 			interrupts = <GIC_SPI 895 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&rpc_ref_clk>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_RPC>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_RPC>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
