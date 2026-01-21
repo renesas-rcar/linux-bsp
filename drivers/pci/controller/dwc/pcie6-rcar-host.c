@@ -182,6 +182,13 @@ static int pcie6_rcar_host_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	rcar_pcie6->perst = devm_reset_control_get(dev, NULL);
+	if (IS_ERR(rcar_pcie6->perst)) {
+		if (PTR_ERR(rcar_pcie6->perst) != -EPROBE_DEFER)
+			dev_err(dev, "Failed to get PERST#\n");
+		return PTR_ERR(rcar_pcie6->perst);
+	}
+
 	pm_runtime_enable(dev);
 	ret = pm_runtime_get_sync(dev);
 	if (ret < 0) {
