@@ -630,13 +630,6 @@ int rcar_gen5_pcie6_get_resources(struct rcar_pcie6 *rcar_pcie6,
 	if (IS_ERR(pci->dbi_base))
 		return PTR_ERR(pci->dbi_base);
 
-	rcar_pcie6->perst = devm_reset_control_get(&pdev->dev, NULL);
-	if (IS_ERR(rcar_pcie6->perst)) {
-		if (PTR_ERR(rcar_pcie6->perst) != -EPROBE_DEFER)
-			dev_err(&pdev->dev, "Failed to get PERST#\n");
-		return PTR_ERR(rcar_pcie6->perst);
-	}
-
 	/* eDMA region can be mapped to a custom base address */
 	if (!pci->edma.reg_base) {
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "dma");
