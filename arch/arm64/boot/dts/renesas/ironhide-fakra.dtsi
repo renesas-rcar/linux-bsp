@@ -21,6 +21,14 @@
 #define IRONHIDE_CAMERA5  "dummy,camera"
 #define IRONHIDE_CAMERA6  "dummy,camera"
 #define IRONHIDE_CAMERA7  "dummy,camera"
+#define IRONHIDE_CAMERA8  "dummy,camera"
+#define IRONHIDE_CAMERA9  "dummy,camera"
+#define IRONHIDE_CAMERA10  "dummy,camera"
+#define IRONHIDE_CAMERA11  "dummy,camera"
+#define IRONHIDE_CAMERA12  "dummy,camera"
+#define IRONHIDE_CAMERA13  "dummy,camera"
+#define IRONHIDE_CAMERA14  "dummy,camera"
+#define IRONHIDE_CAMERA15  "dummy,camera"
 
 /* Define the endpoint links */
 #ifdef IRONHIDE_CAMERA0

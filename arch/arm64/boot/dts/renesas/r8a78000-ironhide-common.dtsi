@@ -541,7 +541,7 @@
 	gmsl0: gmsl-deserializer@31 {
 		compatible = "maxim,max96726";
 		reg = <0x31>, <0x01>, <0x02>, <0x03>, <0x04>;
-		gpios = <&io_expander_u297 0 GPIO_ACTIVE_HIGH>;
+		pwdnb-gpios = <&io_expander_u297 3 GPIO_ACTIVE_HIGH>; /* P03 */
 		gpio-controller;
 		#gpio-cells = <2>;
 		power-supply = <&max20087_0>;
@@ -626,7 +626,7 @@
 	gmsl1: gmsl-deserializer@33 {
 		compatible = "maxim,max96726";
 		reg = <0x33>, <0x05>, <0x06>, <0x07>, <0x08>;
-		gpios = <&io_expander_u297 0 GPIO_ACTIVE_HIGH>;
+		pwdnb-gpios = <&io_expander_u297 13 GPIO_ACTIVE_HIGH>; /* P13 */
 		gpio-controller;
 		#gpio-cells = <2>;
 		power-supply = <&max20087_1>;
@@ -719,7 +719,7 @@
 	gmsl2: gmsl-deserializer@31 {
 		compatible = "maxim,max96726";
 		reg = <0x31>, <0x01>, <0x02>, <0x03>, <0x04>;
-		gpios = <&io_expander_u299 0 GPIO_ACTIVE_HIGH>;
+		pwdnb-gpios = <&io_expander_u299 3 GPIO_ACTIVE_HIGH>; /* P03 */
 		gpio-controller;
 		#gpio-cells = <2>;
 		power-supply = <&max20087_2>;
@@ -804,7 +804,7 @@
 	gmsl3: gmsl-deserializer@33 {
 		compatible = "maxim,max96726";
 		reg = <0x33>, <0x05>, <0x06>, <0x07>, <0x08>;
-		gpios = <&io_expander_u299 0 GPIO_ACTIVE_HIGH>;
+		pwdnb-gpios = <&io_expander_u299 13 GPIO_ACTIVE_HIGH>; /* P13 */
 		gpio-controller;
 		#gpio-cells = <2>;
 		power-supply = <&max20087_3>;
