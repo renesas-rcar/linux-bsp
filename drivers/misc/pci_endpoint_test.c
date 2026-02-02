@@ -82,6 +82,7 @@
 #define PCI_DEVICE_ID_RENESAS_R8A774C0		0x002d
 #define PCI_DEVICE_ID_RENESAS_R8A774E1		0x0025
 #define PCI_DEVICE_ID_RENESAS_R8A779F0		0x0031
+#define PCI_DEVICE_ID_RENESAS_UCIE_DUMMY	0xabcd
 
 static DEFINE_IDA(pci_endpoint_test_ida);
 
@@ -113,6 +114,10 @@ struct pci_endpoint_test {
 	int		last_irq;
 	int		num_irqs;
 	int		irq_type;
+	bool		use_polling;
+	phys_addr_t	bar0_phys_override; /* bypass PCI allocator, ioremap directly */
+	void __iomem	*data_buf;         /* ioremap of shared data region (UCIe dummy) */
+	phys_addr_t	data_buf_phys;     /* physical base of data_buf */
 	/* mutex to protect the ioctls */
 	struct mutex	mutex;
 	struct miscdevice miscdev;
@@ -125,6 +130,9 @@ struct pci_endpoint_test_data {
 	enum pci_barno test_reg_bar;
 	size_t alignment;
 	int irq_type;
+	bool use_polling;
+	phys_addr_t bar0_phys_override; /* if non-zero, ioremap this address for test_reg_bar */
+	phys_addr_t data_buf_phys;      /* if non-zero, fixed shared data buffer (UCIe dummy) */
 };
 
 static inline u32 pci_endpoint_test_readl(struct pci_endpoint_test *test,
@@ -166,6 +174,59 @@ static irqreturn_t pci_endpoint_test_irqhandler(int irq, void *dev_id)
 				 reg);
 
 	return IRQ_HANDLED;
+}
+
+#if IS_ENABLED(CONFIG_UCIE_DUMMY_RCAR)
+/*
+ * pci_endpoint_test_poll_status - Poll the STATUS register for STATUS_IRQ_RAISED.
+ *
+ * Used when the UCIe dummy driver is active and MSI/legacy interrupts are not
+ * available. The endpoint (CR52/FreeRTOS pci_epf_test) signals completion by
+ * setting STATUS_IRQ_RAISED in the shared register rather than raising an IRQ.
+ *
+ * Returns 1 on success, 0 on timeout.
+ */
+static unsigned long pci_endpoint_test_poll_status(struct pci_endpoint_test *test,
+						   unsigned long timeout_ms)
+{
+	unsigned long timeout = jiffies + msecs_to_jiffies(timeout_ms);
+	u32 reg;
+
+	do {
+		reg = pci_endpoint_test_readl(test, PCI_ENDPOINT_TEST_STATUS);
+		if (reg & STATUS_IRQ_RAISED) {
+			pci_endpoint_test_writel(test, PCI_ENDPOINT_TEST_STATUS,
+						 reg & ~STATUS_IRQ_RAISED);
+			return 1;
+		}
+		cpu_relax();
+	} while (time_before(jiffies, timeout));
+
+	return 0;
+}
+#endif /* CONFIG_UCIE_DUMMY_RCAR */
+
+/*
+ * pci_endpoint_test_wait_for_status - Wait for endpoint to signal completion.
+ *
+ * When CONFIG_UCIE_DUMMY_RCAR is enabled and use_polling is set, this polls
+ * the STATUS register. Otherwise it waits on the irq_raised completion which
+ * is triggered by the MSI/legacy interrupt handler.
+ *
+ * Returns non-zero on success, 0 on timeout.
+ */
+static unsigned long pci_endpoint_test_wait_for_status(struct pci_endpoint_test *test,
+						       unsigned long timeout_ms)
+{
+#if IS_ENABLED(CONFIG_UCIE_DUMMY_RCAR)
+	if (test->use_polling)
+		return pci_endpoint_test_poll_status(test, timeout_ms);
+#endif
+	if (timeout_ms)
+		return wait_for_completion_timeout(&test->irq_raised,
+						   msecs_to_jiffies(timeout_ms));
+	wait_for_completion(&test->irq_raised);
+	return 1;
 }
 
 static void pci_endpoint_test_free_irq_vectors(struct pci_endpoint_test *test)
@@ -302,8 +363,7 @@ static bool pci_endpoint_test_legacy_irq(struct pci_endpoint_test *test)
 	pci_endpoint_test_writel(test, PCI_ENDPOINT_TEST_IRQ_NUMBER, 0);
 	pci_endpoint_test_writel(test, PCI_ENDPOINT_TEST_COMMAND,
 				 COMMAND_RAISE_LEGACY_IRQ);
-	val = wait_for_completion_timeout(&test->irq_raised,
-					  msecs_to_jiffies(1000));
+	val = pci_endpoint_test_wait_for_status(test, 1000);
 	if (!val)
 		return false;
 
@@ -323,10 +383,13 @@ static bool pci_endpoint_test_msi_irq(struct pci_endpoint_test *test,
 	pci_endpoint_test_writel(test, PCI_ENDPOINT_TEST_COMMAND,
 				 msix == false ? COMMAND_RAISE_MSI_IRQ :
 				 COMMAND_RAISE_MSIX_IRQ);
-	val = wait_for_completion_timeout(&test->irq_raised,
-					  msecs_to_jiffies(1000));
+	val = pci_endpoint_test_wait_for_status(test, 1000);
 	if (!val)
 		return false;
+
+	/* In polling mode there are no IRQ vectors to verify against */
+	if (test->use_polling)
+		return true;
 
 	if (pci_irq_vector(pdev, msi_num - 1) == test->last_irq)
 		return true;
@@ -404,6 +467,21 @@ static bool pci_endpoint_test_copy(struct pci_endpoint_test *test,
 	}
 
 	get_random_bytes(orig_src_addr, size + alignment);
+
+#if IS_ENABLED(CONFIG_UCIE_DUMMY_RCAR)
+	if (test->data_buf) {
+		/*
+		 * UCIe dummy path: place src data in the fixed shared buffer
+		 * and point src_phys_addr at it.  No DMA mapping is needed.
+		 */
+		src_addr = orig_src_addr;
+		src_phys_addr = test->data_buf_phys;
+		orig_src_phys_addr = 0;
+		memcpy_toio(test->data_buf, orig_src_addr, size);
+		goto ucie_copy_skip_src_dma;
+	}
+#endif
+
 	orig_src_phys_addr = dma_map_single(dev, orig_src_addr,
 					    size + alignment, DMA_TO_DEVICE);
 	if (dma_mapping_error(dev, orig_src_phys_addr)) {
@@ -421,6 +499,9 @@ static bool pci_endpoint_test_copy(struct pci_endpoint_test *test,
 		src_addr = orig_src_addr;
 	}
 
+#if IS_ENABLED(CONFIG_UCIE_DUMMY_RCAR)
+ucie_copy_skip_src_dma:
+#endif
 	pci_endpoint_test_writel(test, PCI_ENDPOINT_TEST_LOWER_SRC_ADDR,
 				 lower_32_bits(src_phys_addr));
 
@@ -435,6 +516,19 @@ static bool pci_endpoint_test_copy(struct pci_endpoint_test *test,
 		ret = false;
 		goto err_dst_addr;
 	}
+
+#if IS_ENABLED(CONFIG_UCIE_DUMMY_RCAR)
+	if (test->data_buf) {
+		/*
+		 * UCIe dummy path: EP writes copy result into the second 1 MB
+		 * slot of the shared buffer (data_buf_phys + SZ_1M).
+		 */
+		dst_addr = orig_dst_addr;
+		dst_phys_addr = test->data_buf_phys + SZ_1M;
+		orig_dst_phys_addr = 0;
+		goto ucie_copy_skip_dst_dma;
+	}
+#endif
 
 	orig_dst_phys_addr = dma_map_single(dev, orig_dst_addr,
 					    size + alignment, DMA_FROM_DEVICE);
@@ -453,6 +547,9 @@ static bool pci_endpoint_test_copy(struct pci_endpoint_test *test,
 		dst_addr = orig_dst_addr;
 	}
 
+#if IS_ENABLED(CONFIG_UCIE_DUMMY_RCAR)
+ucie_copy_skip_dst_dma:
+#endif
 	pci_endpoint_test_writel(test, PCI_ENDPOINT_TEST_LOWER_DST_ADDR,
 				 lower_32_bits(dst_phys_addr));
 	pci_endpoint_test_writel(test, PCI_ENDPOINT_TEST_UPPER_DST_ADDR,
@@ -467,10 +564,16 @@ static bool pci_endpoint_test_copy(struct pci_endpoint_test *test,
 	pci_endpoint_test_writel(test, PCI_ENDPOINT_TEST_COMMAND,
 				 COMMAND_COPY);
 
-	wait_for_completion(&test->irq_raised);
+	pci_endpoint_test_wait_for_status(test, 5000);
 
-	dma_unmap_single(dev, orig_dst_phys_addr, size + alignment,
-			 DMA_FROM_DEVICE);
+#if IS_ENABLED(CONFIG_UCIE_DUMMY_RCAR)
+	if (test->data_buf)
+		memcpy_fromio(dst_addr, test->data_buf + SZ_1M, size);
+#endif
+
+	if (orig_dst_phys_addr)
+		dma_unmap_single(dev, orig_dst_phys_addr, size + alignment,
+				 DMA_FROM_DEVICE);
 
 	dst_crc32 = crc32_le(~0, dst_addr, size);
 	if (dst_crc32 == src_crc32)
@@ -480,8 +583,9 @@ err_dst_phys_addr:
 	kfree(orig_dst_addr);
 
 err_dst_addr:
-	dma_unmap_single(dev, orig_src_phys_addr, size + alignment,
-			 DMA_TO_DEVICE);
+	if (orig_src_phys_addr)
+		dma_unmap_single(dev, orig_src_phys_addr, size + alignment,
+				 DMA_TO_DEVICE);
 
 err_src_phys_addr:
 	kfree(orig_src_addr);
@@ -541,6 +645,21 @@ static bool pci_endpoint_test_write(struct pci_endpoint_test *test,
 
 	get_random_bytes(orig_addr, size + alignment);
 
+#if IS_ENABLED(CONFIG_UCIE_DUMMY_RCAR)
+	if (test->data_buf) {
+		/*
+		 * UCIe dummy path: copy test data into the fixed shared buffer.
+		 * The EP reads directly from this physical address, so no DMA
+		 * mapping is needed.
+		 */
+		addr          = orig_addr;
+		phys_addr     = test->data_buf_phys;
+		orig_phys_addr = 0;
+		memcpy_toio(test->data_buf, orig_addr, size);
+		goto ucie_write_dma_done;
+	}
+#endif
+
 	orig_phys_addr = dma_map_single(dev, orig_addr, size + alignment,
 					DMA_TO_DEVICE);
 	if (dma_mapping_error(dev, orig_phys_addr)) {
@@ -558,6 +677,9 @@ static bool pci_endpoint_test_write(struct pci_endpoint_test *test,
 		addr = orig_addr;
 	}
 
+#if IS_ENABLED(CONFIG_UCIE_DUMMY_RCAR)
+ucie_write_dma_done:
+#endif
 	crc32 = crc32_le(~0, addr, size);
 	pci_endpoint_test_writel(test, PCI_ENDPOINT_TEST_CHECKSUM,
 				 crc32);
@@ -575,14 +697,15 @@ static bool pci_endpoint_test_write(struct pci_endpoint_test *test,
 	pci_endpoint_test_writel(test, PCI_ENDPOINT_TEST_COMMAND,
 				 COMMAND_READ);
 
-	wait_for_completion(&test->irq_raised);
+	pci_endpoint_test_wait_for_status(test, 5000);
 
 	reg = pci_endpoint_test_readl(test, PCI_ENDPOINT_TEST_STATUS);
 	if (reg & STATUS_READ_SUCCESS)
 		ret = true;
 
-	dma_unmap_single(dev, orig_phys_addr, size + alignment,
-			 DMA_TO_DEVICE);
+	if (orig_phys_addr)
+		dma_unmap_single(dev, orig_phys_addr, size + alignment,
+				 DMA_TO_DEVICE);
 
 err_phys_addr:
 	kfree(orig_addr);
@@ -639,6 +762,20 @@ static bool pci_endpoint_test_read(struct pci_endpoint_test *test,
 		goto err;
 	}
 
+#if IS_ENABLED(CONFIG_UCIE_DUMMY_RCAR)
+	if (test->data_buf) {
+		/*
+		 * UCIe dummy path: the EP writes data into the fixed shared
+		 * buffer.  No DMA mapping needed; after completion copy the
+		 * result into the kernel buffer for CRC verification.
+		 */
+		addr          = orig_addr;
+		phys_addr     = test->data_buf_phys;
+		orig_phys_addr = 0;
+		goto ucie_read_dma_done;
+	}
+#endif
+
 	orig_phys_addr = dma_map_single(dev, orig_addr, size + alignment,
 					DMA_FROM_DEVICE);
 	if (dma_mapping_error(dev, orig_phys_addr)) {
@@ -656,6 +793,9 @@ static bool pci_endpoint_test_read(struct pci_endpoint_test *test,
 		addr = orig_addr;
 	}
 
+#if IS_ENABLED(CONFIG_UCIE_DUMMY_RCAR)
+ucie_read_dma_done:
+#endif
 	pci_endpoint_test_writel(test, PCI_ENDPOINT_TEST_LOWER_DST_ADDR,
 				 lower_32_bits(phys_addr));
 	pci_endpoint_test_writel(test, PCI_ENDPOINT_TEST_UPPER_DST_ADDR,
@@ -669,10 +809,16 @@ static bool pci_endpoint_test_read(struct pci_endpoint_test *test,
 	pci_endpoint_test_writel(test, PCI_ENDPOINT_TEST_COMMAND,
 				 COMMAND_WRITE);
 
-	wait_for_completion(&test->irq_raised);
+	pci_endpoint_test_wait_for_status(test, 5000);
 
-	dma_unmap_single(dev, orig_phys_addr, size + alignment,
-			 DMA_FROM_DEVICE);
+#if IS_ENABLED(CONFIG_UCIE_DUMMY_RCAR)
+	if (test->data_buf)
+		memcpy_fromio(addr, test->data_buf, size);
+#endif
+
+	if (orig_phys_addr)
+		dma_unmap_single(dev, orig_phys_addr, size + alignment,
+				 DMA_FROM_DEVICE);
 
 	crc32 = crc32_le(~0, addr, size);
 	if (crc32 == pci_endpoint_test_readl(test, PCI_ENDPOINT_TEST_CHECKSUM))
@@ -686,6 +832,9 @@ err:
 
 static bool pci_endpoint_test_clear_irq(struct pci_endpoint_test *test)
 {
+	if (test->use_polling)
+		return true;
+
 	pci_endpoint_test_release_irq(test);
 	pci_endpoint_test_free_irq_vectors(test);
 	return true;
@@ -696,6 +845,11 @@ static bool pci_endpoint_test_set_irq(struct pci_endpoint_test *test,
 {
 	struct pci_dev *pdev = test->pdev;
 	struct device *dev = &pdev->dev;
+
+	if (test->use_polling) {
+		dev_info(dev, "IRQ type switch not supported in polling mode\n");
+		return false;
+	}
 
 	if (req_irq_type < IRQ_TYPE_LEGACY || req_irq_type > IRQ_TYPE_MSIX) {
 		dev_err(dev, "Invalid IRQ type option\n");
@@ -815,6 +969,9 @@ static int pci_endpoint_test_probe(struct pci_dev *pdev,
 		test->test_reg_bar = test_reg_bar;
 		test->alignment = data->alignment;
 		irq_type = data->irq_type;
+		test->use_polling = data->use_polling;
+		test->bar0_phys_override = data->bar0_phys_override;
+		test->data_buf_phys = data->data_buf_phys;
 	}
 
 	init_completion(&test->irq_raised);
@@ -840,7 +997,16 @@ static int pci_endpoint_test_probe(struct pci_dev *pdev,
 
 	pci_set_master(pdev);
 
-	if (!pci_endpoint_test_alloc_irq_vectors(test, irq_type)) {
+	if (test->use_polling) {
+		/*
+		 * Polling mode (CONFIG_UCIE_DUMMY_RCAR): the UCIe dummy endpoint
+		 * signals completion by writing STATUS_IRQ_RAISED to the shared
+		 * register rather than raising an interrupt. Skip MSI/legacy IRQ
+		 * vector allocation and set irq_type directly.
+		 */
+		test->irq_type = irq_type;
+		dev_info(dev, "Using polling mode for endpoint test (no IRQ)\n");
+	} else if (!pci_endpoint_test_alloc_irq_vectors(test, irq_type)) {
 		err = -EINVAL;
 		goto err_disable_irq;
 	}
@@ -855,6 +1021,52 @@ static int pci_endpoint_test_probe(struct pci_dev *pdev,
 			test->bar[bar] = base;
 		}
 	}
+
+#if IS_ENABLED(CONFIG_UCIE_DUMMY_RCAR)
+	/*
+	 * For the UCIe dummy device the PCI allocator assigns BAR0 within the
+	 * PCIe window (0xdd000000) while the actual shared register region is
+	 * at a different physical address (e.g. 0x90000000).  Replace the
+	 * ioremap'd BAR with a direct mapping of the override address so that
+	 * accesses reach the memory that the CR52 endpoint also sees.
+	 */
+	if (test->bar0_phys_override) {
+		if (test->bar[test_reg_bar])
+			pci_iounmap(pdev, test->bar[test_reg_bar]);
+		test->bar[test_reg_bar] = ioremap(test->bar0_phys_override,
+						  test->alignment);
+		if (!test->bar[test_reg_bar]) {
+			err = -ENOMEM;
+			dev_err(dev,
+				"Failed to ioremap BAR%d override at 0x%llx\n",
+				test_reg_bar,
+				(unsigned long long)test->bar0_phys_override);
+			goto err_iounmap;
+		}
+		dev_info(dev, "BAR%d remapped to shared region 0x%llx\n",
+			 test_reg_bar,
+			 (unsigned long long)test->bar0_phys_override);
+	}
+
+	/*
+	 * Map the fixed data buffers used for READ/WRITE/COPY tests.
+	 * The 2 MB window starting at data_buf_phys covers:
+	 *   [+0x000000, +0x0FFFFF]  1 MB  src (WRITE test) / dst (READ test)
+	 *   [+0x100000, +0x1FFFFF]  1 MB  dst for COPY test
+	 * Both sub-regions are at the same physical address on the CR52 side.
+	 */
+	if (test->data_buf_phys) {
+		test->data_buf = ioremap(test->data_buf_phys, SZ_1M * 2);
+		if (!test->data_buf) {
+			err = -ENOMEM;
+			dev_err(dev, "Failed to ioremap data buffer at 0x%llx\n",
+				(unsigned long long)test->data_buf_phys);
+			goto err_iounmap;
+		}
+		dev_info(dev, "Data buffer mapped at phys=0x%llx size=2MB\n",
+			 (unsigned long long)test->data_buf_phys);
+	}
+#endif
 
 	test->base = test->bar[test_reg_bar];
 	if (!test->base) {
@@ -880,7 +1092,7 @@ static int pci_endpoint_test_probe(struct pci_dev *pdev,
 		goto err_ida_remove;
 	}
 
-	if (!pci_endpoint_test_request_irq(test)) {
+	if (!test->use_polling && !pci_endpoint_test_request_irq(test)) {
 		err = -EINVAL;
 		goto err_kfree_test_name;
 	}
@@ -955,6 +1167,11 @@ static void pci_endpoint_test_remove(struct pci_dev *pdev)
 			pci_iounmap(pdev, test->bar[bar]);
 	}
 
+#if IS_ENABLED(CONFIG_UCIE_DUMMY_RCAR)
+	if (test->data_buf)
+		iounmap(test->data_buf);
+#endif
+
 	pci_release_regions(pdev);
 	pci_disable_device(pdev);
 }
@@ -975,6 +1192,33 @@ static const struct pci_endpoint_test_data j721e_data = {
 	.alignment = 256,
 	.irq_type = IRQ_TYPE_MSI,
 };
+
+#if IS_ENABLED(CONFIG_UCIE_DUMMY_RCAR)
+/*
+ * ucie_dummy_data - device data for Renesas R-Car UCIe dummy host controller.
+ *
+ * The UCIe dummy driver exposes a virtual PCI device (PCI_VENDOR_ID_RENESAS /
+ * PCI_DEVICE_ID_RENESAS_UCIE_DUMMY) whose endpoint is implemented by the CR52
+ * FreeRTOS pci_epf_test application. Since the virtual link does not support
+ * MSI or legacy interrupts, use_polling=true causes the host driver to poll
+ * the STATUS register for STATUS_IRQ_RAISED instead of waiting for an IRQ.
+ */
+static const struct pci_endpoint_test_data ucie_dummy_data = {
+	.test_reg_bar = BAR_0,
+	.alignment = SZ_4K,
+	.irq_type = IRQ_TYPE_LEGACY,
+	.use_polling = true,
+	/* ucie_shared@90000000: the physical address shared with the CR52 EP */
+	.bar0_phys_override = 0x90000000,
+	/*
+	 * Fixed data buffers within ucie_shared (replaces DMA allocation):
+	 *   data_buf_phys+0x000000 (1 MB)  src for WRITE test / dst for READ test
+	 *   data_buf_phys+0x100000 (1 MB)  dst for COPY test
+	 * Both are accessible at the same physical address from X5H and AIACC0.
+	 */
+	.data_buf_phys = 0x90001000,
+};
+#endif /* CONFIG_UCIE_DUMMY_RCAR */
 
 static const struct pci_device_id pci_endpoint_test_tbl[] = {
 	{ PCI_DEVICE(PCI_VENDOR_ID_TI, PCI_DEVICE_ID_TI_DRA74x),
@@ -999,6 +1243,12 @@ static const struct pci_device_id pci_endpoint_test_tbl[] = {
 	{ PCI_DEVICE(PCI_VENDOR_ID_RENESAS, PCI_DEVICE_ID_RENESAS_R8A779F0),
 	  .driver_data = (kernel_ulong_t)&default_data,
 	},
+#if IS_ENABLED(CONFIG_UCIE_DUMMY_RCAR)
+	{ PCI_DEVICE(PCI_VENDOR_ID_RENESAS, PCI_DEVICE_ID_RENESAS_UCIE_DUMMY),
+	  /* UCIe dummy: endpoint signals via shared register polling, not IRQ */
+	  .driver_data = (kernel_ulong_t)&ucie_dummy_data,
+	},
+#endif
 	{ PCI_DEVICE(PCI_VENDOR_ID_SYNOPSYS, PCI_DEVICE_ID_SYNOPSYS_EDDA),
 	  .driver_data = (kernel_ulong_t)&default_data,
 	},
