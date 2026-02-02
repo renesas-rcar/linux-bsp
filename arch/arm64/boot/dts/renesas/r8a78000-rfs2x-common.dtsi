@@ -112,6 +112,21 @@
 			no-map;
 			reg = <0x18 0x00000000 0x0 0xcccd0000>;
 		};
+		
+		ucie_shared: ucie_shared@90000000 {
+		/*
+		 * UCIe shared region covering:
+		 *   0x90000000 - 0x90000FFF  BAR0 test registers  (4 KB)
+		 *   0x90001000 - 0x90100FFF  data buffer for READ/WRITE tests  (1 MB)
+		 *   0x90101000 - 0x90200FFF  second data buffer for COPY test  (1 MB)
+		 * Total: 2 MB + 4 KB = 0x201000 bytes
+		 * The UCIe mapping (UCIE_MAPPING_SIZE) is set to 0x201000 at probe
+		 * so all three sub-regions are accessible from both X5H and AIACC0
+		 * at the same physical address without any per-transfer remapping.
+		 */
+		reg = <0x0 0x90000000 0x0 0x201000>;
+		no-map;
+	};
     };
 
 	sound_card: sound {
@@ -947,4 +962,10 @@
 
 &wcrc10 {
 	status = "okay";
+};
+
+&ucie_dummy0 {
+	status = "okay";
+	/* Auto-enable UCIe mapping at probe for shared memory at 0x90000000 */
+	shared-region = <&ucie_shared>;
 };
