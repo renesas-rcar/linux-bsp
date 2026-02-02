@@ -4648,4 +4648,88 @@
 			};
 		};
 	};
+
+	/* UCIe Dummy Host Controller */
+	ucie_dummy0: pci@dc000000 {
+		compatible = "renesas,ucie-dummy-rcar",
+			     "renesas,r8a78000-ucie-dummy";
+		reg = <0x0 0xdc000000 0x0 0x1000>;  /* rfs_ucie_0: Controller registers */
+		#address-cells = <3>;
+		#size-cells = <2>;
+		bus-range = <0x00 0xff>;
+		device_type = "pci";
+		linux,pci-domain = <1>;
+		/* 16MB PCI window at 0xdd000000 */
+		ranges = <0x02000000 0 0xdd000000 0 0xdd000000 0 0x01000000>;
+		interrupts = <GIC_SPI 765 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 766 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 767 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 768 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 769 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 775 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 776 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 777 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 778 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 779 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 780 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 781 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 782 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 783 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "rfs_ucie_0_int0",
+				  "rfs_ucie_0_int1",
+				  "rfs_ucie_0_int2",
+				  "rfs_ucie_0_int3",
+				  "rfs_ucie_0_int4",
+				  "rfs_ucie_0_int5",
+				  "rfs_ucie_0_int6",
+				  "rfs_ucie_0_int7",
+				  "rfs_ucie_0_int8",
+				  "rfs_ucie_0_int9",
+				  "rfs_ucie_0_int10",
+				  "rfs_ucie_0_int11",
+				  "rfs_ucie_0_int12",
+				  "rfs_ucie_0_int13";
+		status = "disabled";
+	};
+
+	ucie_dummy1: pci@dc001000 {
+		compatible = "renesas,ucie-dummy-rcar",
+			     "renesas,r8a78000-ucie-dummy";
+		reg = <0x0 0xdc001000 0x0 0x1000>;
+		#address-cells = <3>;
+		#size-cells = <2>;
+		bus-range = <0x00 0xff>;
+		device_type = "pci";
+		linux,pci-domain = <2>;
+		ranges = <0x02000000 0 0xdc200000 0 0xdc200000 0 0x00100000>;
+		interrupts = <GIC_SPI 770 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 771 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 772 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 773 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 774 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 784 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 785 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 786 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 787 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 788 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 789 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 790 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 791 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 792 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "rfs_ucie_1_int0",
+				  "rfs_ucie_1_int1",
+				  "rfs_ucie_1_int2",
+				  "rfs_ucie_1_int3",
+				  "rfs_ucie_1_int4",
+				  "rfs_ucie_1_int5",
+				  "rfs_ucie_1_int6",
+				  "rfs_ucie_1_int7",
+				  "rfs_ucie_1_int8",
+				  "rfs_ucie_1_int9",
+				  "rfs_ucie_1_int10",
+				  "rfs_ucie_1_int11",
+				  "rfs_ucie_1_int12",
+				  "rfs_ucie_1_int13";
+		status = "disabled";
+	};
 };
