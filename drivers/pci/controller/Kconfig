@@ -83,6 +83,27 @@ config PCIE_RCAR_EP
 	  Say Y here if you want PCIe controller support on R-Car SoCs in
 	  endpoint mode.
 
+config UCIE_DUMMY_RCAR
+	tristate
+	help
+	  This enables the UCIe dummy core controller support for Renesas
+	  R-Car SoCs. An appropriate host or endpoint driver needs to be
+	  enabled to select this.
+
+config UCIE_DUMMY_RCAR_HOST
+	tristate "Renesas R-Car Dummy UCIe host controller"
+	depends on ARCH_RENESAS || COMPILE_TEST
+	depends on OF
+	select UCIE_DUMMY_RCAR
+	help
+	  Say Y here if you want dummy UCIe controller support on R-Car SoCs
+	  in host mode. This is a simplified driver for virtual platform
+	  testing with hardcoded device IDs to bypass endpoint enumeration.
+
+	  This driver is based on the R-Car PCIe driver architecture and
+	  follows the UCIe (Universal Chiplet Interconnect Express) specification
+	  for the R-Car X5H platform.
+
 config PCI_HOST_COMMON
 	tristate
 	select PCI_ECAM
