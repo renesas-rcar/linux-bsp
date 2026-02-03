@@ -68,7 +68,6 @@ static int local_pm_runtime_get_sync(struct uio_pdrv_genirq_platdata *priv)
 {
 	if (priv->pwr_cnt == 0) {
 		priv->pwr_cnt++;
-		priv->clk_cnt++;
 		return pm_runtime_get_sync(&priv->pdev->dev);
 	}
 
@@ -79,11 +78,6 @@ static int local_pm_runtime_put_sync(struct uio_pdrv_genirq_platdata *priv)
 {
 	if (priv->pwr_cnt > 0) {
 		priv->pwr_cnt--;
-		priv->clk_cnt--;
-		if ((priv->clk != NULL) && (priv->clk_cnt < 0)) {
-			clk_prepare_enable(priv->clk);
-			priv->clk_cnt = 0;
-		}
 
 		return pm_runtime_put_sync(&priv->pdev->dev);
 	}
