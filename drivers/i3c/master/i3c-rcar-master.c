@@ -420,6 +420,7 @@ struct rcar_i3c_master {
 	void __iomem *regs;
 	struct clk *tclk;
 	struct clk *pclk;
+	struct reset_control *rstc;
 	int irq;
 	bool force_i2c;
 
@@ -1924,6 +1925,12 @@ static int rcar_i3c_master_probe(struct platform_device *pdev)
 	master->regs = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(master->regs))
 		return PTR_ERR(master->regs);
+
+	master->rstc = devm_reset_control_get_optional_exclusive(&pdev->dev, NULL);
+	if (IS_ERR(master->rstc))
+		return dev_err_probe(&pdev->dev, PTR_ERR(master->rstc),
+				     "Error: missing reset ctrl\n");
+	reset_control_deassert(master->rstc);
 
 	spin_lock_init(&master->xferqueue.lock);
 	INIT_LIST_HEAD(&master->xferqueue.list);
