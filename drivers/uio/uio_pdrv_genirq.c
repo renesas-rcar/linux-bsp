@@ -282,7 +282,7 @@ static int priv_clk_set_div(struct uio_info *info, int div)
 static int priv_set_rst(struct uio_info *info, int value)
 {
 	struct uio_pdrv_genirq_platdata *priv = info->priv;
-	int status, ret;
+	int status, ret = 0;
 
 	if (!priv->rst) {
 		dev_dbg(&priv->pdev->dev, "device has not reset to set\n");
