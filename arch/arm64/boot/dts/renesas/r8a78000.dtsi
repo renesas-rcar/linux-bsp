@@ -85,6 +85,13 @@
 		};
     };
 
+	msiof_ref_clk: msiof-ref-clock {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <133333333>;
+		clock-output-names = "msiof";
+	};
+
 	rsw_clk: rsw_clk {
 		compatible = "fixed-clock";
 		clock-frequency = <320000000>;
@@ -1013,6 +1020,120 @@
 			interrupts = <GIC_SPI 4081 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&dummy_clk_sgasyncd4>, <&dummy_clk_sgasyncd4>, <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
+			status = "disabled";
+		};
+
+		msiof0: spi@c1700000 {
+			compatible = "renesas,msiof-r8a78000",
+					"renesas,rcar-gen5-msiof";
+			reg = <0 0xc1700000 0 0x0064>;
+			interrupts = <0 4808 4>;
+			clocks = <&msiof_ref_clk>;
+			clock-names = "fck";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof1: spi@c1710000 {
+			compatible = "renesas,msiof-r8a78000",
+					"renesas,rcar-gen5-msiof";
+			reg = <0 0xc1710000 0 0x0064>;
+			interrupts = <0 4809 4>;
+			clocks = <&msiof_ref_clk>;
+			clock-names = "fck";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof2: spi@c1720000 {
+			compatible = "renesas,msiof-r8a78000",
+					"renesas,rcar-gen5-msiof";
+			reg = <0 0xc1720000 0 0x0064>;
+			interrupts = <0 4810 4>;
+			clocks = <&msiof_ref_clk>;
+			clock-names = "fck";
+			//dmas = <&dmac0 0x43>, <&dmac0 0x42>,
+			//       <&dmac1 0x43>, <&dmac1 0x42>;
+			//dma-names = "tx", "rx", "tx", "rx";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof3: spi@c1730000 {
+			compatible = "renesas,msiof-r8a78000",
+					"renesas,rcar-gen5-msiof";
+			reg = <0 0xc1730000 0 0x0064>;
+			interrupts = <0 4811 4>;
+			clocks = <&msiof_ref_clk>;
+			clock-names = "fck";
+			//dmas = <&dmac0 0x43>, <&dmac0 0x42>,
+			//       <&dmac1 0x43>, <&dmac1 0x42>;
+			//dma-names = "tx", "rx", "tx", "rx";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof4: spi@c0600000 {
+			compatible = "renesas,msiof-r8a78000",
+					"renesas,rcar-gen5-msiof";
+			reg = <0 0xc0600000 0 0x0064>;
+			interrupts = <0 4082 4>;
+			clocks = <&msiof_ref_clk>;
+			clock-names = "fck";
+			//dmas = <&dmac10 0x43>, <&dmac10 0x42>,
+			//       <&dmac11 0x43>, <&dmac11 0x42>;
+			//dma-names = "tx", "rx", "tx", "rx";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof5: spi@c0608000 {
+			compatible = "renesas,msiof-r8a78000",
+					"renesas,rcar-gen5-msiof";
+			reg = <0 0xc0608000 0 0x0064>;
+			interrupts = <0 4083 4>;
+			clocks = <&msiof_ref_clk>;
+			clock-names = "fck";
+			//dmas = <&dmac10 0x43>, <&dmac10 0x42>,
+			//       <&dmac11 0x43>, <&dmac11 0x42>;
+			//dma-names = "tx", "rx", "tx", "rx";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof6: spi@c0610000 {
+			compatible = "renesas,msiof-r8a78000",
+					"renesas,rcar-gen5-msiof";
+			reg = <0 0xc0610000 0 0x0064>;
+			interrupts = <0 4084 4>;
+			clocks = <&msiof_ref_clk>;
+			clock-names = "fck";
+			//dmas = <&dmac10 0x43>, <&dmac10 0x42>,
+			//       <&dmac11 0x43>, <&dmac11 0x42>;
+			//dma-names = "tx", "rx", "tx", "rx";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "disabled";
+		};
+
+		msiof7: spi@c0618000 {
+			compatible = "renesas,msiof-r8a78000",
+					"renesas,rcar-gen5-msiof";
+			reg = <0 0xc0618000 0 0x0064>;
+			interrupts = <0 4085 4>;
+			clocks = <&msiof_ref_clk>;
+			clock-names = "fck";
+			//dmas = <&dmac10 0x43>, <&dmac10 0x42>,
+			//       <&dmac11 0x43>, <&dmac11 0x42>;
+			//dma-names = "tx", "rx", "tx", "rx";
+			#address-cells = <1>;
+			#size-cells = <0>;
 			status = "disabled";
 		};
 

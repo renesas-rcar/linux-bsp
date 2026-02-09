@@ -350,6 +350,29 @@
 	status = "okay";
 };
 
+&msiof0 {
+	status = "okay";
+
+	slavedev {
+		compatible = "maker,slavedev";
+		reg = <0>;
+		spi-max-frequency = <16666666>;
+		spi-cpha;
+		spi-cpol;
+	};
+};
+
+&msiof1 {
+	status = "okay";
+
+	spi-slave;
+	slave {
+		compatible = "maker,slavedev";
+		spi-cpha;
+		spi-cpol;
+	};
+};
+
 &rswitch3 {
 	status = "okay";
 
