@@ -19,6 +19,7 @@
 #include <linux/platform_device.h>
 #include <linux/reset.h>
 #include <linux/slab.h>
+#include <linux/pm_runtime.h>
 
 #define PRTS			0x00
 #define PRTS_PRTMD		BIT(0)
@@ -400,8 +401,10 @@ struct rcar_i3c_master {
 	struct i3c_master_controller base;
 	u16 maxdevs;
 	u32 free_pos;
+	u32 dyn_addr;
 	u32 STDBR_I2C_MODE;
 	u32 STDBR_I3C_MODE;
+	u32 datbas[RCAR_I3C_MAX_DEVS];
 	u8 addrs[RCAR_I3C_MAX_DEVS];
 	enum i3c_internal_state internal_state;
 	struct {
@@ -682,6 +685,64 @@ static void rcar_i3c_master_wait_xfer(struct rcar_i3c_master *master, struct rca
 		rcar_i3c_master_dequeue_xfer(master, xfer);
 }
 
+static int rcar_i3c_hw_init(struct rcar_i3c_master *master)
+{
+	/* Set present state to master mode */
+	i3c_reg_write(master->regs, PRSST, PRSST_PRSSTWP | PRSST_CRMS);
+
+	i3c_reg_write(master->regs, STDBR, master->STDBR_I3C_MODE);
+
+	i3c_reg_write(master->regs, EXTBR, 0x0F0F0F0F);
+
+	/* Disable Slave Mode */
+	i3c_reg_write(master->regs, SVCTL, 0);
+
+	/* Setting Queue/Buffer threshold. */
+	i3c_reg_write(master->regs, NQTHCTL, NQTHCTL_IBIDSSZ(6));
+
+	/* Setting High Priority Queue/Buffer threshold.*/
+	i3c_reg_write(master->regs, HQTHCTL, 0);
+
+	/* The only supported configuration is two entries*/
+	i3c_reg_write(master->regs, NTBTHCTL0, 0);
+	i3c_reg_write(master->regs, HTBTHCTL0, 0);
+
+	/* Interrupt when there is one entry in the queue */
+	i3c_reg_write(master->regs, NRQTHCTL, 0);
+
+	/* Enable all Bus/Transfer Status Flags. */
+	i3c_reg_write(master->regs, BSTE, BSTE_ALL_FLAG);
+	i3c_reg_write(master->regs, NTSTE, NTSTE_ALL_FLAG);
+
+	i3c_reg_write(master->regs, INSTE, 0);
+
+	/* Interrupt enable settings */
+	i3c_reg_write(master->regs, BIE, BIE_NACKDIE | BIE_TENDIE | BIE_TODIE);
+	i3c_reg_write(master->regs, NTIE, NTIE_RSQFIE |
+		      NTIE_IBIQEFIE | NTIE_RDBFIE0);
+
+	/* Clear Status register */
+	i3c_reg_write(master->regs, NTST, 0);
+	i3c_reg_write(master->regs, INST, 0);
+	i3c_reg_write(master->regs, BST, 0);
+
+	i3c_reg_write(master->regs, IBINCTL, 0);
+
+	i3c_reg_write(master->regs, SCSTLCTL, 0x1);
+	i3c_reg_set_bit(master->regs, SCSTRCTL, SCSTRCTL_ACKTWE);
+
+	i3c_reg_write(master->regs, OUTCTL, 0x7);
+
+	/* Setting bus condition detection timing */
+	i3c_reg_write(master->regs, BFRECDT, BFRECDT_FRECYC(0x7));
+	i3c_reg_write(master->regs, BAVLCDT, BAVLCDT_AVLCYC(0xF));
+	i3c_reg_write(master->regs, BIDLCDT, BIDLCDT_IDLCYC(0x1F));
+
+	i3c_reg_write(master->regs, TMOCTL, TMOCTL_TODTS(0) | TMOCTL_TOHCTL | TMOCTL_TOLCTL);
+
+	return 0;
+}
+
 static int rcar_i2c_master_bus_init(struct i3c_master_controller *m)
 {
 	uint32_t val;
@@ -771,9 +832,6 @@ static int rcar_i3c_master_bus_init(struct i3c_master_controller *m)
 		return ret;
 	i3c_reg_clear_bit(master->regs, RSTCTL, RSTCTL_INTLRST);
 
-	/* Set present state to master mode */
-	i3c_reg_write(master->regs, PRSST, PRSST_PRSSTWP | PRSST_CRMS);
-
 	i2c_total_ticks = DIV_ROUND_UP(rate, bus->scl_rate.i2c);
 	i3c_total_ticks = DIV_ROUND_UP(rate, bus->scl_rate.i3c);
 	/* Internal Reference Clock Selection */
@@ -828,56 +886,12 @@ static int rcar_i3c_master_bus_init(struct i3c_master_controller *m)
 
 	i3c_reg_write(master->regs, REFCKCTL, 0);
 
-	/* Disable Slave Mode */
-	i3c_reg_write(master->regs, SVCTL, 0);
-
-	/* Setting Queue/Buffer threshold. */
-	i3c_reg_write(master->regs, NQTHCTL, NQTHCTL_IBIDSSZ(6));
-
-	/* Setting High Priority Queue/Buffer threshold.*/
-	i3c_reg_write(master->regs, HQTHCTL, 0);
-
-	/* The only supported configuration is two entries*/
-	i3c_reg_write(master->regs, NTBTHCTL0, 0);
-	i3c_reg_write(master->regs, HTBTHCTL0, 0);
-
-	/* Interrupt when there is one entry in the queue */
-	i3c_reg_write(master->regs, NRQTHCTL, 0);
-
-	/* Enable all Bus/Transfer Status Flags. */
-	i3c_reg_write(master->regs, BSTE, BSTE_ALL_FLAG);
-	i3c_reg_write(master->regs, NTSTE, NTSTE_ALL_FLAG);
-
-	i3c_reg_write(master->regs, INSTE, 0);
-
-	/* Interrupt enable settings */
-	//i3c_reg_write(master->regs, INIE, INIE_INEIE);
-	i3c_reg_write(master->regs, BIE, BIE_NACKDIE | BIE_TENDIE | BIE_TODIE);
-	i3c_reg_write(master->regs, NTIE, NTIE_RSQFIE |
-		      NTIE_IBIQEFIE | NTIE_RDBFIE0);
-
-	/* Clear Status register */
-	i3c_reg_write(master->regs, NTST, 0);
-	i3c_reg_write(master->regs, INST, 0);
-	i3c_reg_write(master->regs, BST, 0);
-
-	i3c_reg_write(master->regs, IBINCTL, 0);
-
-	i3c_reg_write(master->regs, SCSTLCTL, 0x1);
-	i3c_reg_set_bit(master->regs, SCSTRCTL, SCSTRCTL_ACKTWE);
-
-	i3c_reg_write(master->regs, OUTCTL, 0x7);
-
-	/* Setting bus condition detection timing */
-	i3c_reg_write(master->regs, BFRECDT, BFRECDT_FRECYC(0x7));
-	i3c_reg_write(master->regs, BAVLCDT, BAVLCDT_AVLCYC(0xF));
-	i3c_reg_write(master->regs, BIDLCDT, BIDLCDT_IDLCYC(0x1F));
-
-	i3c_reg_write(master->regs, TMOCTL,TMOCTL_TODTS(0) | TMOCTL_TOHCTL | TMOCTL_TOLCTL);
+	rcar_i3c_hw_init(master);
 
 	/* Get an address for I3C master. */
 	ret = i3c_master_get_free_addr(m, 0);
-	if (ret < 0)
+	master->dyn_addr = ret;
+	if (master->dyn_addr < 0)
 		return ret;
 
 	/* Setting Master Dynamic Address. */
@@ -2025,12 +2039,68 @@ static const struct of_device_id rcar_i3c_master_of_ids[] = {
 };
 MODULE_DEVICE_TABLE(of, rcar_i3c_master_of_ids);
 
+static int rcar_i3c_suspend_noirq(struct device *dev)
+{
+	struct rcar_i3c_master *master = dev_get_drvdata(dev);
+	int i;
+
+	i2c_mark_adapter_suspended(&master->base.i2c);
+
+	/* Store the device address table values */
+	for (i = 0; i < master->maxdevs; i++)
+		master->datbas[i] = i3c_reg_read(master->regs, DATBAS(i));
+
+	if (master->rstc)
+		reset_control_assert(master->rstc);
+
+	clk_disable_unprepare(master->pclk);
+	clk_disable_unprepare(master->tclk);
+
+	return 0;
+}
+
+static int rcar_i3c_resume_noirq(struct device *dev)
+{
+	struct rcar_i3c_master *master = dev_get_drvdata(dev);
+	int i, err;
+
+	reset_control_deassert(master->rstc);
+
+	err = clk_prepare_enable(master->pclk);
+	if (err)
+		return err;
+	err = clk_prepare_enable(master->tclk);
+	if (err)
+		return err;
+
+	i3c_reg_write(master->regs, REFCKCTL, 0);
+
+	/* Setting Master Dynamic Address. */
+	i3c_reg_write(master->regs, MSDVAD,
+		      MSDVAD_MDYADV | MSDVAD_MDYAD(master->dyn_addr));
+
+	/* Restore Device Address Table */
+	for (i = 0; i < master->maxdevs; i++)
+		i3c_reg_write(master->regs, DATBAS(i), master->datbas[i]);
+
+	rcar_i3c_hw_init(master);
+
+	i2c_mark_adapter_resumed(&master->base.i2c);
+
+	return 0;
+}
+
+static const struct dev_pm_ops rcar_i3c_pm_ops = {
+	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(rcar_i3c_suspend_noirq, rcar_i3c_resume_noirq)
+};
+
 static struct platform_driver rcar_i3c_master_driver = {
 	.probe = rcar_i3c_master_probe,
 	.remove = rcar_i3c_master_remove,
 	.driver = {
 		.name = "rcar-i3c-master",
 		.of_match_table = rcar_i3c_master_of_ids,
+		.pm	= &rcar_i3c_pm_ops,
 	},
 };
 module_platform_driver(rcar_i3c_master_driver);
