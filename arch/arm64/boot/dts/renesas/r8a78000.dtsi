@@ -5182,6 +5182,11 @@
 			#size-cells = <2>;
 			/* CRITICAL FIX: Proper address translation */
 			ranges = <0x0 0xc8800000 0x0 0xc8800000 0x0 0x100000>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_USB>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_US30>;
+			clock-names = "usb30";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_US30>;
+			reset-names = "usb30";
 			status = "disabled";
 		};
 
@@ -5192,6 +5197,11 @@
 			#size-cells = <2>;
 			/* CRITICAL FIX: Proper address translation */
 			ranges = <0x0 0xc8a00000 0x0 0xc8a00000 0x0 0x100000>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_USB>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_US32>;
+			clock-names = "usb31";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_US32>;
+			reset-names = "usb31";
 			status = "disabled";
 		};
 
@@ -5203,6 +5213,11 @@
 			#size-cells = <2>;
 			/* CRITICAL FIX: Proper address translation */
 			ranges = <0x0 0xc8900000 0x0 0xc8900000 0x0 0x100000>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_USB>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_US31>;
+			clock-names = "usb20";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_US31>;
+			reset-names = "usb20";
 			status = "disabled";
 		};
 
@@ -5214,6 +5229,11 @@
 			#size-cells = <2>;
 			/* CRITICAL FIX: Proper address translation */
 			ranges = <0x0 0xc8b00000 0x0 0xc8b00000 0x0 0x100000>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_USB>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_US33>;
+			clock-names = "usb21";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_US33>;
+			reset-names = "usb21";
 			status = "disabled";
 		};
 
