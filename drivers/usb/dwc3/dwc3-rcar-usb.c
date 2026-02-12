@@ -19,104 +19,6 @@
 #include <linux/usb/ch9.h>
 #include <linux/usb/of.h>
 
-/* Hardcoded for enable module clock */
-#define MDLC_BASE		0xc9c90000
-#define USB_PDID		(0)
-#define USB_CLK_MASK(n)		GENMASK((n) + 1, n)
-#define USB_CLK_SHIFT(m)	(m)
-
-#define MDLC_PKCPROT0		(MDLC_BASE + 0x0cf0)
-#define MDLC_PKCPROT1		(MDLC_BASE + 0x0cf4)
-
-#define _MDLC_MPDG(k)		(MDLC_BASE + 0x0200 + (k) * 4)
-#define _MDLC_MPDGS(k)		(MDLC_BASE + 0x0300 + (k) * 4)
-#define MDLC_MPIER0		(MDLC_BASE + 0x0110)
-#define MDLC_MPIMR0		(MDLC_BASE + 0x0120)
-
-#define MDLC_MPDG		_MDLC_MPDG(USB_PDID)
-#define MDLC_MPDGS		_MDLC_MPDGS(USB_PDID)
-
-#define MDLC_MSRES(i)		(MDLC_BASE + 0x0900 + (i) * 4)
-#define MDLC_MSRESS(i)		(MDLC_BASE + 0x0960 + (i) * 4)
-
-static void usb_module_power_gating_set(u8 pdid, u8 mode)
-{
-       void __iomem *unlock = ioremap(MDLC_PKCPROT0, 4);
-       void __iomem *mpdg = ioremap(_MDLC_MPDG(pdid), 4);
-       void __iomem *mpdgs = ioremap(_MDLC_MPDGS(pdid), 4);
-       void __iomem *mpier0 = ioremap(MDLC_MPIER0, 4);
-       void __iomem *mpimr0 = ioremap(MDLC_MPIMR0, 4);
-
-       writel(0xA5A5A501, unlock);
-
-       if ((readl(mpdgs) & 0x3) == mode)
-                       goto unmap;
-
-       while (readl(mpdgs) != readl(mpdg))
-                       udelay(1000);
-
-       writel(0, mpier0);
-       writel(0x1, mpimr0);
-
-       writel(0x1, mpdg);
-
-       while (readl(mpdgs) != readl(mpdg))
-                       udelay(1000);
-
-       writel(mode, mpdg);
-
-       while (readl(mpdgs) != readl(mpdg))
-                       udelay(1000);
-
-unmap:
-       iounmap(unlock);
-       iounmap(mpdg);
-       iounmap(mpdgs);
-       iounmap(mpier0);
-       iounmap(mpimr0);
-}
-
-static void usb_module_standy_set(u8 clk_reg_no, u8 pos, u8 mode)
-{
-       void __iomem *unlock = ioremap(MDLC_PKCPROT1, 4);
-       void __iomem *msress = ioremap(MDLC_MSRESS(clk_reg_no), 4);
-       void __iomem *msres = ioremap(MDLC_MSRES(clk_reg_no), 4);
-       u32 val;
-
-       writel(0xA5A5A501, unlock);
-
-       if ((readl(msress) & USB_CLK_MASK(pos)) == (mode << USB_CLK_SHIFT(pos)))
-                       goto unmap;
-
-       while ((readl(msress) & USB_CLK_MASK(pos)) != (readl(msres) & USB_CLK_MASK(pos)))
-                       udelay(1000);
-
-       val = readl(msres);
-       val &= ~USB_CLK_MASK(pos);
-       val |= mode << USB_CLK_SHIFT(pos);
-       writel(val, msres);
-
-       while ((readl(msress) & USB_CLK_MASK(pos)) != (readl(msres) & USB_CLK_MASK(pos)))
-                       udelay(1000);
-
-unmap:
-       iounmap(unlock);
-       iounmap(msress);
-       iounmap(msres);
-}
-
-static void usb_module_power_run(void)
-{
-       usb_module_power_gating_set(0, 0x03);
-       usb_module_power_gating_set(2, 0x03);
-
-       usb_module_standy_set(6, 0, 0x03);
-       usb_module_standy_set(6, 2, 0x03);
-       usb_module_standy_set(6, 4, 0x03);
-       usb_module_standy_set(6, 6, 0x03);
-}
-//--------------------------------------------------
-
 #define USB_CTRL_CONF19		0x26
 
 /* USB_CTRL_CONF19 register bits */
@@ -312,9 +214,6 @@ static int rcar_gen5_usb_init_hardware(struct usb_priv *priv)
 {
 	int ret;
 
-	usb_module_power_run();
-	usleep_range(10000, 20000);
-
 	/* Execute the appropriate initialization flow */
 	if (priv->use_usb3_flow) {
 		/* Chapter 94.3.1.1 Using USB3.1 */
@@ -359,30 +258,24 @@ static int rcar_gen5_usb_probe(struct platform_device *pdev)
 		return PTR_ERR(priv->base);
 	}
 
-	/* TODO: Enable reset control when DTS binding is ready */
-	/* Get reset control */
-	//priv->reset = devm_reset_control_get(dev, NULL);
-	//if (IS_ERR(priv->reset)) {
-	//	dev_err(dev, "Failed to get reset control\n");
-	//	return PTR_ERR(priv->reset);
-	//}
+	priv->resets = devm_reset_control_get(dev, NULL);
+	if (IS_ERR(priv->resets)) {
+		dev_err(dev, "Failed to get reset control\n");
+		return PTR_ERR(priv->resets);
+	}
 
-	/* TODO: Enable clock control when clock is available */
-	/* Get clocks */
-	//priv->clk = devm_clk_get(dev, NULL);
-	//if (IS_ERR(priv->clk)) {
-	//	dev_err(dev, "Failed to get mp_phy clock\n");
-	//	return PTR_ERR(priv->clk);
-	//}
+	priv->clk = devm_clk_get(dev, NULL);
+	if (IS_ERR(priv->clk)) {
+		dev_err(dev, "Failed to get clk control\n");
+		return PTR_ERR(priv->clk);
+	}
 
-	/* Enable clock if available */
-	//if (priv->clk) {
-	//	int ret = clk_prepare_enable(priv->clk);
-	//	if (ret) {
-	//		dev_err(dev, "Failed to enable clock: %d\n", ret);
-	//		return ret;
-	//	}
-	//}
+	/* Enable clock */
+	ret = clk_prepare_enable(priv->clk);
+	if (ret) {
+		dev_err(dev, "Failed to enable clock: %d\n", ret);
+		return ret;
+	}
 
 	/* Get PHYs - Only USB3 MP-PHY, USB2 PHY controlled by I2C0 */
 	priv->usb3_phy = devm_phy_optional_get(dev, "usb3-phy");
@@ -492,6 +385,9 @@ static int rcar_gen5_usb_remove(struct platform_device *pdev)
 		phy_exit(priv->usb3_phy);
 	}
 
+	if (priv->clk)
+		clk_disable_unprepare(priv->clk);
+
 	pm_runtime_put_sync(dev);
 	pm_runtime_disable(dev);
 
@@ -508,6 +404,9 @@ static int __maybe_unused rcar_gen5_usb_suspend(struct device *dev)
 		phy_exit(priv->usb3_phy);
 	}
 
+	if (priv->clk)
+		clk_disable_unprepare(priv->clk);
+
 	dev_info(dev, "Renesas USB glue layer suspended\n");
 	return 0;
 }
@@ -517,7 +416,11 @@ static int __maybe_unused rcar_gen5_usb_resume(struct device *dev)
 	struct usb_priv *priv = dev_get_drvdata(dev);
 	int ret;
 
-	usb_module_power_run();
+	ret = clk_prepare_enable(priv->clk);
+	if (ret) {
+		dev_err(dev, "Failed to enable clock on resume: %d\n", ret);
+		return ret;
+	}
 	usleep_range(10000, 20000);
 
 	if (priv->use_usb3_flow) {
