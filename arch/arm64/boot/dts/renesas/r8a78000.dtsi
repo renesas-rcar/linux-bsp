@@ -3474,8 +3474,10 @@
 			compatible = "renesas,rcar-gen5-scif", "renesas,scif";
 			reg = <0 0xc0700000 0 0x40>;
 			interrupts = <GIC_SPI 4074 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&dummy_clk_sgasyncd4>, <&dummy_clk_sgasyncd4>, <&scif_clk>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_SCIF0>,
+					 <&scmi_clk X5H_CLOCK_ID_CLK_SGAD4_PERW_BUS>, <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_SCIF0>;
 			status = "disabled";
 		};
 
@@ -3483,8 +3485,10 @@
 			compatible = "renesas,rcar-gen5-scif", "renesas,scif";
 			reg = <0 0xc0704000 0 0x40>;
 			interrupts = <GIC_SPI 4075 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&dummy_clk_sgasyncd4>, <&dummy_clk_sgasyncd4>, <&scif_clk>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_SCIF1>,
+					 <&scmi_clk X5H_CLOCK_ID_CLK_SGAD4_PERW_BUS>, <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_SCIF1>;
 			status = "disabled";
 		};
 
@@ -3492,8 +3496,10 @@
 			compatible = "renesas,rcar-gen5-scif", "renesas,scif";
 			reg = <0 0xc0708000 0 0x40>;
 			interrupts = <GIC_SPI 4076 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&dummy_clk_sgasyncd4>, <&dummy_clk_sgasyncd4>, <&scif_clk>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_SCIF3>,
+					 <&scmi_clk X5H_CLOCK_ID_CLK_SGAD4_PERW_BUS>, <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_SCIF3>;
 			status = "disabled";
 		};
 
@@ -3501,8 +3507,10 @@
 			compatible = "renesas,rcar-gen5-scif", "renesas,scif";
 			reg = <0 0xc070c000 0 0x40>;
 			interrupts = <GIC_SPI 4077 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&dummy_clk_sgasyncd4>, <&dummy_clk_sgasyncd4>, <&scif_clk>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_SCIF4>,
+					 <&scmi_clk X5H_CLOCK_ID_CLK_SGAD4_PERW_BUS>, <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_SCIF4>;
 			status = "disabled";
 		};
 
@@ -3511,8 +3519,9 @@
 			reg = <0 0xc0710000 0 0x60>;
 			interrupts = <GIC_SPI 4078 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_HSCIF0>,
-					 <&dummy_clk_sgasyncd4>, <&scif_clk>;
+					 <&scmi_clk X5H_CLOCK_ID_CLK_SGAD4_PERW_BUS>, <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_HSCIF0>;
 			status = "disabled";
 		};
 
@@ -3520,8 +3529,10 @@
 			compatible = "renesas,rcar-gen5-hscif", "renesas,hscif";
 			reg = <0 0xc0714000 0 0x60>;
 			interrupts = <GIC_SPI 4079 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&dummy_clk_sgasyncd4>, <&dummy_clk_sgasyncd4>, <&scif_clk>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_HSCIF1>,
+					 <&scmi_clk X5H_CLOCK_ID_CLK_SGAD4_PERW_BUS>, <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_HSCIF1>;
 			status = "disabled";
 		};
 
@@ -3529,8 +3540,10 @@
 			compatible = "renesas,rcar-gen5-hscif", "renesas,hscif";
 			reg = <0 0xc0718000 0 0x60>;
 			interrupts = <GIC_SPI 4080 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&dummy_clk_sgasyncd4>, <&dummy_clk_sgasyncd4>, <&scif_clk>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_HSCIF2>,
+					 <&scmi_clk X5H_CLOCK_ID_CLK_SGAD4_PERW_BUS>, <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_HSCIF2>;
 			status = "disabled";
 		};
 
@@ -3538,8 +3551,10 @@
 			compatible = "renesas,rcar-gen5-hscif", "renesas,hscif";
 			reg = <0 0xc071c000 0 0x60>;
 			interrupts = <GIC_SPI 4081 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&dummy_clk_sgasyncd4>, <&dummy_clk_sgasyncd4>, <&scif_clk>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_HSCIF3>,
+					 <&scmi_clk X5H_CLOCK_ID_CLK_SGAD4_PERW_BUS>, <&scif_clk>;
 			clock-names = "fck", "brg_int", "scif_clk";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_HSCIF3>;
 			status = "disabled";
 		};
 
