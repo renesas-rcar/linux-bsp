@@ -1220,6 +1220,8 @@ static void rcar_canxl_abort_rx_fifo_queue(struct rcar_canxl_global *gpriv, u16 
 	u32 sts;
 
 	/* Abort a RX FIFO Queue */
+	rcar_canxl_write(gpriv->base, MH_LOCK, MH_LOCK_ULK(0x1234)); /* Write 0x1234 to ULK */
+	rcar_canxl_write(gpriv->base, MH_LOCK, MH_LOCK_ULK(0x4321)); /* Write 0x4321 to ULK */
 	rcar_canxl_write(gpriv->base, RX_FQ_CTRL(1),
 			 RX_FQ_CTRL1_ABORT(rx_fifo));
 
@@ -1244,6 +1246,8 @@ static void rcar_canxl_abort_rx_fifo_queue(struct rcar_canxl_global *gpriv, u16 
 	if (err)
 		dev_err(&pdev->dev, "RX descriptor detected with VALID=0\n");
 
+	rcar_canxl_write(gpriv->base, MH_LOCK, MH_LOCK_ULK(0x1234)); /* Write 0x1234 to ULK */
+	rcar_canxl_write(gpriv->base, MH_LOCK, MH_LOCK_ULK(0x4321)); /* Write 0x4321 to ULK */
 	rcar_canxl_write(gpriv->base, RX_FQ_CTRL(1), 0);
 	rcar_canxl_write(gpriv->base, RX_FQ_CTRL(2), 0);
 }
@@ -1255,6 +1259,8 @@ static void rcar_canxl_abort_tx_fifo_queue(struct rcar_canxl_global *gpriv, u16 
 	u32 sts;
 
 	/* Abort a TX FIFO Queue */
+	rcar_canxl_write(gpriv->base, MH_LOCK, MH_LOCK_ULK(0x1234)); /* Write 0x1234 to ULK */
+	rcar_canxl_write(gpriv->base, MH_LOCK, MH_LOCK_ULK(0x4321)); /* Write 0x4321 to ULK */
 	rcar_canxl_write(gpriv->base, TX_FQ_CTRL(1),
 			 TX_FQ_CTRL1_ABORT(tx_fifo));
 
@@ -1269,6 +1275,8 @@ static void rcar_canxl_abort_tx_fifo_queue(struct rcar_canxl_global *gpriv, u16 
 	if (err)
 		dev_err(&pdev->dev, "TX FIFO Queue stop failed\n");
 
+	rcar_canxl_write(gpriv->base, MH_LOCK, MH_LOCK_ULK(0x1234)); /* Write 0x1234 to ULK */
+	rcar_canxl_write(gpriv->base, MH_LOCK, MH_LOCK_ULK(0x4321)); /* Write 0x4321 to ULK */
 	rcar_canxl_write(gpriv->base, TX_FQ_CTRL(1), 0);
 	rcar_canxl_write(gpriv->base, TX_FQ_CTRL(2), 0);
 }
@@ -1279,10 +1287,9 @@ static void rcar_canxl_abort_tx_prior_queue(struct rcar_canxl_global *gpriv)
 	int err;
 	u32 sts;
 
+	/* Abort all slots in TX Priority Queue */
 	rcar_canxl_write(gpriv->base, MH_LOCK, MH_LOCK_ULK(0x1234)); /* Write 0x1234 to ULK */
 	rcar_canxl_write(gpriv->base, MH_LOCK, MH_LOCK_ULK(0x4321)); /* Write 0x4321 to ULK */
-
-	/* Abort all slots in TX Priority Queue */
 	rcar_canxl_write(gpriv->base, TX_PQ_CTRL(1),
 			 CANXL_TX_PQ_SLOT_ENABLE);
 
@@ -1292,6 +1299,8 @@ static void rcar_canxl_abort_tx_prior_queue(struct rcar_canxl_global *gpriv)
 	if (err)
 		dev_err(&pdev->dev, "TX Priority Queue is busy\n");
 
+	rcar_canxl_write(gpriv->base, MH_LOCK, MH_LOCK_ULK(0x1234)); /* Write 0x1234 to ULK */
+	rcar_canxl_write(gpriv->base, MH_LOCK, MH_LOCK_ULK(0x4321)); /* Write 0x4321 to ULK */
 	rcar_canxl_write(gpriv->base, TX_PQ_CTRL(1), 0);
 	rcar_canxl_write(gpriv->base, TX_PQ_CTRL(2), 0);
 }
