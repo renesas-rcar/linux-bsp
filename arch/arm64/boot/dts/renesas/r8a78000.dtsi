@@ -3618,9 +3618,9 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4900000 0 0x1000>;
 			interrupts = <0 510 4>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 730>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN000>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO0>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VIN000>;
 			renesas,id = <0>;
 			status = "disabled";
 
@@ -3646,9 +3646,9 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4901000 0 0x1000>;
 			interrupts = <0 511 4>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 730>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN001>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO0>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VIN001>;
 			renesas,id = <1>;
 			status = "disabled";
 
@@ -3674,9 +3674,9 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4908000 0 0x1000>;
 			interrupts = <0 518 4>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 731>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN010>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO0>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VIN010>;
 			renesas,id = <8>;
 			status = "disabled";
 
@@ -3702,9 +3702,9 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4910000 0 0x1000>;
 			interrupts = <0 526 4>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 800>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN020>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO0>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VIN020>;
 			renesas,id = <16>;
 			status = "disabled";
 
@@ -3730,9 +3730,9 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4918000 0 0x1000>;
 			interrupts = <0 534 4>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 801>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN030>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO1>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VIN030>;
 			renesas,id = <24>;
 			status = "disabled";
 
@@ -3758,9 +3758,9 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4919000 0 0x1000>;
 			interrupts = <0 535 4>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 801>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN031>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO1>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VIN031>;
 			renesas,id = <25>;
 			status = "disabled";
 
@@ -3786,9 +3786,9 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4920000 0 0x1000>;
 			interrupts = <0 542 4>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 802>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN040>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO1>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VIN040>;
 			renesas,id = <32>;
 			status = "disabled";
 
@@ -3814,9 +3814,9 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4928000 0 0x1000>;
 			interrupts = <0 550 4>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 803>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN050>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO1>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VIN050>;
 			renesas,id = <40>;
 			status = "disabled";
 
@@ -3842,9 +3842,9 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4930000 0 0x1000>;
 			interrupts = <0 558 4>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 804>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN060>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO2>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VIN060>;
 			renesas,id = <48>;
 			status = "disabled";
 
@@ -3870,9 +3870,9 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4931000 0 0x1000>;
 			interrupts = <0 559 4>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 804>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN061>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO2>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VIN061>;
 			renesas,id = <49>;
 			status = "disabled";
 
@@ -3898,9 +3898,9 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4938000 0 0x1000>;
 			interrupts = <0 566 4>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 805>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN070>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO2>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VIN070>;
 			renesas,id = <56>;
 			status = "disabled";
 
@@ -3926,9 +3926,9 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4940000 0 0x1000>;
 			interrupts = <0 574 4>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 806>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN080>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO2>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VIN080>;
 			renesas,id = <64>;
 			status = "disabled";
 
@@ -3954,9 +3954,9 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4948000 0 0x1000>;
 			interrupts = <0 582 4>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 807>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN090>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO3>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VIN090>;
 			renesas,id = <72>;
 			status = "disabled";
 
@@ -3982,9 +3982,9 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4949000 0 0x1000>;
 			interrupts = <0 583 4>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 807>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN091>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO3>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VIN091>;
 			renesas,id = <73>;
 			status = "disabled";
 
@@ -4010,9 +4010,9 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4950000 0 0x1000>;
 			interrupts = <0 590 4>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 808>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN100>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO3>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VIN100>;
 			renesas,id = <80>;
 			status = "disabled";
 
@@ -4038,9 +4038,9 @@
 			compatible = "renesas,vin-r8a78000", "generic-uio";
 			reg = <0 0xc4958000 0 0x1000>;
 			interrupts = <0 598 4>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 809>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VIN110>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO3>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VIN110>;
 			renesas,id = <88>;
 			status = "disabled";
 
@@ -4066,9 +4066,10 @@
 			compatible = "renesas,r8a78000-csi2", "generic-uio";
 			reg = <0 0xc4400000 0 0x70000>;
 			interrupts = <0 498 4>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 331>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_CSI_VIO_CSI0>,
+				 <&scmi_clk X5H_CLOCK_ID_CSITOP0>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO0>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CSITOP0>;
 			status = "disabled";
 
 			ports {
@@ -4092,9 +4093,10 @@
 			compatible = "renesas,r8a78000-csi2", "generic-uio";
 			reg = <0 0xc4480000 0 0x70000>;
 			interrupts = <0 499 4>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 400>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_CSI_VIO_CSI1>,
+				 <&scmi_clk X5H_CLOCK_ID_CSITOP1>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO1>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CSITOP1>;
 			status = "disabled";
 
 			ports {
@@ -4118,9 +4120,10 @@
 			compatible = "renesas,r8a78000-csi2", "generic-uio";
 			reg = <0 0xc4500000 0 0x70000>;
 			interrupts = <0 500 4>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 401>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_CSI_VIO_CSI2>,
+				 <&scmi_clk X5H_CLOCK_ID_CSITOP2>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO2>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CSITOP2>;
 			status = "disabled";
 
 			ports {
@@ -4144,9 +4147,10 @@
 			compatible = "renesas,r8a78000-csi2", "generic-uio";
 			reg = <0 0xc4580000 0 0x70000>;
 			interrupts = <0 501 4>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 402>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_CSI_VIO_CSI2>,
+				 <&scmi_clk X5H_CLOCK_ID_CSITOP3>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO3>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CSITOP3>;
 			status = "disabled";
 
 			ports {
@@ -4170,9 +4174,9 @@
 			compatible = "renesas,r8a78000-isp";
 			reg = <0 0xc4700000 0 0x10000>;
 			interrupts = <0 506 8>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 612>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_ISPCS0>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO0>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_ISPCS0>;
 			status = "disabled";
 
 			ports {
@@ -4225,9 +4229,9 @@
 			compatible = "renesas,r8a78000-isp";
 			reg = <0 0xc4720000 0 0x10000>;
 			interrupts = <0 507 8>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 61>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_ISPCS1>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO1>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_ISPCS1>;
 			status = "disabled";
 
 			ports {
@@ -4280,9 +4284,9 @@
 			compatible = "renesas,r8a78000-isp";
 			reg = <0 0xc4740000 0 0x10000>;
 			interrupts = <0 508 8>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 614>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_ISPCS2>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO2>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_ISPCS2>;
 			status = "disabled";
 
 			ports {
@@ -4335,9 +4339,9 @@
 			compatible = "renesas,r8a78000-isp";
 			reg = <0 0xc4760000 0 0x10000>;
 			interrupts = <0 509 8>;
-			clocks = <&dummy_clk>;
-			//power-domains = <&sysc 64>;
-			//resets = <&cpg 615>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_ISPCS3>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO3>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_ISPCS3>;
 			status = "disabled";
 
 			ports {
