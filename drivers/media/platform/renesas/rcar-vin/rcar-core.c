@@ -47,8 +47,6 @@
 #define MDLC_MSRES(i)		(MDLC_BASE + 0x0900 + (i) * 4)
 #define MDLC_MSRESS(i)	(	MDLC_BASE + 0x0960 + (i) * 4)
 
-#define MDL_CLK_WA
-
 static void rcar_vin_module_power_gating_set(u8 pdid, u8 mode)
 {
 	void __iomem *unlock = ioremap(MDLC_PKCPROT0, 4);

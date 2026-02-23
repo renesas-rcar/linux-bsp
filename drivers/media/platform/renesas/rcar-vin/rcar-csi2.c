@@ -51,8 +51,6 @@
 #define CLK_CSICKCR                             (SYSSS_TOP_BASE + 0x100C)
 #define CLKTOPPKCPROT0                          (SYSSS_TOP_BASE + 0x1370)
 
-#define MDL_CLK_WA
-
 static void rcar_csi2_module_power_gating_set(u8 pdid, u8 mode)
 {
 	void __iomem *unlock = ioremap(MDLC_PKCPROT0, 4);
