@@ -759,6 +759,11 @@ enum rswitch_lsc_mode {
 #define PASE			BIT(8)
 #define LVT			GENMASK(6, 0)
 
+/* bit field definitions for MXGMIIC */
+#define RXBFM			GENMASK(18, 16)
+#define LFS_TXIDLE		BIT(1)
+#define LFS_TXRFS		BIT(0)
+
 /* bit field definitions for GWMTIRM */
 #define MTIOG			BIT(0)
 #define MTR			BIT(1)
@@ -803,7 +808,7 @@ enum rswitch_lsc_mode {
 #define RR			BIT(0)
 
 /* bit field definitions for RCEC */
-#define	RCEC_ACE_DEFAULT	(BIT(0) | BIT(AGENT_INDEX_GWCA))
+#define	RCEC_ACE_DEFAULT(agent_index)	(BIT(0) | BIT(agent_index))
 #define RCE			BIT(16)
 
 /* bit field definitions for RCDC */
@@ -979,10 +984,9 @@ enum switch_vlan_mode {
 #define VLANIPVS		GENMASK(18, 16)
 #define VLANDVS			GENMASK(6, 0)
 
-/* bit field definitions for RSW3_FWLTHTIM */
-#define LTHTR			BIT(31)
-#define LTHEVR			BIT(1)
-#define LTHRET			BIT(0)
+/* bit field definitions for FWLTHTIM */
+#define LTHTR			BIT(1)
+#define LTHTIOG			BIT(0)
 
 /* TOP */
 #define TPEMIMC7(queue)		(TPEMIMC70 + (queue) * 4)

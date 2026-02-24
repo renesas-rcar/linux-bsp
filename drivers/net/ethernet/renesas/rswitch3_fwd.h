@@ -7,7 +7,7 @@
 #ifndef __RSWITCH3_FWD_H__
 #define __RSWITCH3_FWD_H__
 
-#include <linux/platform_device.h>
+// #include <linux/platform_device.h>
 
 enum rswitch3_reg {
 	RSW3_FWGC		= 0x0000,
@@ -466,8 +466,8 @@ enum rswitch3_reg {
 
 /* bit field definitions for FWMACTLn */
 #define RSW3_MACED			BIT(31)
-#define RSW3_MACCSDL			GENMASK(6, 0)
-#define RSW3_MACDVL			GENMASK(6, 0)
+#define RSW3_MACCSDL			GENMASK(15, 0)
+#define RSW3_MACDVL			GENMASK(15, 0)
 
 /* bit field definitions for FWMACHWLC0 */
 #define RSW3_MACTHWLFC3			BIT(31)

@@ -22,27 +22,34 @@
 #define RSWITCH2_TOP_OFFSET		0x00008000
 #define RSWITCH2_COMA_OFFSET		0x00009000
 #define RSWITCH2_ETHA_OFFSET		0x0000a000	/* with RMAC */
-#define RSWITCH_ETHA_SIZE		0x00002000	/* with RMAC */
 #define RSWITCH2_GWCA0_OFFSET		0x00010000
 #define RSWITCH2_GWCA1_OFFSET		0x00012000
 #define RSWITCH_GPTP_OFFSET_S4		0x00018000
 
+#define RSWITCH3_TOP_OFFSET		0x0001b000
+#define RSWITCH3_COMA_OFFSET		0x0001c000
+#define RSWITCH3_ETHA_OFFSET		0x0001d000	/* with RMAC */
+#define RSWITCH3_GWCA0_OFFSET		0x00037000
+#define RSWITCH3_GWCA1_OFFSET		0x00039000
+
 #define RSWITCH_NUM_AGENTS_RSW2		5
 #define RSWITCH_NUM_PORTS_RSW2		3
-#define AGENT_INDEX_GWCA_RSW2		RSWITCH_NUM_PORTS_RSW2
+#define AGENT_INDEX_GWCA_RSW2		(RSWITCH_NUM_PORTS_RSW2 + GWCA_INDEX_RSW2)
 
 #define RSWITCH_NUM_AGENTS_RSW3		15
 #define RSWITCH_NUM_PORTS_RSW3		13
-#define AGENT_INDEX_GWCA_RSW3		RSWITCH_NUM_PORTS_RSW3
+#define AGENT_INDEX_GWCA_RSW3		(RSWITCH_NUM_PORTS_RSW3 + GWCA_INDEX_RSW3)
+
+#define RSWITCH_ETHA_SIZE		0x00002000
+#define RSWITCH_GWCA_SIZE		0x00002000
 
 #define rswitch_for_all_ports(_priv, _rdev)			\
 	list_for_each_entry(_rdev, &(_priv)->port_list, list)
 
-#define rswitch_for_each_enabled_port(priv, i)		\
-	for (i = 0; i < priv->info->rswitch_num_ports; i++)		\
-		if (priv->rdev[i]->disabled)		\
-			continue;			\
-		else
+#define rswitch_for_each_enabled_port(priv, i)				\
+	for ((i) = rswitch_next_enabled_port(priv, 0);			\
+	     (i) < (priv)->info->rswitch_num_ports;			\
+	     (i) = rswitch_next_enabled_port(priv, (i) + 1))
 
 #define rswitch_for_each_enabled_port_continue_reverse(priv, i)	\
 	for (; i-- > 0; )					\
@@ -77,11 +84,13 @@
 #define RSWITCH3_FALLBACK_CLK_SPEC	712500000	/* 712.5 MHz */
 
 /* TODO: hardcoded ETHA/GWCA settings for now */
-#define GWCA_IRQ_RESOURCE_NAME	"gwca0_rxtx%d"
-#define GWCA_IRQ_NAME		"rswitch: gwca0_rxtx%d"
+#define GWCA_IRQ_RESOURCE_NAME_RSW3 "gwca%d_gwdis%d"
+#define GWCA_IRQ_RESOURCE_NAME	"gwca%d_rxtx%d"
+#define GWCA_IRQ_NAME_RSW3	"rswitch: gwca%d_gwdis%d"
+#define GWCA_IRQ_NAME		"rswitch: gwca%d_rxtx%d"
 #define GWCA_NUM_IRQS		8
-#define GWCA_INDEX		0
-#define AGENT_INDEX_GWCA	3
+#define GWCA_INDEX_RSW2		0
+#define GWCA_INDEX_RSW3		1
 #define GWCA_IPV_NUM		0
 
 #define GWCA_TS_IRQ_RESOURCE_NAME	"gwca0_rxts0"
@@ -335,6 +344,7 @@ struct rswitch_hw_info {
 	u8 rswitch_num_ports;
 	u8 rswitch_num_agents;
 	u8 agent_index_gwca;
+	u8 gwca_index;
 	u8 rswitch_version;
 };
 
@@ -355,14 +365,19 @@ struct rswitch_switchdev_event_work {
 	unsigned long event;
 };
 
+static inline unsigned int rswitch_next_enabled_port(struct rswitch_private *priv,
+						     unsigned int i)
+{
+	while (i < priv->info->rswitch_num_ports && priv->rdev[i]->disabled)
+		i++;
+
+	return i;
+}
+
 bool is_rdev(const struct net_device *ndev);
 void rswitch_modify(void __iomem *addr, u32 reg, u32 clear, u32 set);
 int rswitch_reg_wait(void __iomem *addr, u32 offs, u32 mask, u32 expected);
 int rswitch_gwca_change_mode(struct rswitch_private *priv, enum rswitch_port_mode mode);
 int rswitch_etha_change_mode(struct rswitch_etha *etha, enum rswitch_port_mode mode);
-
-static bool parallel_mode;
-module_param(parallel_mode, bool, 0644);
-MODULE_PARM_DESC(parallel_mode, "Operate simultaneously with Realtime core");
 
 #endif	/* #ifndef __RSWITCH_H__ */

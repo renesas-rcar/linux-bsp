@@ -30,6 +30,8 @@
 #include "rswitch.h"
 #include "rswitch_l2.h"
 
+static bool parallel_mode;
+
 int rswitch_reg_wait(void __iomem *addr, u32 offs, u32 mask, u32 expected)
 {
 	u32 val;
@@ -65,7 +67,7 @@ static void rswitch_reset(struct rswitch_private *priv)
 
 		count = 0;
 		do {
-			mode = ioread32(priv->addr + gwro_offset + 0x4) & OPS;
+			mode = ioread32(priv->addr + gwro_offset + 0x4) & OPC;
 			if (mode == OPC_OPERATION)
 				break;
 
@@ -80,7 +82,8 @@ static void rswitch_reset(struct rswitch_private *priv)
 
 static void rswitch_clock_enable(struct rswitch_private *priv)
 {
-	iowrite32(RCEC_ACE_DEFAULT | RCE, priv->addr_coma + RCEC);
+	iowrite32(RCEC_ACE_DEFAULT(priv->info->agent_index_gwca) | RCE,
+		  priv->addr_coma + RCEC);
 }
 
 static void rswitch_clock_disable(struct rswitch_private *priv)
@@ -146,13 +149,14 @@ static void rswitch_coma_init(struct rswitch_private *priv)
 
 static void rswitch_top_init(struct rswitch_private *priv)
 {
+	u8 gwca_index = priv->info->gwca_index;
 	unsigned int i;
 
 	for (i = 0; i < RSWITCH_MAX_NUM_QUEUES; i++) {
 		if (priv->info->rswitch_version == RSW20)
-			iowrite32((i / 16) << (GWCA_INDEX * 8), priv->addr_mfab + TPEMIMC7(i));
+			iowrite32((i / 16) << (gwca_index * 8), priv->addr_mfab + TPEMIMC7(i));
 		else
-			iowrite32((i / 16) << (GWCA_INDEX * 4), priv->addr_mfab + RSW3_TPDEMIMC(i));
+			iowrite32((i / 16) << (gwca_index * 4), priv->addr_mfab + RSW3_TPDEMIMC(i));
 	}
 }
 
@@ -161,6 +165,7 @@ static int rswitch2_fwd_init(struct rswitch_private *priv)
 {
 	u8 num_agents = priv->info->rswitch_num_agents;
 	u32 all_ports_val = GENMASK(num_agents - 1, 0);
+	u8 gwca_index = priv->info->gwca_index;
 	u32 reg_val, ret, i;
 
 	/* Start with empty configuration */
@@ -192,7 +197,7 @@ static int rswitch2_fwd_init(struct rswitch_private *priv)
 			       field_prep(PBDV(num_agents), BIT(priv->gwca.agent_index)));
 		/* Within GWCA port, forward to Rx queue for port i */
 		iowrite32(priv->rdev[i]->rx_queue->index,
-			  priv->addr_mfwd + FWPBFCSDC(GWCA_INDEX, i));
+			  priv->addr_mfwd + FWPBFCSDC(gwca_index, i));
 	}
 
 	/* For GWCA port, allow direct descriptor forwarding */
@@ -223,7 +228,7 @@ static int rswitch3_fwd_init(struct rswitch_private *priv)
 {
 	u8 num_agents = priv->info->rswitch_num_agents;
 	u32 all_ports_val = GENMASK(num_agents - 1, 0);
-	const u8 *macaddr;
+	u8 gwca_index = priv->info->gwca_index;
 	unsigned int i;
 	u32 reg_val;
 	int ret;
@@ -261,50 +266,15 @@ static int rswitch3_fwd_init(struct rswitch_private *priv)
 
 	/* reserve some of the MAC table for HW learning */
 	rswitch_modify(priv->addr_mfwd, RSW3_FWMACHWLC0, 0,
-		       FIELD_PREP(RSW3_MACTHWLEA, 0x3f) |
-		       FIELD_PREP(RSW3_MACTHWLSA, 0));
+		       FIELD_PREP(RSW3_MACTHWLEA, 0x7f) |
+		       FIELD_PREP(RSW3_MACTHWLSA, 0x40));
 
 	/* MAC table reset flow */
 	iowrite32(MACTIOG, priv->addr_mfwd + RSW3_FWMACTIM);
 	ret = rswitch_reg_wait(priv->addr_mfwd, RSW3_FWMACTIM, MACTIOG, 0);
 
-	// MAC table entry flow
-	rswitch_for_each_enabled_port(priv, i) {
-		iowrite32(i, priv->addr_mfwd + RSW3_FWMACTL0);
-		iowrite32(0x00, priv->addr_mfwd + RSW3_FWMACTL1);
-		iowrite32(0x00, priv->addr_mfwd + RSW3_FWMACTL2);
-		iowrite32(0x00, priv->addr_mfwd + RSW3_FWMACTL3);
-		iowrite32(MACDSLVL(num_agents) | MACSSLVL(num_agents),
-			  priv->addr_mfwd + RSW3_FWMACTL4);
-
-		macaddr = priv->rdev[0]->ndev->dev_addr;
-
-		reg_val = ((macaddr[0] & 0xff) << 8) | macaddr[1];
-		iowrite32(reg_val, priv->addr_mfwd + RSW3_FWMACTL5);
-
-		reg_val = ((macaddr[2] & 0xff) << 24) | ((macaddr[3] & 0xff) << 16);
-		reg_val |= ((macaddr[4] & 0xff) << 8) | macaddr[5];
-		iowrite32(reg_val, priv->addr_mfwd + RSW3_FWMACTL6);
-
-		reg_val = FIELD_PREP(RSW3_MACCSDL, priv->rdev[i]->rx_queue->index);
-		iowrite32(reg_val, priv->addr_mfwd + RSW3_FWMACTL7(GWCA_INDEX));
-
-		reg_val = FIELD_PREP(RSW3_MACDVL, (1 << num_agents));
-		iowrite32(reg_val, priv->addr_mfwd + RSW3_FWMACTL8);
-
-		ret = rswitch_reg_wait(priv->addr_mfwd, RSW3_FWMACTLR, 0, 0);
-		if (ret)
-			netdev_info(priv->rdev[i]->ndev, "MAC table learning timed out\n");
-	}
-
 	/* For GWCA port, allow direct descriptor forwarding */
 	rswitch_modify(priv->addr_mfwd, RSW3_FWPC1(priv->gwca.agent_index), 0, DDE);
-
-	// enable L2 stream
-	reg_val = LTHTA | IP4UE | IP4TE | L2SE;
-	rswitch_for_each_enabled_port(priv, i) {
-		iowrite32(reg_val, priv->addr_mfwd + RSW3_FWPC0(i));
-	}
 
 	/* Configure MAC table aging */
 	rswitch_modify(priv->addr_mfwd, RSW3_FWMACAGUSPC, RSW3_MACAGUSP,
@@ -318,7 +288,7 @@ static int rswitch3_fwd_init(struct rswitch_private *priv)
 	rswitch_for_each_enabled_port(priv, i) {
 		/* Within GWCA port, forward to Rx queue for port i */
 		iowrite32(priv->rdev[i]->rx_queue->index,
-			  priv->addr_mfwd + RSW3_FWPBFCSDC(GWCA_INDEX, i));
+			  priv->addr_mfwd + RSW3_FWPBFCSDC(gwca_index, i));
 
 		/* Port based forwarding from port i to GWCA port */
 		rswitch_modify(priv->addr_mfwd, RSW3_FWPBFC0(i), PBDV(num_agents),
@@ -353,8 +323,6 @@ static int rswitch3_fwd_init(struct rswitch_private *priv)
 	iowrite32(RSW3_L23UTIOG, priv->addr_mfwd + RSW3_FWL23UTIM);
 	ret = rswitch_reg_wait(priv->addr_mfwd, RSW3_FWL23UTIM, RSW3_L23UTR, RSW3_L23UTR);
 
-	/* TODO: add chrdev for fwd */
-	/* TODO: add proc for fwd */
 
 	return ret;
 }
@@ -928,6 +896,7 @@ static int rswitch_gwca_hw_init(struct rswitch_private *priv)
 	err = rswitch_gwca_mcast_table_reset(priv);
 	if (err < 0)
 		return err;
+
 	err = rswitch_gwca_axi_ram_reset(priv);
 	if (err < 0)
 		return err;
@@ -935,15 +904,30 @@ static int rswitch_gwca_hw_init(struct rswitch_private *priv)
 	iowrite32(0, priv->addr_gwca + GWVCC);
 	iowrite32(0, priv->addr_gwca + GWIRC);
 	iowrite32(FIELD_PREP(DQD, DES_RAM_DP), priv->addr_gwca + GWRDQDC0);
+
 	/* Drop frames with unknown tags */
 	iowrite32(UT, priv->addr_gwca + GWTTFC);
 
-	iowrite32(lower_32_bits(priv->gwca.linkfix_table_dma), priv->addr_gwca + GWDCBAC1);
-	iowrite32(upper_32_bits(priv->gwca.linkfix_table_dma), priv->addr_gwca + GWDCBAC0);
-	iowrite32(lower_32_bits(priv->gwca.ts_queue.ring_dma), priv->addr_gwca + GWTDCAC10);
-	iowrite32(upper_32_bits(priv->gwca.ts_queue.ring_dma), priv->addr_gwca + GWTDCAC00);
-	iowrite32(FIELD_PREP(TSDMN, 1) | FIELD_PREP(TXDMN, 0x1e) | FIELD_PREP(RXDMN, 0x1f),
-		  priv->addr_gwca + GWMDNC);
+	if (priv->info->rswitch_version == RSW20) {
+		iowrite32(lower_32_bits(priv->gwca.linkfix_table_dma),
+			  priv->addr_gwca + GWDCBAC1);
+		iowrite32(upper_32_bits(priv->gwca.linkfix_table_dma),
+			  priv->addr_gwca + GWDCBAC0);
+		iowrite32(lower_32_bits(priv->gwca.ts_queue.ring_dma), priv->addr_gwca + GWTDCAC10);
+		iowrite32(upper_32_bits(priv->gwca.ts_queue.ring_dma), priv->addr_gwca + GWTDCAC00);
+		iowrite32(FIELD_PREP(TSDMN, 1) | FIELD_PREP(TXDMN, 0x1e) | FIELD_PREP(RXDMN, 0x1f),
+			  priv->addr_gwca + GWMDNC);
+	} else {
+		iowrite32(lower_32_bits(priv->gwca.linkfix_table_dma),
+			  priv->addr_gwca + GWDCBAC1_RSW3);
+		iowrite32(upper_32_bits(priv->gwca.linkfix_table_dma),
+			  priv->addr_gwca + GWDCBAC0_RSW3);
+		iowrite32(lower_32_bits(priv->gwca.ts_queue.ring_dma), priv->addr_gwca + GWTDCAC10);
+		iowrite32(upper_32_bits(priv->gwca.ts_queue.ring_dma), priv->addr_gwca + GWTDCAC00);
+		iowrite32(FIELD_PREP(TSDMN, 1) | FIELD_PREP(TXDMN, 0x1e) | FIELD_PREP(RXDMN, 0x1f),
+			  priv->addr_gwca + GWMDNC_RSW3);
+	}
+
 	iowrite32(TE, priv->addr_gwca + GWTSDCC0);
 
 	iowrite32(PPPL(GWCA_IPV_NUM), priv->addr_gwca + GWTPC0);
@@ -952,6 +936,7 @@ static int rswitch_gwca_hw_init(struct rswitch_private *priv)
 		err = rswitch_rxdmac_init(priv, i);
 		if (err < 0)
 			return err;
+
 		err = rswitch_txdmac_init(priv, i);
 		if (err < 0)
 			return err;
@@ -1279,11 +1264,17 @@ static irqreturn_t rswitch_gwca_irq(int irq, void *dev_id)
 
 static int rswitch_gwca_request_irqs(struct rswitch_private *priv)
 {
+	u8 gwca_index = priv->info->gwca_index;
 	char *resource_name, *irq_name;
 	int i, ret, irq;
 
 	for (i = 0; i < GWCA_NUM_IRQS; i++) {
-		resource_name = kasprintf(GFP_KERNEL, GWCA_IRQ_RESOURCE_NAME, i);
+		if (priv->info->rswitch_version == RSW20)
+			resource_name = kasprintf(GFP_KERNEL,
+						  GWCA_IRQ_RESOURCE_NAME, gwca_index, i);
+		else
+			resource_name = kasprintf(GFP_KERNEL,
+						  GWCA_IRQ_RESOURCE_NAME_RSW3, gwca_index, i);
 		if (!resource_name)
 			return -ENOMEM;
 
@@ -1292,8 +1283,13 @@ static int rswitch_gwca_request_irqs(struct rswitch_private *priv)
 		if (irq < 0)
 			return irq;
 
-		irq_name = devm_kasprintf(&priv->pdev->dev, GFP_KERNEL,
-					  GWCA_IRQ_NAME, i);
+		if (priv->info->rswitch_version == RSW20)
+			irq_name = devm_kasprintf(&priv->pdev->dev, GFP_KERNEL,
+						  GWCA_IRQ_NAME, priv->info->gwca_index, i);
+		else
+			irq_name = devm_kasprintf(&priv->pdev->dev, GFP_KERNEL,
+						  GWCA_IRQ_NAME_RSW3, priv->info->gwca_index, i);
+
 		if (!irq_name)
 			return -ENOMEM;
 
@@ -1393,6 +1389,13 @@ int rswitch_etha_change_mode(struct rswitch_etha *etha,
 
 	iowrite32(OPC_DISABLE, etha->addr + EAMC);
 	ret = rswitch_reg_wait(etha->addr, EAMS, OPC, OPC_DISABLE);
+	if (ret < 0) {
+		/* workaround for deadlock in RMAC due to a HW fault in X5H*/
+		iowrite32(FIELD_PREP(RXBFM, 0x4), etha->addr + MXGMIIC);
+		iowrite32(OPC_DISABLE, etha->addr + EAMC);
+		ret = rswitch_reg_wait(etha->addr, EAMS, OPC, OPC_DISABLE);
+		iowrite32(FIELD_PREP(RXBFM, 0), etha->addr + MXGMIIC);
+	}
 	if (ret < 0)
 		return ret;
 
@@ -1449,7 +1452,6 @@ static void rswitch2_rmac_setting(struct rswitch_etha *etha, const u8 *mac)
 		break;
 	case PHY_INTERFACE_MODE_USXGMII:
 	case PHY_INTERFACE_MODE_5GBASER:
-	case PHY_INTERFACE_MODE_10GBASER:
 		pis = PIS_XGMII;
 		break;
 	default:
@@ -1466,12 +1468,6 @@ static void rswitch2_rmac_setting(struct rswitch_etha *etha, const u8 *mac)
 		break;
 	case 2500:
 		lsc = LSC_2_5G;
-		break;
-	case 5000:
-		lsc = LSC_5G;
-		break;
-	case 10000:
-		lsc = LSC_10G;
 		break;
 	default:
 		lsc = FIELD_GET(LSC, ioread32(etha->addr + MPIC));
@@ -1579,6 +1575,22 @@ static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac,
 	return rswitch_etha_change_mode(etha, OPC_OPERATION);
 }
 
+static int rswitch_etha_mii_hw_start(struct rswitch_etha *etha)
+{
+	u32 val;
+	int err;
+
+	val = ioread32(etha->addr + EAMS);
+
+	if ((val & OPC) != OPC_OPERATION) {
+		err = rswitch_etha_change_mode(etha, OPC_OPERATION);
+		if (err < 0)
+			return err;
+	}
+
+	return 0;
+}
+
 static int rswitch_etha_mpsm_op(struct rswitch_etha *etha, bool read,
 				unsigned int mmf, unsigned int pda,
 				unsigned int pra, unsigned int pop,
@@ -1673,6 +1685,9 @@ static struct device_node *rswitch_get_port_node(struct rswitch_device *rdev)
 			goto out;
 		}
 		if (index == rdev->etha->index) {
+			if (rdev->priv->info->rswitch_version == RSW20)
+				break;
+
 			if (!of_device_is_available(port))
 				port = NULL;
 
@@ -1704,8 +1719,11 @@ static int rswitch_etha_get_params(struct rswitch_device *rdev)
 	if (err)
 		return err;
 
-	rdev->etha->connect_to_xpcs = of_property_read_bool(rdev->np_port,
-							    "renesas,connect_to_xpcs");
+	if (rdev->priv->info->rswitch_version != RSW20)
+		rdev->etha->connect_to_xpcs = of_property_read_bool(rdev->np_port,
+								    "renesas,connect_to_xpcs");
+	else
+		rdev->etha->connect_to_xpcs = false;
 
 	err = of_property_read_u32(rdev->np_port, "max-speed", &max_speed);
 	if (!err) {
@@ -1739,9 +1757,13 @@ static int rswitch_etha_get_params(struct rswitch_device *rdev)
 
 static int rswitch_mii_register(struct rswitch_device *rdev)
 {
+	u8 version = rdev->priv->info->rswitch_version;
 	struct device_node *mdio_np;
 	struct mii_bus *mii_bus;
 	int err;
+
+	if (rdev->etha->mii)
+		return 0;
 
 	mii_bus = mdiobus_alloc();
 	if (!mii_bus)
@@ -1749,7 +1771,7 @@ static int rswitch_mii_register(struct rswitch_device *rdev)
 
 	mii_bus->name = "rswitch_mii";
 	sprintf(mii_bus->id, "etha%d", rdev->etha->index);
-	mii_bus->priv = rdev->etha;
+	mii_bus->priv = version == RSW20 ? rdev->etha : rdev->etha_mii;
 	mii_bus->read_c45 = rswitch_etha_mii_read_c45;
 	mii_bus->write_c45 = rswitch_etha_mii_write_c45;
 	mii_bus->read = rswitch_etha_mii_read_c22;
@@ -1923,7 +1945,7 @@ static void rswitch_etha_set_exception_path(struct rswitch_private *priv)
 {
 	iowrite32(FDMACUFEF, priv->addr_mfwd + FWCEPRC2);
 	/* RSW3 has more AXI chains, if needed EPCSD can be extended for this device */
-	iowrite32(FIELD_PREP(EPCS, GWCA_INDEX) |
+	iowrite32(FIELD_PREP(EPCS, priv->info->gwca_index) |
 		  FIELD_PREP(EPCSD, priv->gwca.l2_shared_rx_queue->index),
 		  priv->addr_mfwd + FWCEPTC);
 }
@@ -1933,12 +1955,20 @@ static int rswitch_ether_port_init_one(struct rswitch_device *rdev)
 	int err;
 
 	if (!parallel_mode) {
+		rdev->serdes = devm_of_phy_get(&rdev->priv->pdev->dev,
+					       rdev->np_port, NULL);
+		if (IS_ERR(rdev->serdes)) {
+			err = -EPROBE_DEFER;
+			return err;
+		}
+
 		if (!rdev->etha->operated) {
 			err = rswitch_etha_hw_init(rdev->etha,
 						   rdev->ndev->dev_addr,
 						   rdev->priv);
 			if (err < 0)
 				return err;
+
 			if (rdev->priv->etha_no_runtime_change)
 				rdev->etha->operated = true;
 		}
@@ -1946,15 +1976,11 @@ static int rswitch_ether_port_init_one(struct rswitch_device *rdev)
 		err = rswitch_mii_register(rdev);
 		if (err < 0)
 			return err;
-		err = rswitch_phy_device_init(rdev);
-		if (err < 0)
-			goto err_phy_device_init;
 
-		rdev->serdes = devm_of_phy_get(&rdev->priv->pdev->dev,
-					       rdev->np_port, NULL);
-		if (IS_ERR(rdev->serdes)) {
-			err = PTR_ERR(rdev->serdes);
-			goto err_serdes_phy_get;
+		if (rdev->priv->info->rswitch_version == RSW20) {
+			err = rswitch_phy_device_init(rdev);
+			if (err < 0)
+				goto err_phy_device_init;
 		}
 
 		err = rswitch_serdes_set_params(rdev);
@@ -1965,9 +1991,7 @@ static int rswitch_ether_port_init_one(struct rswitch_device *rdev)
 	return 0;
 
 err_serdes_set_params:
-err_serdes_phy_get:
 	rswitch_phy_device_deinit(rdev);
-
 err_phy_device_init:
 	rswitch_mii_unregister(rdev);
 
@@ -2005,6 +2029,12 @@ static int rswitch_ether_port_init_all(struct rswitch_private *priv)
 	rswitch_for_each_enabled_port(priv, i) {
 		if (priv->rdev[i]->disabled)
 			continue;
+
+		if (priv->info->rswitch_version == RSW30) {
+			err = rswitch_etha_mii_hw_start(priv->rdev[i]->etha_mii);
+			if (err)
+				goto err_serdes;
+		}
 
 		err = phy_init(priv->rdev[i]->serdes);
 		if (err)
@@ -2055,7 +2085,7 @@ static int rswitch_open(struct net_device *ndev)
 
 		err = rswitch_serdes_set_params(rdev);
 		if (err) {
-			phy_exit(rdev->pcs);
+			phy_exit(rdev->serdes);
 			rswitch_phy_device_deinit(rdev);
 			return err;
 		}
@@ -2236,7 +2266,6 @@ static netdev_tx_t rswitch_start_xmit(struct sk_buff *skb, struct net_device *nd
 
 	gq->cur = rswitch_next_queue_index(gq, true, nr_desc);
 	rswitch_modify(rdev->addr, GWTRC(gq->index), 0, BIT(gq->index % 32));
-
 	return ret;
 
 err_unmap:
@@ -2384,7 +2413,8 @@ static int rswitch2_map_addr(struct platform_device *pdev, struct rswitch_privat
 	priv->addr_mfab = priv->addr_mfwd + RSWITCH2_TOP_OFFSET;
 	priv->addr_coma = priv->addr_mfwd + RSWITCH2_COMA_OFFSET;
 	priv->addr_etha = priv->addr_mfwd + RSWITCH2_ETHA_OFFSET;
-	priv->addr_gwca = priv->addr_mfwd + RSWITCH2_GWCA0_OFFSET;
+	priv->addr_gwca = priv->addr_mfwd + RSWITCH2_GWCA0_OFFSET +
+			  RSWITCH_GWCA_SIZE * priv->info->gwca_index;
 	priv->ptp_priv->addr = priv->addr_mfwd + RSWITCH_GPTP_OFFSET_S4;
 
 	return 0;
@@ -2400,7 +2430,7 @@ static int rswitch3_map_addr(struct platform_device *pdev, struct rswitch_privat
 		return -EINVAL;
 	}
 
-	res_mfwd = platform_get_resource_byname(pdev, IORESOURCE_MEM, "secure_ptp");
+	res_ptp = platform_get_resource_byname(pdev, IORESOURCE_MEM, "secure_ptp");
 	if (!res_ptp) {
 		dev_err(&pdev->dev, "invalid resource\n");
 		return -EINVAL;
@@ -2414,10 +2444,11 @@ static int rswitch3_map_addr(struct platform_device *pdev, struct rswitch_privat
 	if (IS_ERR(priv->addr_mfwd))
 		return PTR_ERR(priv->addr_mfwd);
 
-	priv->addr_mfab = priv->addr_mfwd + RSWITCH2_TOP_OFFSET;
-	priv->addr_coma = priv->addr_mfwd + RSWITCH2_COMA_OFFSET;
-	priv->addr_etha = priv->addr_mfwd + RSWITCH2_ETHA_OFFSET;
-	priv->addr_gwca = priv->addr_mfwd + RSWITCH2_GWCA0_OFFSET;
+	priv->addr_mfab = priv->addr_mfwd + RSWITCH3_TOP_OFFSET;
+	priv->addr_coma = priv->addr_mfwd + RSWITCH3_COMA_OFFSET;
+	priv->addr_etha = priv->addr_mfwd + RSWITCH3_ETHA_OFFSET;
+	priv->addr_gwca = priv->addr_mfwd + RSWITCH3_GWCA0_OFFSET +
+			  RSWITCH_GWCA_SIZE * priv->info->gwca_index;
 
 	priv->ptp_priv->addr = devm_ioremap_resource(&pdev->dev, res_ptp);
 	if (IS_ERR(priv->ptp_priv->addr))
@@ -2441,6 +2472,7 @@ static const struct rswitch_hw_info rswitch_rsw2_hw_info = {
 	.rswitch_num_ports = RSWITCH_NUM_PORTS_RSW2,
 	.rswitch_num_agents = RSWITCH_NUM_AGENTS_RSW2,
 	.agent_index_gwca = AGENT_INDEX_GWCA_RSW2,
+	.gwca_index = GWCA_INDEX_RSW2,
 	.rswitch_version = RSW20,
 };
 
@@ -2453,6 +2485,7 @@ static const struct rswitch_hw_info rswitch_rsw30_hw_info = {
 	.rswitch_num_ports = RSWITCH_NUM_PORTS_RSW3,
 	.rswitch_num_agents = RSWITCH_NUM_AGENTS_RSW3,
 	.agent_index_gwca = AGENT_INDEX_GWCA_RSW3,
+	.gwca_index = GWCA_INDEX_RSW3,
 	.rswitch_version = RSW30,
 };
 
@@ -2508,17 +2541,19 @@ static void rswitch_etha_init(struct rswitch_private *priv, unsigned int index)
 	etha->coma_addr = priv->addr_coma;
 	etha->priv = priv;
 
-	memset(etha_mii, 0, sizeof(*etha));
-	etha_mii->index = index;
-	etha_mii->addr = priv->addr_etha + index * RSWITCH_ETHA_SIZE;
-	etha_mii->coma_addr = priv->addr_coma;
-
 	/* MPIC.PSMCS = (clk [MHz] / (MDC frequency [MHz] * 2) - 1.
 	 * Calculating PSMCS value as MDC frequency = 2.5MHz. So, multiply
 	 * both the numerator and the denominator by 10.
 	 */
 	etha->psmcs = clk_get_rate(priv->clk) / 100000 / (25 * 2) - 1;
-	etha_mii->psmcs = rswitch_calc_psmcs(priv);
+
+	if (priv->info->rswitch_version != RSW20) {
+		memset(etha_mii, 0, sizeof(*etha));
+		etha_mii->index = index;
+		etha_mii->addr = priv->addr_etha + index * RSWITCH_ETHA_SIZE;
+		etha_mii->coma_addr = priv->addr_coma;
+		etha_mii->psmcs = rswitch_calc_psmcs(priv);
+	}
 }
 
 static int rswitch_device_alloc(struct rswitch_private *priv, unsigned int index)
@@ -2544,11 +2579,12 @@ static int rswitch_device_alloc(struct rswitch_private *priv, unsigned int index
 	priv->rdev[index] = rdev;
 	rdev->port = index;
 	rdev->etha = &priv->etha[index];
-	rdev->etha_mii = &priv->etha_mii[index];
-	rdev->addr = priv->addr_mfwd;
+	if (priv->info->rswitch_version != RSW20)
+		rdev->etha_mii = &priv->etha_mii[index];
+	rdev->addr = priv->addr_gwca;
 	rdev->rx_old_queue = NULL;
 
-	ndev->base_addr = (unsigned long)rdev->addr;
+	ndev->base_addr = (unsigned long)priv->addr_mfwd;
 	snprintf(ndev->name, IFNAMSIZ, "tsn%d", index);
 	ndev->netdev_ops = &rswitch_netdev_ops;
 	ndev->ethtool_ops = &rswitch_ethtool_ops;
@@ -2567,7 +2603,8 @@ static int rswitch_device_alloc(struct rswitch_private *priv, unsigned int index
 			eth_hw_addr_random(ndev);
 	}
 
-	rdev->etha_mii = &priv->etha_mii[rdev->etha_mii_idx];
+	if (priv->info->rswitch_version != RSW20)
+		rdev->etha_mii = &priv->etha_mii[rdev->etha_mii_idx];
 
 	err = rswitch_etha_get_params(rdev);
 	if (err < 0)
@@ -2672,9 +2709,11 @@ static int rswitch_init(struct rswitch_private *priv)
 	if (err < 0)
 		goto err_gwca_request_irq;
 
-	err = rswitch_gwca_ts_request_irqs(priv);
-	if (err < 0)
-		goto err_gwca_ts_request_irq;
+	if (priv->info->rswitch_version == RSW20) {
+		err = rswitch_gwca_ts_request_irqs(priv);
+		if (err < 0)
+			goto err_gwca_ts_request_irq;
+	}
 
 	err = rswitch_gwca_hw_init(priv);
 	if (err < 0)
@@ -2775,8 +2814,19 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 		return PTR_ERR(info);
 
 	priv->clk = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(priv->clk))
-		return PTR_ERR(priv->clk);
+
+	if (IS_ERR(priv->clk)) {
+		dev_warn(&pdev->dev, "no input clock; will use fallback frequency for PSMCS (%pe)\n",
+			 priv->clk);
+		priv->clk = NULL;
+	} else {
+		ret = clk_prepare_enable(priv->clk);
+		if (ret) {
+			dev_warn(&pdev->dev,
+				 "failed to enable clock (%d); will use fallback frequency\n", ret);
+			priv->clk = NULL;
+		}
+	}
 
 	attr = soc_device_match(rswitch_soc_no_speed_change);
 	if (attr)
@@ -2799,7 +2849,7 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 			return ret;
 	}
 
-	priv->gwca.agent_index = AGENT_INDEX_GWCA;
+	priv->gwca.agent_index = priv->info->agent_index_gwca;
 	priv->gwca.num_queues = min(priv->info->rswitch_num_ports * NUM_QUEUES_PER_NDEV,
 				    RSWITCH_MAX_NUM_QUEUES);
 	/* One extra queue for L2 switch reception */
@@ -2876,11 +2926,14 @@ static int renesas_eth_sw_suspend(struct device *dev)
 		rswitch_rxdmac_free(ndev);
 	}
 
-	for (i = 0; i < priv->info->rswitch_num_ports; i++) {
-		struct rswitch_etha *etha_mii = &priv->etha_mii[i];
+	if (priv->info->rswitch_version != RSW20) {
+		for (i = 0; i < priv->info->rswitch_num_ports; i++) {
+			struct rswitch_etha *etha_mii = &priv->etha_mii[i];
 
-		etha_mii->operated = false;
+			etha_mii->operated = false;
+		}
 	}
+/*	Note: RSW3 specific stuff needs to be checked*/
 
 	return 0;
 }
@@ -2918,6 +2971,8 @@ static struct platform_driver renesas_eth_sw_driver_platform = {
 	}
 };
 module_platform_driver(renesas_eth_sw_driver_platform);
-MODULE_AUTHOR("Yoshihiro Shimoda");
+module_param(parallel_mode, bool, 0644);
+MODULE_PARM_DESC(parallel_mode, "Operate simultaneously with Realtime core");
+MODULE_AUTHOR("Yoshihiro Shimoda, Michael Dege");
 MODULE_DESCRIPTION("Renesas Ethernet Switch device driver");
 MODULE_LICENSE("GPL");

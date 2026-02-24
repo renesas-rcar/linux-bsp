@@ -98,19 +98,20 @@ static void rswitch_update_l2_hw_forwarding(struct rswitch_private *priv)
 
 static void rswitch_update_l2_hw_forwarding_gwca(struct rswitch_private *priv)
 {
+	u8 agent_index_gwca = priv->info->agent_index_gwca;
 	u8 num_agents = priv->info->rswitch_num_agents;
 	u32 fwpc0_set, fwpc0_clr, fwpc2_set, fwpc2_clr;
 	struct rswitch_device *rdev;
 
 	fwpc0_clr = MACSSA | MACDSA | MACRUDA;
 	fwpc0_set = fwpc0_clr;
-	fwpc2_clr = field_prep(LTWFM(num_agents), BIT(AGENT_INDEX_GWCA));
+	fwpc2_clr = field_prep(LTWFM(num_agents), BIT(agent_index_gwca));
 	fwpc2_set = fwpc2_clr;
 
 	(priv->offload_brdev) ? (fwpc0_clr = 0, fwpc2_set = 0)
 			      : (fwpc0_set = 0, fwpc2_clr = 0);
 
-	rswitch_modify(priv->addr_mfwd, FWPC0(AGENT_INDEX_GWCA), fwpc0_clr, fwpc0_set);
+	rswitch_modify(priv->addr_mfwd, FWPC0(agent_index_gwca), fwpc0_clr, fwpc0_set);
 
 	rswitch_for_all_ports(priv, rdev) {
 		rswitch_modify(priv->addr_mfwd, FWPC2(rdev->etha->index),
@@ -239,11 +240,13 @@ static int rswitch_update_ageing_time(struct rswitch_private *priv, clock_t time
 static void rswitch_update_vlan_filtering(struct rswitch_private *priv,
 					  bool vlan_filtering)
 {
+	u8 agent_index_gwca = priv->info->agent_index_gwca;
+
 	if (vlan_filtering)
-		rswitch_modify(priv->addr_mfwd, FWPC0(AGENT_INDEX_GWCA),
+		rswitch_modify(priv->addr_mfwd, FWPC0(agent_index_gwca),
 			       0, VLANSA | VLANRU);
 	else
-		rswitch_modify(priv->addr_mfwd, FWPC0(AGENT_INDEX_GWCA),
+		rswitch_modify(priv->addr_mfwd, FWPC0(agent_index_gwca),
 			       VLANSA | VLANRU, 0);
 }
 
@@ -307,6 +310,7 @@ static int rswitch_read_vlan_table(struct rswitch_private *priv, u16 vid,
 static int rswitch_write_vlan_table(struct rswitch_private *priv, u16 vid, u32 index)
 {
 	u32 vlancsdl = priv->gwca.l2_shared_rx_queue->index;
+	u8 gwca_index = priv->info->gwca_index;
 	u32 vlanslvs = 0, vlandvs = 0;
 	int err;
 
@@ -320,10 +324,11 @@ static int rswitch_write_vlan_table(struct rswitch_private *priv, u16 vid, u32 i
 	vlanslvs |= BIT(index);
 	vlandvs  |= BIT(index);
 	iowrite32(FIELD_PREP(VLANSLVL, vlanslvs), priv->addr_mfwd + FWVLANTL2);
-	iowrite32(FIELD_PREP(VLANCSDL, vlancsdl), priv->addr_mfwd + FWVLANTL3(GWCA_INDEX));
+	iowrite32(FIELD_PREP(VLANCSDL, vlancsdl), priv->addr_mfwd + FWVLANTL3(gwca_index));
 	iowrite32(FIELD_PREP(VLANDVL, vlandvs), priv->addr_mfwd + FWVLANTL4);
 
-	return rswitch_reg_wait(priv->addr_mfwd, FWVLANTLR, VLANTL, 0);
+	err = rswitch_reg_wait(priv->addr_mfwd, FWVLANTLR, VLANTL, 0);
+	return err;
 }
 
 static int rswitch_erase_vlan_table(struct rswitch_private *priv, u16 vid, u32 index)
@@ -408,7 +413,9 @@ static int rswitch_gwca_set_vlan_tag(struct rswitch_private *priv,
 		rswitch_modify(priv->addr_gwca, GWVTC, CTV, FIELD_PREP(CTV, p_vlan->vid));
 	}
 
-	return rswitch_gwca_change_mode(priv, OPC_OPERATION);
+	err = rswitch_gwca_change_mode(priv, OPC_OPERATION);
+
+	return err;
 }
 
 static int rswitch_port_obj_do_add(struct net_device *ndev,
@@ -437,11 +444,13 @@ static int rswitch_port_obj_do_add(struct net_device *ndev,
 	if (br_vlan_enabled(rdev->brdev))
 		rswitch_modify(priv->addr_mfwd, FWPC0(etha->index), 0, VLANSA | VLANRU);
 
-	rswitch_modify(priv->addr_mfwd, FWPC2(AGENT_INDEX_GWCA),
+	rswitch_modify(priv->addr_mfwd, FWPC2(priv->info->agent_index_gwca),
 		       field_prep(LTWFM(num_agents), BIT(etha->index)),
 		       0);
 
-	return rswitch_port_set_vlan_tag(etha, p_vlan, false);
+	err = rswitch_port_set_vlan_tag(etha, p_vlan, false);
+
+	return err;
 }
 
 static int rswitch_port_obj_do_add_gwca(struct net_device *ndev,
@@ -456,7 +465,7 @@ static int rswitch_port_obj_do_add_gwca(struct net_device *ndev,
 	/* Set Rswitch VLAN mode */
 	iowrite32(br_vlan_enabled(ndev) ? FIELD_PREP(SVM, C_TAG) : 0, priv->addr_mfwd + FWGC);
 
-	err = rswitch_write_vlan_table(priv, p_vlan->vid, AGENT_INDEX_GWCA);
+	err = rswitch_write_vlan_table(priv, p_vlan->vid, priv->info->agent_index_gwca);
 	if (err < 0)
 		return err;
 
@@ -464,7 +473,9 @@ static int rswitch_port_obj_do_add_gwca(struct net_device *ndev,
 	if (ioread32(priv->addr_gwca + GWVCC))
 		return NOTIFY_DONE;
 
-	return rswitch_gwca_set_vlan_tag(priv, p_vlan, false);
+	err = rswitch_gwca_set_vlan_tag(priv, p_vlan, false);
+
+	return err;
 }
 
 static int rswitch_port_obj_do_del(struct net_device *ndev,
@@ -483,7 +494,7 @@ static int rswitch_port_obj_do_del(struct net_device *ndev,
 		return err;
 
 	rswitch_modify(priv->addr_mfwd, FWPC0(etha->index), VLANSA | VLANRU, 0);
-	rswitch_modify(priv->addr_mfwd, FWPC2(AGENT_INDEX_GWCA), 0,
+	rswitch_modify(priv->addr_mfwd, FWPC2(priv->info->agent_index_gwca), 0,
 		       field_prep(LTWFM(num_agents), BIT(etha->index)));
 	rswitch_modify(priv->addr_mfwd, FWPC2(rdev->port),
 		       0, field_prep(LTWFM(num_agents), GENMASK(num_agents - 1, 0)));
@@ -495,15 +506,17 @@ static int rswitch_port_obj_do_del_gwca(struct net_device *ndev,
 					struct rswitch_private *priv,
 					struct switchdev_obj_port_vlan *p_vlan)
 {
+	u8 agent_index_gwca = priv->info->agent_index_gwca;
 	int err;
 
 	err = rswitch_gwca_set_vlan_tag(priv, p_vlan, true);
 	if (err < 0)
 		return err;
 
-	rswitch_modify(priv->addr_mfwd, FWPC0(AGENT_INDEX_GWCA), VLANSA | VLANRU, 0);
+	rswitch_modify(priv->addr_mfwd, FWPC0(agent_index_gwca),
+		       VLANSA | VLANRU, 0);
 
-	return rswitch_erase_vlan_table(priv, p_vlan->vid, AGENT_INDEX_GWCA);
+	return rswitch_erase_vlan_table(priv, p_vlan->vid, agent_index_gwca);
 }
 
 static int rswitch_handle_port_obj_add(struct net_device *ndev,
@@ -534,12 +547,11 @@ static int rswitch_handle_port_obj_add(struct net_device *ndev,
 		if (err < 0)
 			return err;
 
+		info->handled = true;
 		break;
 	default:
-		return -EOPNOTSUPP;
+		break;
 	}
-
-	info->handled = true;
 
 	return NOTIFY_DONE;
 }
@@ -572,12 +584,11 @@ static int rswitch_handle_port_obj_del(struct net_device *ndev,
 		if (err < 0)
 			return err;
 
+		info->handled = true;
 		break;
 	default:
-		return -EOPNOTSUPP;
+		break;
 	}
-
-	info->handled = true;
 
 	return NOTIFY_DONE;
 }
@@ -624,8 +635,10 @@ static int rswitch_gwca_write_mac_address(struct rswitch_private *priv, const u8
 
 static int rswitch_set_mactable(struct rswitch_private *priv, const u8 *mac, bool add)
 {
-	u32 index = priv->gwca.l2_shared_rx_queue->index;
+	u8 agent_index_gwca = priv->info->agent_index_gwca;
+	u8 index = priv->gwca.l2_shared_rx_queue->index;
 	u8 num_agents = priv->info->rswitch_num_agents;
+	u8 gwca_index = priv->info->gwca_index;
 	u32 clear, set;
 	int err;
 
@@ -645,8 +658,8 @@ static int rswitch_set_mactable(struct rswitch_private *priv, const u8 *mac, boo
 		iowrite32(MACDSLVL(num_agents) | MACSSLVL(num_agents),
 			  priv->addr_mfwd + FWMACTL3);
 		iowrite32(FIELD_PREP(MACCSDL, BIT(0)),
-			  priv->addr_mfwd + FWMACTL4(GWCA_INDEX));
-		iowrite32(FIELD_PREP(MACDVL, BIT(AGENT_INDEX_GWCA)),
+				priv->addr_mfwd + FWMACTL4(gwca_index));
+		iowrite32(FIELD_PREP(MACDVL, BIT(agent_index_gwca)),
 			  priv->addr_mfwd + FWMACTL5);
 
 		err = rswitch_reg_wait(priv->addr_mfwd, FWMACTLR, MACTL, 0);
@@ -667,15 +680,15 @@ static int rswitch_set_mactable(struct rswitch_private *priv, const u8 *mac, boo
 		iowrite32((mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5],
 			  priv->addr_mfwd + RSW3_FWMACTL6);
 		iowrite32(FIELD_PREP(RSW3_MACCSDL, index),
-			  priv->addr_mfwd + RSW3_FWMACTL7(GWCA_INDEX));
-		iowrite32(FIELD_PREP(RSW3_MACDVL, BIT(AGENT_INDEX_GWCA)),
+			  priv->addr_mfwd + RSW3_FWMACTL7(gwca_index));
+		iowrite32(FIELD_PREP(RSW3_MACDVL, BIT(agent_index_gwca)),
 			  priv->addr_mfwd + RSW3_FWMACTL8);
-
 		err = rswitch_reg_wait(priv->addr_mfwd, RSW3_FWMACTLR, MACTL, 0);
 		if (err < 0)
 			return err;
 
 		if (ioread32(priv->addr_mfwd + RSW3_FWMACTLR))
+
 			return NOTIFY_BAD;
 	}
 	return NOTIFY_DONE;
@@ -690,12 +703,12 @@ static void rswitch_switchdev_bridge_fdb_event_work(struct work_struct *work)
 	struct net_device *ndev;
 	const u8 *addr;
 
+	rtnl_lock();
+
 	switchdev_work = container_of(work, struct rswitch_switchdev_event_work, work);
 	ndev = switchdev_work->ndev;
 	priv = switchdev_work->priv;
 	addr = switchdev_work->fdb_info.addr;
-
-	rtnl_lock();
 
 	/* Unfortunately all net_device members point to br0, there is no simple way to check
 	 * if the event was triggered by a port device setting.
