@@ -107,6 +107,11 @@
 			reg = <0x0 0xa2600000 0x0 0x1da00000>;
 			linux,cma-default;
 		};
+
+		gsx_lma_heap@1800000000 {
+			no-map;
+			reg = <0x18 0x00000000 0x0 0xcccd0000>;
+		};
     };
 
 	sound_card: sound {
