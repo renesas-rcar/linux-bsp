@@ -30,6 +30,7 @@
 #include <linux/bitmap.h>
 #include <linux/bitops.h>
 #include <linux/iopoll.h>
+#include <linux/reset.h>
 
 #define RCANXL_DRV_NAME		"rcar_canxl"
 
@@ -743,6 +744,7 @@ struct rcar_canxl_global {
 	bool xlmode;			/* CANXL mode */
 	enum rcar_canxl_chip_id chip_id;
 	u32 channel;
+	struct reset_control *rstc;
 };
 
 /* CAN XL mode nominal rate constants */
@@ -2390,12 +2392,21 @@ static int rcar_canxl_probe(struct platform_device *pdev)
 		goto fail_dev;
 	}
 
+	gpriv->rstc = devm_reset_control_get_optional_exclusive(&pdev->dev, NULL);
+	if (IS_ERR(gpriv->rstc))
+		return dev_err_probe(&pdev->dev, PTR_ERR(gpriv->rstc),
+				     "failed to get reset\n");
+
+	err = reset_control_reset(gpriv->rstc);
+	if (err)
+		goto fail_dev;
+
 	/* Enable peripheral clock for register access */
 	err = clk_prepare_enable(gpriv->clkp);
 	if (err) {
 		dev_err(&pdev->dev,
 			"failed to enable peripheral clock, error %d\n", err);
-		goto fail_dev;
+		goto fail_reset;
 	}
 
 	err = rcar_canxl_local_ram_init(gpriv);
@@ -2444,6 +2455,9 @@ fail_channel:
 	rcar_canxl_channel_remove(gpriv);
 fail_clk:
 	clk_disable_unprepare(gpriv->clkp);
+fail_reset:
+	reset_control_assert(gpriv->rstc);
+	return err;
 fail_dev:
 	return err;
 }
