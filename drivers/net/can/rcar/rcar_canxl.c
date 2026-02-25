@@ -2286,6 +2286,77 @@ static void rcar_canxl_channel_remove(struct rcar_canxl_global *gpriv)
 	}
 }
 
+static int rcar_canxl_global_init(struct rcar_canxl_global *gpriv)
+{
+	struct device *dev = &gpriv->pdev->dev;
+	int err;
+
+	err = reset_control_reset(gpriv->rstc);
+	if (err)
+		goto fail_reset;
+
+	/* Enable peripheral clock for register access */
+	err = clk_prepare_enable(gpriv->clkp);
+	if (err) {
+		dev_err(dev,
+			"failed to enable peripheral clock, error %d\n", err);
+		goto fail_dev;
+	}
+
+	err = rcar_canxl_local_ram_init(gpriv);
+	if (err) {
+		dev_dbg(dev, "Local RAM initialization failed\n");
+		goto fail_clk;
+	}
+
+	/* Enable clock and check XCAN clock is valid or not */
+	rcar_canxl_enable_clock(gpriv);
+
+	/* Reset protocol controller and set operation mode */
+	rcar_canxl_reset_controller(gpriv);
+
+	/* Configure MH global registers */
+	rcar_canxl_configure_mh_global(gpriv, gpriv->channel);
+
+	/* Configure RX Filter */
+	rcar_canxl_configure_rx_filter(gpriv);
+
+	/* Configure TX Filter */
+	rcar_canxl_configure_tx_filter(gpriv);
+
+	/* Configure RX FIFO Queue */
+	rcar_canxl_configure_rx_fifo_queue(gpriv);
+
+	/* Configure TX FIFO Queue */
+	rcar_canxl_configure_tx_fifo_queue(gpriv);
+
+	/* Configure TX Priority Queue */
+	rcar_canxl_configure_tx_prior_queue(gpriv);
+
+	/* Initialization of descriptors */
+	rcar_canxl_descriptor_init(gpriv);
+
+	return 0;
+
+fail_clk:
+	clk_disable_unprepare(gpriv->clkp);
+	return err;
+fail_reset:
+	reset_control_assert(gpriv->rstc);
+	return err;
+fail_dev:
+	return err;
+}
+
+static void rcar_canxl_global_deinit(struct rcar_canxl_global *gpriv, bool full)
+{
+	rcar_canxl_disable_interrupts(gpriv);
+	if (full)
+		rcar_canxl_reset_controller(gpriv);
+	clk_disable_unprepare(gpriv->clkp);
+	reset_control_assert(gpriv->rstc);
+}
+
 static int rcar_canxl_probe(struct platform_device *pdev)
 {
 	void __iomem *addr;
@@ -2399,48 +2470,10 @@ static int rcar_canxl_probe(struct platform_device *pdev)
 
 	err = reset_control_reset(gpriv->rstc);
 	if (err)
-		goto fail_dev;
-
-	/* Enable peripheral clock for register access */
-	err = clk_prepare_enable(gpriv->clkp);
-	if (err) {
-		dev_err(&pdev->dev,
-			"failed to enable peripheral clock, error %d\n", err);
 		goto fail_reset;
-	}
-
-	err = rcar_canxl_local_ram_init(gpriv);
-	if (err) {
-		dev_dbg(&pdev->dev, "Local RAM initialization failed\n");
-		goto fail_clk;
-	}
-
-	/* Enable clock and check XCAN clock is valid or not */
-	rcar_canxl_enable_clock(gpriv);
-
-	/* Reset protocol controller and set operation mode */
-	rcar_canxl_reset_controller(gpriv);
-
-	/* Configure MH global registers */
-	rcar_canxl_configure_mh_global(gpriv, ch);
-
-	/* Configure RX Filter */
-	rcar_canxl_configure_rx_filter(gpriv);
-
-	/* Configure TX Filter */
-	rcar_canxl_configure_tx_filter(gpriv);
-
-	/* Configure RX FIFO Queue */
-	rcar_canxl_configure_rx_fifo_queue(gpriv);
-
-	/* Configure TX FIFO Queue */
-	rcar_canxl_configure_tx_fifo_queue(gpriv);
-
-	/* Configure TX Priority Queue */
-	rcar_canxl_configure_tx_prior_queue(gpriv);
-
-	/* Initialization of descriptors */
-	rcar_canxl_descriptor_init(gpriv);
+	err = rcar_canxl_global_init(gpriv);
+	if (err)
+		goto fail_dev;
 
 	err = rcar_canxl_channel_probe(gpriv, fcan_freq);
 	if (err)
@@ -2453,10 +2486,9 @@ static int rcar_canxl_probe(struct platform_device *pdev)
 
 fail_channel:
 	rcar_canxl_channel_remove(gpriv);
-fail_clk:
-	clk_disable_unprepare(gpriv->clkp);
 fail_reset:
 	reset_control_assert(gpriv->rstc);
+	rcar_canxl_global_deinit(gpriv, false);
 	return err;
 fail_dev:
 	return err;
@@ -2466,10 +2498,7 @@ static void rcar_canxl_remove(struct platform_device *pdev)
 {
 	struct rcar_canxl_global *gpriv = platform_get_drvdata(pdev);
 
-	rcar_canxl_reset_controller(gpriv);
-	rcar_canxl_disable_interrupts(gpriv);
-	rcar_canxl_channel_remove(gpriv);
-	clk_disable_unprepare(gpriv->clkp);
+	rcar_canxl_global_deinit(gpriv, true);
 	kfree(gpriv->sys_base);
 }
 
