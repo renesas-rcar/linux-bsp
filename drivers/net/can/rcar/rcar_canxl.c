@@ -2505,11 +2505,53 @@ static void rcar_canxl_remove(struct platform_device *pdev)
 
 static int rcar_canxl_suspend(struct device *dev)
 {
+	struct rcar_canxl_global *gpriv = dev_get_drvdata(dev);
+	struct rcar_canxl_channel *priv = gpriv->ch;
+	struct net_device *ndev = priv->ndev;
+	int err;
+
+	if (netif_running(ndev)) {
+		netif_device_detach(ndev);
+
+		err = rcar_canxl_close(ndev);
+		if (err) {
+			netdev_err(ndev, "rcar_canxl_close() failed %pe\n",
+				   ERR_PTR(err));
+			return err;
+		}
+
+		priv->can.state = CAN_STATE_SLEEPING;
+	}
+
+	rcar_canxl_global_deinit(gpriv, false);
+
 	return 0;
 }
 
 static int rcar_canxl_resume(struct device *dev)
 {
+	struct rcar_canxl_global *gpriv = dev_get_drvdata(dev);
+	struct rcar_canxl_channel *priv = gpriv->ch;
+	struct net_device *ndev = priv->ndev;
+	int err;
+
+	err = rcar_canxl_global_init(gpriv);
+	if (err) {
+		dev_err(dev, "rcar_canxl_global_init() failed %pe\n", ERR_PTR(err));
+		return err;
+	}
+
+	if (netif_running(ndev)) {
+		err = rcar_canxl_open(ndev);
+		if (err) {
+			netdev_err(ndev, "rcar_canxl_open() failed %pe\n",
+				   ERR_PTR(err));
+			return err;
+		}
+
+		netif_device_attach(ndev);
+	}
+
 	return 0;
 }
 
