@@ -2503,17 +2503,17 @@ static void rcar_canxl_remove(struct platform_device *pdev)
 	kfree(gpriv->sys_base);
 }
 
-static int __maybe_unused rcar_canxl_suspend(struct device *dev)
+static int rcar_canxl_suspend(struct device *dev)
 {
 	return 0;
 }
 
-static int __maybe_unused rcar_canxl_resume(struct device *dev)
+static int rcar_canxl_resume(struct device *dev)
 {
 	return 0;
 }
 
-static SIMPLE_DEV_PM_OPS(rcar_canxl_pm_ops, rcar_canxl_suspend,
+static DEFINE_SIMPLE_DEV_PM_OPS(rcar_canxl_pm_ops, rcar_canxl_suspend,
 			 rcar_canxl_resume);
 
 static const struct rcar_canxl_of_data of_rcanxl_x5h_compatible = {
@@ -2534,7 +2534,7 @@ static struct platform_driver rcar_canxl_driver = {
 	.driver = {
 		.name = RCANXL_DRV_NAME,
 		.of_match_table = of_match_ptr(rcar_canxl_of_table),
-		.pm = &rcar_canxl_pm_ops,
+		.pm = pm_sleep_ptr(&rcar_canxl_pm_ops),
 	},
 	.probe = rcar_canxl_probe,
 	.remove = rcar_canxl_remove,
