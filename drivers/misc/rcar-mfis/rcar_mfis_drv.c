@@ -70,7 +70,6 @@ static struct rcar_mfis_ch *rcar_mfis_channel_get(unsigned int channel)
 int rcar_mfis_trigger_interrupt(int channel, struct rcar_mfis_msg msg)
 {
 	struct rcar_mfis_ch *rcar_mfis_ch;
-	int ret;
 	u32 icr;
 
 	rcar_mfis_ch = rcar_mfis_channel_get(channel);
@@ -85,7 +84,7 @@ int rcar_mfis_trigger_interrupt(int channel, struct rcar_mfis_msg msg)
 	rcar_mfis_reg_write(rcmfis_priv, EMBR(channel), msg.mbr);
 	rcar_mfis_reg_write(rcmfis_priv, EICR(channel), (msg.icr << 1) | 1);
 
-	return ret;
+	return 0;
 }
 EXPORT_SYMBOL(rcar_mfis_trigger_interrupt);
 
