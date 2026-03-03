@@ -175,6 +175,11 @@
 			reg = <0x16 0xcccd0000 0x0 0x33330000>;
 		};
 
+		gsx_lma_heap@1800000000 {
+			no-map;
+			reg = <0x18 0x00000000 0x0 0xcccd0000>;
+		};
+
 		ecc_data_region@18cccd0000 {
 			no-map;
 			reg = <0x18 0xcccd0000 0x0 0x33330000>;
