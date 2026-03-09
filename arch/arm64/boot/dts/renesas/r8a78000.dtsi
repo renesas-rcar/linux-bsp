@@ -2016,8 +2016,9 @@
 			reg = <0 0xc1420000 0 0x8600>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_CANFD0>,
 				 <&scmi_clk X5H_CLOCK_ID_CLK_CANFD_SCP_MAIN>,
+				 <&scmi_clk X5H_CLOCK_ID_CLK_BUSD2_SCP_MAIN>,
 				 <&can_clk>;
-			clock-names = "fck", "canfd", "can_clk";
+			clock-names = "fck", "canfd", "ram_clk", "can_clk";
 			assigned-clocks = <&can_clk>;
 			assigned-clock-rates = <80000000>;
 			interrupts = <GIC_SPI 4675 IRQ_TYPE_LEVEL_HIGH>,
@@ -2069,8 +2070,9 @@
 			reg = <0 0xc1520000 0 0x8600>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_CANFD1>,
 				 <&scmi_clk X5H_CLOCK_ID_CLK_CANFD_SCP_MAIN>,
+				 <&scmi_clk X5H_CLOCK_ID_CLK_BUSD2_SCP_MAIN>,
 				 <&can_clk>;
-			clock-names = "fck", "canfd", "can_clk";
+			clock-names = "fck", "canfd", "ram_clk", "can_clk";
 			assigned-clocks = <&can_clk>;
 			assigned-clock-rates = <80000000>;
 			interrupts = <GIC_SPI 4725 IRQ_TYPE_LEVEL_HIGH>,
