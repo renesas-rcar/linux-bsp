@@ -4875,6 +4875,7 @@
 			clock-names = "fck", "canxl", "can_clk";
 			assigned-clocks = <&canxl_clk>;
 			assigned-clock-rates = <160000000>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CANXL0>;
 			channel0;
 			status = "disabled";
 		};
@@ -4891,6 +4892,7 @@
 			clock-names = "fck", "canxl", "can_clk";
 			assigned-clocks = <&canxl_clk>;
 			assigned-clock-rates = <160000000>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CANXL1>;
 			channel1;
 			status = "disabled";
 		};
