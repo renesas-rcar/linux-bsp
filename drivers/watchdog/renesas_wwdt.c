@@ -45,11 +45,15 @@ MODULE_PARM_DESC(nowayout, "Watchdog cannot be stopped once started (default="
 struct wwdt_priv {
 	void __iomem *base;
 	struct watchdog_device wdev;
+	struct clk *cntclk;
+	struct clk *busclk;
 	unsigned long clk_rate;
 	unsigned int interval_time;
 	unsigned int error_mode;
 	unsigned int wsize;
 	unsigned int wdt_wie;
+	struct reset_control *rstc1;
+	struct reset_control *rstc2;
 };
 
 static void wwdt_write(struct wwdt_priv *priv, u8 val, unsigned int reg)
@@ -94,15 +98,6 @@ static void wwdt_setup(struct watchdog_device *wdev)
 {
 	struct wwdt_priv *priv = watchdog_get_drvdata(wdev);
 	struct device_node *np = priv->wdev.parent->of_node;
-	u8 val;
-
-	val = wwdt_read(priv, WDTA0MD);
-	if (!priv->error_mode)
-		val &= ~WDTA0ERM;
-	val |= (WDTA0OVF(priv->interval_time)) | WSIZE(priv->wsize);
-	if (priv->wdt_wie)
-		val |= WDTA0WIE;
-	wwdt_write(priv, val, WDTA0MD);
 
 	/* Setting ECM for WWDT20 */
 	if (of_find_property(np, "ecm", NULL))
@@ -151,6 +146,9 @@ static int wwdt_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct wwdt_priv *priv;
+	struct watchdog_device *wdev;
+	unsigned long rate;
+	unsigned int interval, window_size;
 	u8 val;
 	int ret;
 
@@ -162,13 +160,51 @@ static int wwdt_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->base))
 		return PTR_ERR(priv->base);
 
-	pm_runtime_enable(dev);
-	priv->wdev.info = &wwdt_ident;
-	priv->wdev.ops = &wwdt_ops;
-	priv->wdev.parent = dev;
+	priv->busclk = devm_clk_get(dev, "busclk");
+	if (IS_ERR(priv->busclk))
+		return PTR_ERR(priv->busclk);
 
-	platform_set_drvdata(pdev, priv);
-	watchdog_set_drvdata(&priv->wdev, priv);
+	priv->cntclk = devm_clk_get(dev, "cntclk");
+	if (IS_ERR(priv->cntclk))
+		return PTR_ERR(priv->cntclk);
+
+	priv->rstc1 = devm_reset_control_get_optional_exclusive(dev, "rstc1");
+	if (IS_ERR(priv->rstc1))
+		return dev_err_probe(dev, PTR_ERR(priv->rstc1),
+				     "failed to get reset rstc1\n");
+
+	priv->rstc2 = devm_reset_control_get_optional_exclusive(dev, "rstc2");
+	if (IS_ERR(priv->rstc2))
+		return dev_err_probe(dev, PTR_ERR(priv->rstc2),
+				     "failed to get reset rstc2\n");
+
+	ret = reset_control_reset(priv->rstc1);
+	if (ret)
+		return ret;
+
+	ret = reset_control_reset(priv->rstc2);
+	if (ret)
+		return ret;
+
+	ret = clk_prepare_enable(priv->busclk);
+	if (ret < 0)
+		return ret;
+
+	ret = clk_prepare_enable(priv->cntclk);
+	if (ret < 0)
+		goto fail_clk;
+
+	rate = clk_get_rate(priv->cntclk);
+
+	if (!rate) {
+		u32 clk_rate;
+
+		if (of_property_read_u32(pdev->dev.of_node,
+					 "renesas,cntclk", &clk_rate))
+			goto fail_dev;
+
+		rate = clk_rate;
+	}
 
 	ret = device_property_read_u32(dev, "interval-time", &priv->interval_time);
 	if (ret)
@@ -194,20 +230,46 @@ static int wwdt_probe(struct platform_device *pdev)
 
 	/* Default state after reset release */
 	val = wwdt_read(priv, WDTA0MD);
-	val &= ~WDTA0WIE;
-	val |= WSIZE(0);
+	if (!priv->error_mode)
+		val &= ~WDTA0ERM;
+
+	val |= (WDTA0OVF(priv->interval_time)) | WSIZE(priv->wsize);
+	interval = 1 << (9 + (priv->interval_time));
+	window_size = 250 * (3 - (priv->wsize));
 	wwdt_write(priv, val, WDTA0MD);
+
+	wdev = &priv->wdev;
+	wdev->max_hw_heartbeat_ms = 1000 * interval / rate;
+	wdev->min_hw_heartbeat_ms = window_size * interval / rate;
+	wdev->timeout = DIV_ROUND_UP(wdev->max_hw_heartbeat_ms, 1000);
+
+	pm_runtime_enable(dev);
+	wdev->info = &wwdt_ident;
+	wdev->ops = &wwdt_ops;
+	wdev->parent = dev;
+
+	platform_set_drvdata(pdev, priv);
+	watchdog_set_drvdata(&priv->wdev, priv);
 
 	watchdog_set_nowayout(&priv->wdev, nowayout);
 	watchdog_set_restart_priority(&priv->wdev, 0);
 	watchdog_stop_on_unregister(&priv->wdev);
 
-	ret = watchdog_register_device(&priv->wdev);
-	if (ret < 0)
-		pr_info("Fail to register device\n");
+	ret = watchdog_register_device(wdev);
+	if (ret < 0) {
+		dev_err(dev, "Fail to register device\n");
+		goto fail_dev;
+	}
 
 	dev_info(dev, "probed\n");
 	return 0;
+
+fail_dev:
+	clk_disable_unprepare(priv->cntclk);
+fail_clk:
+	clk_disable_unprepare(priv->busclk);
+	pm_runtime_disable(dev);
+	return ret;
 }
 
 static int wwdt_remove(struct platform_device *pdev)
