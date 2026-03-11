@@ -1670,6 +1670,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_I3C0>,
 				 <&scmi_clk X5H_CLOCK_ID_CLK_SA_I3C_PERW_M>;
 			clock-names = "tclk", "pclk";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_I3C0>;
 			#address-cells = <3>;
 			#size-cells = <0>;
 			i2c-scl-hz = <400000>;
@@ -1684,6 +1685,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_I3C1>,
 				 <&scmi_clk X5H_CLOCK_ID_CLK_SA_I3C_PERW_M>;
 			clock-names = "tclk", "pclk";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_I3C1>;
 			#address-cells = <3>;
 			#size-cells = <0>;
 			i2c-scl-hz = <400000>;
@@ -1697,6 +1699,8 @@
 			interrupts = <GIC_SPI 4070 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_I3C2>,
 				 <&scmi_clk X5H_CLOCK_ID_CLK_SA_I3C_PERW_M>;
+			clock-names = "tclk", "pclk";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_I3C2>;
 			#address-cells = <3>;
 			#size-cells = <0>;
 			i2c-scl-hz = <400000>;
