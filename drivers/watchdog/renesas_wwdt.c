@@ -54,6 +54,7 @@ struct wwdt_priv {
 	unsigned int wdt_wie;
 	struct reset_control *rstc1;
 	struct reset_control *rstc2;
+	u8 mode_setting;
 };
 
 static void wwdt_write(struct wwdt_priv *priv, u8 val, unsigned int reg)
@@ -280,6 +281,46 @@ static void wwdt_remove(struct platform_device *pdev)
 	pm_runtime_disable(&pdev->dev);
 }
 
+static int wwdt_suspend(struct device *dev)
+{
+	struct wwdt_priv *priv = dev_get_drvdata(dev);
+
+	/* Store mode setting */
+	priv->mode_setting = wwdt_read(priv, WDTA0MD);
+
+	clk_disable_unprepare(priv->busclk);
+	clk_disable_unprepare(priv->cntclk);
+
+	reset_control_assert(priv->rstc2);
+	reset_control_assert(priv->rstc1);
+
+	return 0;
+}
+
+static int wwdt_resume(struct device *dev)
+{
+	struct wwdt_priv *priv = dev_get_drvdata(dev);
+	int err;
+
+	err = reset_control_deassert(priv->rstc1);
+	if (err)
+		return err;
+
+	err = reset_control_deassert(priv->rstc2);
+	if (err)
+		return err;
+
+	clk_prepare_enable(priv->busclk);
+	clk_prepare_enable(priv->cntclk);
+
+	/* Re-store mode setting */
+	wwdt_write(priv, priv->mode_setting, WDTA0MD);
+
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(wwdt_pm_ops, wwdt_suspend, wwdt_resume);
+
 static const struct of_device_id renesas_wwdt_ids[] = {
 	{ .compatible = "renesas, rcar-gen5-wwdt", },
 	{ /* sentinel */ }
@@ -290,6 +331,7 @@ static struct platform_driver renesas_wwdt_driver = {
 	.driver = {
 		.name = "renesas_wwdt",
 		.of_match_table = renesas_wwdt_ids,
+		.pm = &wwdt_pm_ops,
 	},
 	.probe = wwdt_probe,
 	.remove = wwdt_remove,
