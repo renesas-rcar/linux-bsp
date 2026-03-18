@@ -149,6 +149,22 @@ static int rcar_gen4_ptp_set_offs(struct rcar_gen4_ptp_private *ptp_priv,
 	return 0;
 }
 
+int rcar_gen4_ptp_reinit_hw(struct rcar_gen4_ptp_private *ptp_priv)
+{
+	if (!ptp_priv->initialized)
+		return -EINVAL;
+
+	if (ptp_priv->parallel_mode) {
+		ptp_priv->default_addend = ioread32(ptp_priv->addr + ptp_priv->offs->increment);
+	} else {
+		iowrite32(ptp_priv->default_addend, ptp_priv->addr + ptp_priv->offs->increment);
+		iowrite32(0x01, ptp_priv->addr + ptp_priv->offs->enable);
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(rcar_gen4_ptp_reinit_hw);
+
 int rcar_gen4_ptp_register(struct rcar_gen4_ptp_private *ptp_priv,
 			   enum rcar_gen4_ptp_reg_layout layout, u32 rate)
 {
