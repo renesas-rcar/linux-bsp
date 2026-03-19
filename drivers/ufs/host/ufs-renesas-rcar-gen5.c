@@ -6,6 +6,7 @@
  */
 
 #include <linux/clk.h>
+#include <linux/reset.h>
 #include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/iopoll.h>
@@ -22,6 +23,8 @@
 
 struct ufs_rcar_gen5_priv {
 	void __iomem *phy_base;
+	struct clk *clk;
+	struct reset_control *rstc;
 	bool initialized;	/* The hardware needs initialization once */
 };
 
@@ -227,9 +230,19 @@ static int ufs_rcar_gen5_init(struct ufs_hba *hba)
 		return -ENOMEM;
 	ufshcd_set_variant(hba, priv);
 
+	priv->clk = devm_clk_get(hba->dev, "fck");
+	if (IS_ERR(priv->clk))
+		return PTR_ERR(priv->clk);
+
+	priv->rstc = devm_reset_control_get_optional_exclusive(hba->dev, NULL);
+	if (IS_ERR(priv->rstc))
+		return PTR_ERR(priv->rstc);
+
 	priv->phy_base = devm_platform_ioremap_resource_byname(pdev, "phy");
 	if (IS_ERR(priv->phy_base))
 		return PTR_ERR(priv->phy_base);
+
+	reset_control_deassert(priv->rstc);
 
 	return 0;
 }
@@ -284,11 +297,40 @@ static void ufs_rcar_gen5_remove(struct platform_device *pdev)
 	ufshcd_pltfrm_remove(pdev);
 }
 
+static int ufs_system_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct ufs_hba *hba = platform_get_drvdata(pdev);
+	struct ufs_rcar_gen5_priv *priv = ufshcd_get_variant(hba);
+
+	reset_control_reset(priv->rstc);
+
+	return ufshcd_system_suspend(dev);
+}
+
+static int ufs_system_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct ufs_hba *hba = platform_get_drvdata(pdev);
+	struct ufs_rcar_gen5_priv *priv = ufshcd_get_variant(hba);
+
+	reset_control_reset(priv->rstc);
+
+	return ufshcd_system_resume(dev);
+}
+
+static const struct dev_pm_ops ufs_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(ufs_system_suspend, ufs_system_resume)
+	.prepare         = ufshcd_suspend_prepare,
+	.complete        = ufshcd_resume_complete,
+};
+
 static struct platform_driver ufs_rcar_gen5_platform = {
 	.probe	= ufs_rcar_gen5_probe,
 	.remove_new	= ufs_rcar_gen5_remove,
 	.driver	= {
 		.name	= "ufshcd-renesas-rcar-gen5",
+		.pm = pm_sleep_ptr(&ufs_pm_ops),
 		.of_match_table	= of_match_ptr(ufs_rcar_gen5_of_match),
 	},
 };
