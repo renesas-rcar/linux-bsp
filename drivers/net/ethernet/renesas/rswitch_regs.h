@@ -719,12 +719,26 @@ enum rswitch_lsc_mode {
 	LSC_100M = 1,
 	LSC_1G,
 	LSC_2_5G,
+	LSC_5G,
+	LSC_10G
 };
 
-#define PIS			GENMASK(2, 0)
-#define LSC			GENMASK(5, 3)
-#define PSMCS			GENMASK(22, 16)
+#define RSW3_PSMCT		GENMASK(31, 27)
+#define PSMCT			GENMASK(30, 27)
+#define RSW3_PSMHT		GENMASK(27, 24)
 #define PSMHT			GENMASK(26, 24)
+#define PSMDP			BIT(23)
+#define PSMCS			GENMASK(22, 16)
+#define PSMCS_HI		GENMASK(15, 13)
+#define PLSPP			BIT(10)
+#define PIPP			BIT(9)
+#define PIP			BIT(8)
+#define LSC			GENMASK(5, 3)
+#define PIS			GENMASK(2, 0)
+
+#define PSMCS_ENC(v) \
+	(FIELD_PREP(PSMCS, (((v) & 0x3ff) & 0x7f)) | \
+	 FIELD_PREP(PSMCS_HI, ((((v) & 0x3ff) >> 7) & 0x7)))
 
 /* bit field definitions for MPSM */
 #define PSME			BIT(0)

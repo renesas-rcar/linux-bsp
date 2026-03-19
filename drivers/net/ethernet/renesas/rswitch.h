@@ -72,6 +72,9 @@
 #define RSW_AGEING_CLK_PER_US	0x140
 #define RSW_AGEING_TIME		300
 
+#define RSWITCH3_MDC_HZ			2500000		/* 2.5 MHz */
+#define RSWITCH3_FALLBACK_CLK_RELAX	687500000	/* 687.5 MHz */
+#define RSWITCH3_FALLBACK_CLK_SPEC	712500000	/* 712.5 MHz */
 
 /* TODO: hardcoded ETHA/GWCA settings for now */
 #define GWCA_IRQ_RESOURCE_NAME	"gwca0_rxtx%d"
@@ -186,6 +189,7 @@ struct rswitch_etha {
 	 * this flag to avoid multiple initialization.
 	 */
 	bool operated;
+	bool connect_to_xpcs;
 };
 
 /* The datasheet said descriptor "chain" and/or "queue". For consistency of
@@ -257,7 +261,9 @@ struct rswitch_device {
 	struct list_head list;
 
 	int port;
+	int etha_mii_idx;
 	struct rswitch_etha *etha;
+	struct rswitch_etha *etha_mii;
 	struct device_node *np_port;
 	struct phy *serdes;
 
@@ -293,6 +299,7 @@ struct rswitch_private {
 
 	struct rswitch_gwca gwca;
 	struct rswitch_etha etha[RSWITCH_MAX_NUM_PORTS];
+	struct rswitch_etha etha_mii[RSWITCH_MAX_NUM_PORTS];
 	struct rswitch_mfwd mfwd;
 
 	/* Notifiers */
@@ -324,6 +331,7 @@ struct rswitch_hw_info {
 	int (*bpool_config)(struct rswitch_private *priv);
 	int (*rswitch_fwd_init)(struct rswitch_private *priv);
 	void (*rswitch_etha_enable_mii)(struct rswitch_etha *etha);
+	void (*rswitch_rmac_setting)(struct rswitch_etha *etha, const u8 *mac);
 	u8 rswitch_num_ports;
 	u8 rswitch_num_agents;
 	u8 agent_index_gwca;
@@ -352,5 +360,9 @@ void rswitch_modify(void __iomem *addr, u32 reg, u32 clear, u32 set);
 int rswitch_reg_wait(void __iomem *addr, u32 offs, u32 mask, u32 expected);
 int rswitch_gwca_change_mode(struct rswitch_private *priv, enum rswitch_port_mode mode);
 int rswitch_etha_change_mode(struct rswitch_etha *etha, enum rswitch_port_mode mode);
+
+static bool parallel_mode;
+module_param(parallel_mode, bool, 0644);
+MODULE_PARM_DESC(parallel_mode, "Operate simultaneously with Realtime core");
 
 #endif	/* #ifndef __RSWITCH_H__ */
