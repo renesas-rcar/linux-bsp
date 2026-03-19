@@ -1590,7 +1590,8 @@ struct rcar_csi2 {
 	void __iomem *base;
 	const struct rcar_csi2_info *info;
 	struct reset_control *rstc;
-	struct clk *clk;
+	struct clk_bulk_data *clks;
+	int num_clks;
 
 	struct v4l2_subdev subdev;
 	struct media_pad pads[NR_OF_RCAR_CSI2_PAD];
@@ -1891,7 +1892,7 @@ static void rcsi2_enter_standby(struct rcar_csi2 *priv)
 	if (priv->info->enter_standby)
 		priv->info->enter_standby(priv);
 
-	clk_disable_unprepare(priv->clk);
+	clk_bulk_disable_unprepare(priv->num_clks, priv->clks);
 
 #ifdef MDL_CLK_WA
 	;
@@ -1917,9 +1918,9 @@ static int rcsi2_exit_standby(struct rcar_csi2 *priv)
 	reset_control_deassert(priv->rstc);
 #endif
 
-	ret = clk_prepare_enable(priv->clk);
+	ret = clk_bulk_prepare_enable(priv->num_clks, priv->clks);
 	if (ret) {
-		dev_err(priv->dev, "clock prepare failed for clock: %s\n",
+		dev_err(priv->dev, "clock prepare failed for bulk clock: %s\n",
 			dev_name(priv->dev));
 		return ret;
 	}
@@ -3482,10 +3483,10 @@ static int rcsi2_probe_resources(struct rcar_csi2 *priv,
 	return PTR_ERR_OR_ZERO(priv->rstc);
 #endif
 
-	priv->clk = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(priv->clk)) {
-		dev_err(priv->dev, "failed to get clock: %s\n",
-			dev_name(priv->dev));
+	/* Get clocks */
+	priv->num_clks = devm_clk_bulk_get_all(&pdev->dev, &priv->clks);
+	if (priv->num_clks < 1) {
+		dev_err(&pdev->dev, "Failed to get clocks\n");
 		return -EPROBE_DEFER;
 	}
 
