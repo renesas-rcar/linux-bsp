@@ -218,13 +218,21 @@ static int rswitch_update_ageing_time(struct rswitch_private *priv, clock_t time
 {
 	u32 reg_val;
 
-	if (!FIELD_FIT(MACAGT, time))
-		return -EINVAL;
+	if (priv->info->rswitch_version == RSW20) {
+		if (!FIELD_FIT(MACAGT, time))
+			return -EINVAL;
 
-	reg_val = FIELD_PREP(MACAGT, time);
-	reg_val |= MACAGE | MACAGSL;
-	iowrite32(reg_val, priv->addr_mfwd + FWMACAGC);
+		reg_val = FIELD_PREP(MACAGT, time);
+		reg_val |= MACAGE | MACAGSL;
+		iowrite32(reg_val, priv->addr_mfwd + FWMACAGC);
+	} else {
+		if (!FIELD_FIT(RSW3_MACAGT, time))
+			return -EINVAL;
 
+		reg_val = FIELD_PREP(RSW3_MACAGT, time);
+		reg_val |= MACAGE | MACAGSL;
+		iowrite32(reg_val, priv->addr_mfwd + RSW3_FWMACAGC);
+	}
 	return 0;
 }
 
@@ -614,77 +622,86 @@ static int rswitch_gwca_write_mac_address(struct rswitch_private *priv, const u8
 	return rswitch_gwca_change_mode(priv, OPC_OPERATION);
 }
 
-static int rswitch_add_addr_to_mactable(struct rswitch_private *priv, const u8 *mac)
+static int rswitch_set_mactable(struct rswitch_private *priv, const u8 *mac, bool add)
 {
 	u32 index = priv->gwca.l2_shared_rx_queue->index;
 	u8 num_agents = priv->info->rswitch_num_agents;
+	u32 clear, set;
 	int err;
 
-	rswitch_modify(priv->addr_mfwd, FWMACTL0, MACED, 0);
-	iowrite32((mac[0] << 8) | mac[1], priv->addr_mfwd + FWMACTL1);
-	iowrite32((mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5],
-		  priv->addr_mfwd + FWMACTL2);
-	iowrite32(MACDSLVL(num_agents) | MACSSLVL(num_agents),
-		  priv->addr_mfwd + FWMACTL3);
-	iowrite32(FIELD_PREP(MACCSDL, index),
-		  priv->addr_mfwd + FWMACTL4(GWCA_INDEX));
-	iowrite32(FIELD_PREP(MACDVL, BIT(AGENT_INDEX_GWCA)),
-		  priv->addr_mfwd + FWMACTL5);
+	if (add) {
+		clear = priv->info->rswitch_version == RSW20 ? MACED : RSW3_MACED;
+		set = 0;
+	} else {
+		clear = 0;
+		set = priv->info->rswitch_version == RSW20 ? MACED : RSW3_MACED;
+	}
 
-	err = rswitch_reg_wait(priv->addr_mfwd, FWMACTLR, MACTL, 0);
-	if (err < 0)
-		return err;
+	if (priv->info->rswitch_version == RSW20) {
+		rswitch_modify(priv->addr_mfwd, FWMACTL0, clear, set);
+		iowrite32((mac[0] << 8) | mac[1], priv->addr_mfwd + FWMACTL1);
+		iowrite32((mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5],
+			  priv->addr_mfwd + FWMACTL2);
+		iowrite32(MACDSLVL(num_agents) | MACSSLVL(num_agents),
+			  priv->addr_mfwd + FWMACTL3);
+		iowrite32(FIELD_PREP(MACCSDL, BIT(0)),
+			  priv->addr_mfwd + FWMACTL4(GWCA_INDEX));
+		iowrite32(FIELD_PREP(MACDVL, BIT(AGENT_INDEX_GWCA)),
+			  priv->addr_mfwd + FWMACTL5);
 
-	if (ioread32(priv->addr_mfwd + FWMACTLR))
-		return NOTIFY_BAD;
+		err = rswitch_reg_wait(priv->addr_mfwd, FWMACTLR, MACTL, 0);
+		if (err < 0)
+			return err;
 
-	return NOTIFY_DONE;
-}
+		err = ioread32(priv->addr_mfwd + FWMACTLR);
+		if (err)
+			return NOTIFY_BAD;
+	} else {
+		iowrite32(priv->gwca.agent_index, priv->addr_mfwd + RSW3_FWMACTL0);
+		rswitch_modify(priv->addr_mfwd, RSW3_FWMACTL1, clear, set);
+		iowrite32(0x00, priv->addr_mfwd + RSW3_FWMACTL2);
+		iowrite32(0x00, priv->addr_mfwd + RSW3_FWMACTL3);
+		iowrite32(MACDSLVL(num_agents) | MACSSLVL(num_agents),
+			  priv->addr_mfwd + RSW3_FWMACTL4);
+		iowrite32((mac[0] << 8) | mac[1], priv->addr_mfwd + RSW3_FWMACTL5);
+		iowrite32((mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5],
+			  priv->addr_mfwd + RSW3_FWMACTL6);
+		iowrite32(FIELD_PREP(RSW3_MACCSDL, index),
+			  priv->addr_mfwd + RSW3_FWMACTL7(GWCA_INDEX));
+		iowrite32(FIELD_PREP(RSW3_MACDVL, BIT(AGENT_INDEX_GWCA)),
+			  priv->addr_mfwd + RSW3_FWMACTL8);
 
-static int rswitch_del_addr_from_mactable(struct rswitch_private *priv, const u8 *mac)
-{
-	u8 num_agents = priv->info->rswitch_num_agents;
-	int err;
+		err = rswitch_reg_wait(priv->addr_mfwd, RSW3_FWMACTLR, MACTL, 0);
+		if (err < 0)
+			return err;
 
-	rswitch_modify(priv->addr_mfwd, FWMACTL0, 0, MACED);
-	iowrite32((mac[0] << 8) | mac[1], priv->addr_mfwd + FWMACTL1);
-	iowrite32((mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5],
-		  priv->addr_mfwd + FWMACTL2);
-	iowrite32(MACDSLVL(num_agents) | MACSSLVL(num_agents),
-		  priv->addr_mfwd + FWMACTL3);
-	iowrite32(FIELD_PREP(MACCSDL, BIT(0)),
-		  priv->addr_mfwd + FWMACTL4(GWCA_INDEX));
-	iowrite32(FIELD_PREP(MACDVL, BIT(AGENT_INDEX_GWCA)),
-		  priv->addr_mfwd + FWMACTL5);
-
-	err = rswitch_reg_wait(priv->addr_mfwd, FWMACTLR, MACTL, 0);
-	if (err < 0)
-		return err;
-
-	err = ioread32(priv->addr_mfwd + FWMACTLR);
-	if (err)
-		return NOTIFY_BAD;
-
+		if (ioread32(priv->addr_mfwd + RSW3_FWMACTLR))
+			return NOTIFY_BAD;
+	}
 	return NOTIFY_DONE;
 }
 
 static void rswitch_switchdev_bridge_fdb_event_work(struct work_struct *work)
 {
 	struct rswitch_switchdev_event_work *switchdev_work;
-	const unsigned char addr[] = {0, 0, 0, 0, 0, 0};
+	const unsigned char null_addr[] = {0, 0, 0, 0, 0, 0};
+	struct rswitch_private *priv;
 	struct rswitch_device *rdev;
 	struct net_device *ndev;
+	const u8 *addr;
 
 	switchdev_work = container_of(work, struct rswitch_switchdev_event_work, work);
 	ndev = switchdev_work->ndev;
+	priv = switchdev_work->priv;
+	addr = switchdev_work->fdb_info.addr;
 
 	rtnl_lock();
 
 	/* Unfortunately all net_device members point to br0, there is no simple way to check
 	 * if the event was triggered by a port device setting.
 	 */
-	rswitch_for_all_ports(switchdev_work->priv, rdev) {
-		if (ether_addr_equal(rdev->ndev->dev_addr, switchdev_work->fdb_info.addr))
+	rswitch_for_all_ports(priv, rdev) {
+		if (ether_addr_equal(rdev->ndev->dev_addr, addr))
 			goto out;
 	}
 
@@ -694,12 +711,12 @@ static void rswitch_switchdev_bridge_fdb_event_work(struct work_struct *work)
 
 	switch (switchdev_work->event) {
 	case SWITCHDEV_FDB_ADD_TO_DEVICE:
-		rswitch_gwca_write_mac_address(switchdev_work->priv, switchdev_work->fdb_info.addr);
-		rswitch_add_addr_to_mactable(switchdev_work->priv, switchdev_work->fdb_info.addr);
+		rswitch_gwca_write_mac_address(priv, addr);
+		rswitch_set_mactable(priv, addr, true);
 		break;
 	case SWITCHDEV_FDB_DEL_TO_DEVICE:
-		rswitch_del_addr_from_mactable(switchdev_work->priv, switchdev_work->fdb_info.addr);
-		rswitch_gwca_write_mac_address(switchdev_work->priv, addr);
+		rswitch_set_mactable(priv, addr, false);
+		rswitch_gwca_write_mac_address(priv, null_addr);
 		break;
 	default:
 		break;
@@ -708,7 +725,7 @@ static void rswitch_switchdev_bridge_fdb_event_work(struct work_struct *work)
 out:
 	rtnl_unlock();
 
-	kfree(switchdev_work->fdb_info.addr);
+	kfree(addr);
 	rdev = netdev_priv(ndev);
 	netdev_put(ndev, &switchdev_work->dev_tracker);
 	kfree(switchdev_work);

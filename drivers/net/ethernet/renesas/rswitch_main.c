@@ -240,35 +240,33 @@ static int rswitch3_fwd_init(struct rswitch_private *priv)
 	ret = rswitch_reg_wait(priv->addr_mfwd, RSW3_FWMACTIM, MACTIOG, 0);
 
 	// MAC table entry flow
-	iowrite32(0x01, priv->addr_mfwd + RSW3_FWMACTL0);
-	iowrite32(0x00, priv->addr_mfwd + RSW3_FWMACTL1);
-	iowrite32(0x00, priv->addr_mfwd + RSW3_FWMACTL2);
-	iowrite32(0x00, priv->addr_mfwd + RSW3_FWMACTL3);
+	rswitch_for_each_enabled_port(priv, i) {
+		iowrite32(i, priv->addr_mfwd + RSW3_FWMACTL0);
+		iowrite32(0x00, priv->addr_mfwd + RSW3_FWMACTL1);
+		iowrite32(0x00, priv->addr_mfwd + RSW3_FWMACTL2);
+		iowrite32(0x00, priv->addr_mfwd + RSW3_FWMACTL3);
+		iowrite32(MACDSLVL(num_agents) | MACSSLVL(num_agents),
+			  priv->addr_mfwd + RSW3_FWMACTL4);
 
-	reg_val = FIELD_PREP(RSW3_MACDSLVL, ((1 << num_agents) - 1));
-	reg_val |= FIELD_PREP(RSW3_MACSSLVL, ((1 << num_agents) - 1));
-	iowrite32(reg_val, priv->addr_mfwd + RSW3_FWMACTL4);
+		const u8 *macaddr = priv->rdev[0]->ndev->dev_addr;
 
-	const u8 *macaddr = priv->rdev[0]->ndev->dev_addr;
+		reg_val = ((macaddr[0] & 0xff) << 8) | macaddr[1];
+		iowrite32(reg_val, priv->addr_mfwd + RSW3_FWMACTL5);
 
-	reg_val = ((macaddr[0] & 0xff) << 8) | macaddr[1];
-	iowrite32(reg_val, priv->addr_mfwd + RSW3_FWMACTL5);
+		reg_val = ((macaddr[2] & 0xff) << 24) | ((macaddr[3] & 0xff) << 16);
+		reg_val |= ((macaddr[4] & 0xff) << 8) | macaddr[5];
+		iowrite32(reg_val, priv->addr_mfwd + RSW3_FWMACTL6);
 
-	reg_val = ((macaddr[2] & 0xff) << 24) | ((macaddr[3] & 0xff) << 16);
-	reg_val |= ((macaddr[4] & 0xff) << 8) | macaddr[5];
-	iowrite32(reg_val, priv->addr_mfwd + RSW3_FWMACTL6);
+		reg_val = FIELD_PREP(RSW3_MACCSDL, priv->rdev[i]->rx_queue->index);
+		iowrite32(reg_val, priv->addr_mfwd + RSW3_FWMACTL7(GWCA_INDEX));
 
-	i = 0; // FIXME: temporary solution
+		reg_val = FIELD_PREP(RSW3_MACDVL, (1 << num_agents));
+		iowrite32(reg_val, priv->addr_mfwd + RSW3_FWMACTL8);
 
-	reg_val = FIELD_PREP(RSW3_MACCSDL, priv->rdev[i]->rx_queue->index);   // i = ?
-	iowrite32(reg_val, priv->addr_mfwd + RSW3_FWMACTL7(GWCA_INDEX));
-
-	reg_val = FIELD_PREP(RSW3_MACDVL, (1 << num_agents));
-	iowrite32(reg_val, priv->addr_mfwd + RSW3_FWMACTL8);
-
-	ret = rswitch_reg_wait(priv->addr_mfwd, RSW3_FWMACTLR, 0, 0);
-	if (ret)
-		netdev_info(priv->rdev[i]->ndev, "MAC table learning timed out\n");
+		ret = rswitch_reg_wait(priv->addr_mfwd, RSW3_FWMACTLR, 0, 0);
+		if (ret)
+			netdev_info(priv->rdev[i]->ndev, "MAC table learning timed out\n");
+	}
 
 	/* For GWCA port, allow direct descriptor forwarding */
 	rswitch_modify(priv->addr_mfwd, RSW3_FWPC1(priv->gwca.agent_index), 0, DDE);

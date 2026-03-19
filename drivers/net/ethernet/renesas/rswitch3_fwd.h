@@ -465,8 +465,7 @@ enum rswitch3_reg {
 #define RSW3_MACDESOG			BIT(29)
 
 /* bit field definitions for FWMACTLn */
-#define RSW3_MACDSLVL			GENMASK(22, 16)
-#define RSW3_MACSSLVL			GENMASK(6, 0)
+#define RSW3_MACED			BIT(31)
 #define RSW3_MACCSDL			GENMASK(6, 0)
 #define RSW3_MACDVL			GENMASK(6, 0)
 
