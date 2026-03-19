@@ -3509,6 +3509,7 @@
 			reg-names = "hcr", "phy";
 			interrupts = <GIC_SPI 4284 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_UFS0>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_UFS0>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_UFS0>, <&ufs0_clk>;
 			clock-names = "fck", "ref_clk";
 			freq-table-hz = <200000000 200000000>, <38400000 38400000>;
@@ -3521,6 +3522,7 @@
 			reg-names = "hcr", "phy";
 			interrupts = <GIC_SPI 4285 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_UFS1>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_UFS1>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_UFS1>, <&ufs1_clk>;
 			clock-names = "fck", "ref_clk";
 			freq-table-hz = <200000000 200000000>, <38400000 38400000>;
