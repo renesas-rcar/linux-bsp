@@ -2683,6 +2683,8 @@ static int renesas_eth_sw_resume(struct device *dev)
 
 	rsw3_ether_port_init_all(priv);
 
+	rcar_gen4_ptp_reinit_hw(priv->ptp_priv);
+
 	rsw3_for_each_enabled_port(priv, i) {
 		ndev = priv->rdev[i]->ndev;
 		if (netif_running(ndev)) {
