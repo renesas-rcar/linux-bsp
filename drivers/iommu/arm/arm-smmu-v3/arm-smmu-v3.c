@@ -28,6 +28,7 @@
 #include <linux/platform_device.h>
 #include <kunit/visibility.h>
 #include <uapi/linux/iommufd.h>
+#include <linux/pm_runtime.h>
 
 #include "arm-smmu-v3.h"
 #include "../../dma-iommu.h"
@@ -4086,6 +4087,23 @@ static int arm_smmu_device_reset(struct arm_smmu_device *smmu)
 	return 0;
 }
 
+/* -----------------------------------------------------------------------------
+ * Power management
+ */
+
+#ifdef CONFIG_PM
+static int arm_smmu_v3_runtime_resume(struct device *dev)
+{
+	struct arm_smmu_device *smmu = dev_get_drvdata(dev);
+
+	return arm_smmu_device_reset(smmu);
+}
+#endif
+
+static const struct dev_pm_ops arm_smmu_v3_pm = {
+	SET_NOIRQ_SYSTEM_SLEEP_PM_OPS(NULL, arm_smmu_v3_runtime_resume)
+};
+
 #define IIDR_IMPLEMENTER_ARM		0x43b
 #define IIDR_PRODUCTID_ARM_MMU_600	0x483
 #define IIDR_PRODUCTID_ARM_MMU_700	0x487
@@ -4706,6 +4724,7 @@ static void arm_smmu_driver_unregister(struct platform_driver *drv)
 
 static struct platform_driver arm_smmu_driver = {
 	.driver	= {
+		.pm			= &arm_smmu_v3_pm,
 		.name			= "arm-smmu-v3",
 		.of_match_table		= arm_smmu_of_match,
 		.suppress_bind_attrs	= true,
