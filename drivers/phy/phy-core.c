@@ -526,6 +526,21 @@ int phy_set_speed(struct phy *phy, int speed)
 }
 EXPORT_SYMBOL_GPL(phy_set_speed);
 
+int phy_set_dp_format(struct phy *phy, struct phy_configure_opts_dp_format *format)
+{
+	int ret;
+
+	if (!phy || !phy->ops->set_dp_format)
+		return 0;
+
+	mutex_lock(&phy->mutex);
+	ret = phy->ops->set_dp_format(phy, format);
+	mutex_unlock(&phy->mutex);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(phy_set_dp_format);
+
 int phy_reset(struct phy *phy)
 {
 	int ret;

@@ -95,4 +95,26 @@ struct phy_configure_opts_dp {
 	u8 set_voltages : 1;
 };
 
+enum phy_dp_pixel_format {
+	DP_RGB,
+	DP_YCBCR444,
+	DP_YCBCR422,
+	DP_YCBCR420,
+};
+
+enum phy_dp_pixel_depth {
+	DP_6BPC,
+	DP_8BPC,
+	DP_10BPC,
+	DP_12BPC,
+	DP_16BPC,
+	DP_48BPC,
+};
+
+struct phy_configure_opts_dp_format {
+	u8 stream;
+	enum phy_dp_pixel_format format;
+	enum phy_dp_pixel_depth depth;
+};
+
 #endif /* __PHY_DP_H_ */

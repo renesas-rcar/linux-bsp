@@ -81,6 +81,7 @@ union phy_configure_opts {
  * @set_mode: set the mode of the phy
  * @set_media: set the media type of the phy (optional)
  * @set_speed: set the speed of the phy (optional)
+ * @set_dp_format: set the DisplayPort pixel color depth/format
  * @reset: resetting the phy
  * @calibrate: calibrate the phy
  * @release: ops to be performed while the consumer relinquishes the PHY
@@ -99,6 +100,7 @@ struct phy_ops {
 	int	(*set_mode)(struct phy *phy, enum phy_mode mode, int submode);
 	int	(*set_media)(struct phy *phy, enum phy_media media);
 	int	(*set_speed)(struct phy *phy, int speed);
+	int	(*set_dp_format)(struct phy *phy, struct phy_configure_opts_dp_format *format);
 
 	/**
 	 * @configure:
@@ -254,6 +256,7 @@ int phy_set_mode_ext(struct phy *phy, enum phy_mode mode, int submode);
 	phy_set_mode_ext(phy, mode, 0)
 int phy_set_media(struct phy *phy, enum phy_media media);
 int phy_set_speed(struct phy *phy, int speed);
+int phy_set_dp_format(struct phy *phy, struct phy_configure_opts_dp_format *format);
 int phy_configure(struct phy *phy, union phy_configure_opts *opts);
 int phy_validate(struct phy *phy, enum phy_mode mode, int submode,
 		 union phy_configure_opts *opts);
@@ -429,6 +432,13 @@ static inline int phy_set_media(struct phy *phy, enum phy_media media)
 }
 
 static inline int phy_set_speed(struct phy *phy, int speed)
+{
+	if (!phy)
+		return 0;
+	return -ENODEV;
+}
+
+static inline int phy_set_dp_format(struct phy *phy, struct phy_configure_opts_dp_format)
 {
 	if (!phy)
 		return 0;
