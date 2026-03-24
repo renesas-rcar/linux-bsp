@@ -722,27 +722,15 @@ int rsnd_adg_probe(struct rsnd_priv *priv)
 	struct rsnd_adg *adg;
 	struct device *dev = rsnd_priv_to_dev(priv);
 	int ret;
-	struct clk *clk;
 
 	adg = devm_kzalloc(dev, sizeof(*adg), GFP_KERNEL);
 	if (!adg)
 		return -ENOMEM;
 
-	if (rsnd_is_gen5(priv)) {
-		clk = devm_clk_get(dev, "adg");
-		if (IS_ERR(clk))
-			return PTR_ERR(clk);
-
-		ret = rsnd_mod_init(priv, &adg->mod, &adg_ops,
-				    clk, 0, 0);
-		if (ret)
-			return ret;
-	} else {
-		ret = rsnd_mod_init(priv, &adg->mod, &adg_ops,
-				    NULL, 0, 0);
-		if (ret)
-			return ret;
-	}
+	ret = rsnd_mod_init(priv, &adg->mod, &adg_ops,
+		      NULL, 0, 0);
+	if (ret)
+		return ret;
 
 	priv->adg = adg;
 
@@ -762,7 +750,6 @@ int rsnd_adg_probe(struct rsnd_priv *priv)
 
 void rsnd_adg_remove(struct rsnd_priv *priv)
 {
-	struct rsnd_adg *adg = rsnd_priv_to_adg(priv);
 	struct device *dev = rsnd_priv_to_dev(priv);
 	struct device_node *np = dev->of_node;
 
@@ -774,7 +761,4 @@ void rsnd_adg_remove(struct rsnd_priv *priv)
 
 	/* It should be called after rsnd_adg_clk_disable() */
 	rsnd_adg_null_clk_clean(priv);
-
-	if (rsnd_is_gen5(priv))
-		rsnd_mod_quit(&adg->mod);
 }
