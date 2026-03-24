@@ -5191,12 +5191,10 @@
 					 0 0 0 4 &gic GIC_SPI 4292 IRQ_TYPE_LEVEL_HIGH
 					 0 0 0 4 &gic GIC_SPI 4293 IRQ_TYPE_LEVEL_HIGH>;
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PCI4>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_PCI401>,
-				 <&scmi_clk X5H_CLOCK_ID_PCI411>,
-				 <&scmi_clk X5H_CLOCK_ID_PCI402>,
-				 <&scmi_clk X5H_CLOCK_ID_PCI412>, <&pcie4_bus_clk>;
-			clock-names = "pci401", "pci411", "pci402", "pci412", "pcie4_bus";
-			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_U266_PCIE4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_PCI401>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_U266_PCIE4>,
+					<&scmi_reset X5H_RESET_DOMAIN_ID_PCI401>;
+			reset-names = "perst", "rst";
 			num-lanes = <1>;
 			max-link-speed = <1>;
 			status = "disabled";
