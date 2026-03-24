@@ -80,10 +80,33 @@ scmi_reset_reset(struct reset_controller_dev *rcdev, unsigned long id)
 	return reset_ops->reset(ph, id);
 }
 
+#if defined(CONFIG_ARCH_R8A78000)
+/**
+ * scmi_reset_status() - get the device reset status
+ * @rcdev: reset controller entity
+ * @id: ID of the reset signal to be retrieved
+ *
+ * This function implements the reset driver op to get a device's
+ * reset status using the ARM SCMI protocol.
+ *
+ * Return: 0 for successful request, else a corresponding error value
+ */
+static int
+scmi_reset_status(struct reset_controller_dev *rcdev, unsigned long id)
+{
+	const struct scmi_protocol_handle *ph = to_scmi_handle(rcdev);
+
+	return reset_ops->status(ph, id);
+}
+#endif /* CONFIG_ARCH_R8A78000 */
+
 static const struct reset_control_ops scmi_reset_ops = {
 	.assert		= scmi_reset_assert,
 	.deassert	= scmi_reset_deassert,
 	.reset		= scmi_reset_reset,
+#if defined(CONFIG_ARCH_R8A78000)
+	.status		= scmi_reset_status,
+#endif /* CONFIG_ARCH_R8A78000 */
 };
 
 static int scmi_reset_probe(struct scmi_device *sdev)
