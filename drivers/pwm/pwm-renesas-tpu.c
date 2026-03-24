@@ -488,6 +488,31 @@ static int tpu_probe(struct platform_device *pdev)
 	return 0;
 }
 
+static int tpu_pwm_resume(struct device *dev)
+{
+	struct tpu_device *tpu = dev_get_drvdata(dev);
+	int ret;
+
+	ret = clk_prepare_enable(tpu->bus_clk);
+	if (ret < 0)
+		dev_err(dev, "failed to enable bus clock: %d\n", ret);
+
+	return ret;
+}
+
+static int tpu_pwm_suspend(struct device *dev)
+{
+	struct tpu_device *tpu = dev_get_drvdata(dev);
+
+	clk_disable_unprepare(tpu->bus_clk);
+
+	return 0;
+}
+
+static const struct dev_pm_ops tpu_pwm_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(tpu_pwm_suspend, tpu_pwm_resume)
+};
+
 #ifdef CONFIG_OF
 static const struct of_device_id tpu_of_table[] = {
 	{ .compatible = "renesas,tpu-r8a73a4", },
@@ -505,6 +530,7 @@ static struct platform_driver tpu_driver = {
 	.probe		= tpu_probe,
 	.driver		= {
 		.name	= "renesas-tpu-pwm",
+		.pm = &tpu_pwm_pm_ops,
 		.of_match_table = of_match_ptr(tpu_of_table),
 	}
 };
