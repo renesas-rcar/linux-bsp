@@ -1240,6 +1240,21 @@
 		groups = "audio_clk_a_a", "audio0_clkout0";
 		function = "audio_clk";
 	};
+
+	dp0_hotplug_pins: dp0_hotplug {
+		groups = "dp0_hotplug";
+		function = "dp0_hotplug";
+	};
+
+	dp1_hotplug_pins: dp1_hotplug {
+		groups = "dp1_hotplug";
+		function = "dp1_hotplug";
+	};
+
+	dp2_hotplug_pins: dp2_hotplug {
+		groups = "dp2_hotplug";
+		function = "dp2_hotplug";
+	};
 };
 
 &rpc {
@@ -1445,6 +1460,8 @@
 
 &dp0 {
 	status = "okay";
+	pinctrl-0 = <&dp0_hotplug_pins>;
+	pinctrl-names = "default";
 
 	ports {
 		port@1 {
@@ -1458,6 +1475,8 @@
 
 &dp1 {
 	status = "okay";
+	pinctrl-0 = <&dp1_hotplug_pins>;
+	pinctrl-names = "default";
 
 	ports {
 		port@1 {
@@ -1471,6 +1490,8 @@
 
 &dp2 {
 	status = "okay";
+	pinctrl-0 = <&dp2_hotplug_pins>;
+	pinctrl-names = "default";
 
 	ports {
 		port@1 {
