@@ -636,7 +636,17 @@ static void vsp1_mask_all_interrupts(struct vsp1_device *vsp1)
  */
 int vsp1_device_get(struct vsp1_device *vsp1)
 {
-	return pm_runtime_resume_and_get(vsp1->dev);
+	int ret;
+
+	ret = clk_prepare_enable(vsp1->clk);
+	if (ret)
+		return ret;
+
+	ret = pm_runtime_resume_and_get(vsp1->dev);
+	if (ret)
+		clk_disable_unprepare(vsp1->clk);
+
+	return ret;
 }
 
 /*
@@ -647,6 +657,7 @@ int vsp1_device_get(struct vsp1_device *vsp1)
  */
 void vsp1_device_put(struct vsp1_device *vsp1)
 {
+	clk_disable_unprepare(vsp1->clk);
 	pm_runtime_put_sync(vsp1->dev);
 }
 
@@ -1017,6 +1028,12 @@ static int vsp1_probe(struct platform_device *pdev)
 
 	/* Configure device parameters based on the version register. */
 	pm_runtime_enable(&pdev->dev);
+
+	vsp1->clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(vsp1->clk)) {
+		ret = PTR_ERR(vsp1->clk);
+		goto done;
+	}
 
 	ret = vsp1_device_get(vsp1);
 	if (ret < 0)

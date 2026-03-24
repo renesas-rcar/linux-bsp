@@ -112,6 +112,8 @@ struct vsp1_device {
 
 	struct vsp1_drm *drm;
 	struct vsp1_vspx *vspx;
+
+	struct clk *clk;
 };
 
 int vsp1_device_get(struct vsp1_device *vsp1);
