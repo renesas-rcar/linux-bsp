@@ -124,6 +124,40 @@ static int rcar_vcon_parse_of(struct rcar_vcon_device *rvcon)
 	return 0;
 }
 
+static int __maybe_unused rcar_vcon_pm_suspend(struct device *dev)
+{
+	struct rcar_vcon_device *rvcon = dev_get_drvdata(dev);
+	int ret;
+
+	ret = drm_mode_config_helper_suspend(&rvcon->ddev);
+	if (ret)
+		return ret;
+
+	clk_bulk_disable_unprepare(rvcon->num_clks, rvcon->clks);
+
+	return 0;
+}
+
+static int __maybe_unused rcar_vcon_pm_resume(struct device *dev)
+{
+	struct rcar_vcon_device *rvcon = dev_get_drvdata(dev);
+	int ret;
+
+	ret = clk_bulk_prepare_enable(rvcon->num_clks, rvcon->clks);
+	if (ret)
+		return ret;
+
+	ret = drm_mode_config_helper_resume(&rvcon->ddev);
+	if (ret)
+		clk_bulk_disable_unprepare(rvcon->num_clks, rvcon->clks);
+
+	return ret;
+}
+
+static const struct dev_pm_ops rcar_vcon_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(rcar_vcon_pm_suspend, rcar_vcon_pm_resume)
+};
+
 static int rcar_vcon_remove(struct platform_device *pdev)
 {
 	struct rcar_vcon_device *rvcon = platform_get_drvdata(pdev);
@@ -240,7 +274,8 @@ static struct platform_driver rcar_vcon_platform_driver = {
 	.remove		= rcar_vcon_remove,
 	.shutdown       = rcar_vcon_shutdown,
 	.driver		= {
-			.name = "rcar-vcon",
+			.name		= "rcar-vcon",
+			.pm		= &rcar_vcon_pm_ops,
 			.of_match_table = of_match_ptr(rcar_vcon_of_table),
 	},
 };

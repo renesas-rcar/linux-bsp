@@ -207,6 +207,8 @@ static void rcar_vcon_crtc_stop(struct rcar_vcon_crtc *rcrtc)
 	rcar_vcon_crtc_wait_page_flip(rcrtc);
 	drm_crtc_vblank_off(crtc);
 
+	rcar_vcon_vsp_disable(rcrtc);
+
 	rcar_vcon_crtc_write(rcrtc, RESET, 0x01);
 }
 

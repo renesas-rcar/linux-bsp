@@ -573,6 +573,35 @@ static int rcar_dw_dp_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int __maybe_unused rcar_dw_dp_pm_suspend(struct device *dev)
+{
+	struct rcar_dw_dp *dw_dp = dev_get_drvdata(dev);
+
+	rcar_dw_dp_clk_disable(dw_dp);
+
+	return 0;
+}
+
+static int __maybe_unused rcar_dw_dp_pm_resume(struct device *dev)
+{
+	struct rcar_dw_dp *dw_dp = dev_get_drvdata(dev);
+	int ret;
+
+	ret = rcar_dw_dp_clk_enable(dw_dp);
+	if (ret)
+		return ret;
+
+	rcar_dw_dp_phy_write(dw_dp, DPTX_CLKGEN_RST_CNT, DPTX_CLKGEN_RST_CNT_DEFAULT);
+
+	dw_dp_resume(dw_dp->dp);
+
+	return 0;
+}
+
+static const struct dev_pm_ops rcar_dw_dp_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(rcar_dw_dp_pm_suspend, rcar_dw_dp_pm_resume)
+};
+
 static const struct of_device_id rcar_dw_dp_of_table[] = {
 	{
 		.compatible = "renesas,r8a78000-dw-dp",
@@ -586,7 +615,8 @@ static struct platform_driver rcar_dw_dp_platform_driver = {
 	.probe          = rcar_dw_dp_probe,
 	.remove         = rcar_dw_dp_remove,
 	.driver         = {
-		.name   = "rcar-dw-dp",
+		.name		= "rcar-dw-dp",
+		.pm             = &rcar_dw_dp_pm_ops,
 		.of_match_table = rcar_dw_dp_of_table,
 	},
 };
