@@ -58,6 +58,12 @@
 		#clock-cells = <0>;
 	};
 
+	msiof_clk: msiof_clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <133333333>;
+	};
+
 	ssi_dummy_clk: ssi_dummy_clk {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
@@ -4869,8 +4875,12 @@
 			dmas = <&scp_dmac0 0x41>, <&scp_dmac0 0x40>,
 				<&scp_dmac1 0x41>, <&scp_dmac1 0x40>;
 			dma-names = "tx", "rx", "tx", "rx";
-			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>;
-			clock-names = "mso";
+			clocks = <&scmi_clk X5H_CLOCK_ID_MSI0>,
+				<&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>,
+				<&msiof_clk>;
+			clock-names = "fck", "mso", "msiof_clk";
+			assigned-clocks = <&msiof_clk>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_MSI0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
@@ -4884,8 +4894,12 @@
 			dmas = <&scp_dmac0 0x43>, <&scp_dmac0 0x42>,
 				<&scp_dmac1 0x43>, <&scp_dmac1 0x42>;
 			dma-names = "tx", "rx", "tx", "rx";
-			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>;
-			clock-names = "mso";
+			clocks = <&scmi_clk X5H_CLOCK_ID_MSI1>,
+				<&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>,
+				<&msiof_clk>;
+			clock-names = "fck", "mso", "msiof_clk";
+			assigned-clocks = <&msiof_clk>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_MSI1>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
@@ -4899,8 +4913,12 @@
 			dmas = <&scp_dmac0 0x45>, <&scp_dmac0 0x44>,
 				<&scp_dmac1 0x45>, <&scp_dmac1 0x44>;
 			dma-names = "tx", "rx", "tx", "rx";
-			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>;
-			clock-names = "mso";
+			clocks = <&scmi_clk X5H_CLOCK_ID_MSI2>,
+				<&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>,
+				<&msiof_clk>;
+			clock-names = "fck", "mso", "msiof_clk";
+			assigned-clocks = <&msiof_clk>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_MSI2>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
@@ -4914,8 +4932,12 @@
 			dmas = <&scp_dmac0 0x47>, <&scp_dmac0 0x46>,
 				<&scp_dmac1 0x47>, <&scp_dmac1 0x46>;
 			dma-names = "tx", "rx", "tx", "rx";
-			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>;
-			clock-names = "mso";
+			clocks = <&scmi_clk X5H_CLOCK_ID_MSI3>,
+				<&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>,
+				<&msiof_clk>;
+			clock-names = "fck", "mso", "msiof_clk";
+			assigned-clocks = <&msiof_clk>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_MSI3>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
@@ -4931,8 +4953,12 @@
 				<&sys_dmac12 0x49>, <&sys_dmac12 0x48>;
 			dma-names = "tx", "rx", "tx", "rx",
 				    "tx", "rx";
-			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>;
-			clock-names = "mso";
+			clocks = <&scmi_clk X5H_CLOCK_ID_MSI4>,
+				<&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>,
+				<&msiof_clk>;
+			clock-names = "fck", "mso", "msiof_clk";
+			assigned-clocks = <&msiof_clk>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_MSI4>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
@@ -4948,8 +4974,12 @@
 				<&sys_dmac12 0x4B>, <&sys_dmac12 0x4A>;
 			dma-names = "tx", "rx", "tx", "rx",
 				    "tx", "rx";
-			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>;
-			clock-names = "mso";
+			clocks = <&scmi_clk X5H_CLOCK_ID_MSI5>,
+				<&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>,
+				<&msiof_clk>;
+			clock-names = "fck", "mso", "msiof_clk";
+			assigned-clocks = <&msiof_clk>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_MSI5>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
@@ -4965,8 +4995,12 @@
 				<&sys_dmac12 0x4D>, <&sys_dmac12 0x4C>;
 			dma-names = "tx", "rx", "tx", "rx",
 				    "tx", "rx";
-			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>;
-			clock-names = "mso";
+			clocks = <&scmi_clk X5H_CLOCK_ID_MSI6>,
+				<&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>,
+				<&msiof_clk>;
+			clock-names = "fck", "mso", "msiof_clk";
+			assigned-clocks = <&msiof_clk>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_MSI6>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
@@ -4982,8 +5016,12 @@
 				<&sys_dmac12 0x4F>, <&sys_dmac12 0x4E>;
 			dma-names = "tx", "rx", "tx", "rx",
 				    "tx", "rx";
-			clocks = <&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>;
-			clock-names = "mso";
+			clocks = <&scmi_clk X5H_CLOCK_ID_MSI7>,
+				<&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>,
+				<&msiof_clk>;
+			clock-names = "fck", "mso", "msiof_clk";
+			assigned-clocks = <&msiof_clk>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_MSI7>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			status = "disabled";
