@@ -103,7 +103,15 @@
 #define HBLANK_INTERVAL				GENMASK(15, 0)
 
 #define DW_DP_PM_CONFIG1			0x0350
+#define ML_POWEROFF_SEQ_CNT			GENMASK(27, 20)
+#define ML_POWEROFF_SEQ_CNT_DFLT		0x0004
+#define ML_POWEROFF_START_LINE			GENMASK(15, 0)
+#define ML_POWEROFF_START_LINE_DFLT		0x0008
+
 #define DW_DP_PM_CONFIG2			0x0354
+#define ML_POWEROFF_IDLE_PATTERN_CNT		GENMASK(23, 16)
+#define ML_POWEROFF_IDLE_PATTERN_CNT_DFLT	0x0005
+
 #define DW_DP_MSO_CONFIG0			0x03a0
 
 #define DW_DP_AUD_CONFIG1			0x0400
@@ -167,6 +175,9 @@
 #define DW_DP_AUX_250US_CNT_LIMIT		0x0b40
 #define DW_DP_AUX_2000US_CNT_LIMIT		0x0b44
 #define DW_DP_AUX_100000US_CNT_LIMIT		0x0b48
+#define DW_DP_AUX_250US_CNT_LIMIT_DFLT		0x00102
+#define DW_DP_AUX_2000US_CNT_LIMIT_DFLT		0x0080c
+#define DW_DP_AUX_100000US_CNT_LIMIT_DFLT	0x19258
 
 #define DW_DP_GENERAL_INTERRUPT			0x0d00
 #define VIDEO_FIFO_OVERFLOW_STREAM0		BIT(6)
@@ -259,12 +270,7 @@
 #define DW_DP_HDCP22_GPIOCHNGSTS		0x362c
 #define DW_DP_HDCP_REG_DPK_CRC			0x3630
 
-#define DW_DP_LANEN_DIG_ASIC_TX_ASIC_OUT	0x44038
-#define TX_ACK					BIT(0)
-#define DW_DP_LANEN_DIG_ASIC_RX_ASIC_OUT_0	0x44310
-#define RX_ACK					BIT(0)
-
-#define DW_DP_MAX_REGISTER			DW_DP_LANEN_DIG_ASIC_RX_ASIC_OUT_0
+#define DW_DP_MAX_REGISTER			DW_DP_HDCP_REG_DPK_CRC
 
 #define SDP_REG_BANK_SIZE			16
 
@@ -645,6 +651,7 @@ static int dw_dp_phy_configure(struct dw_dp *dp, unsigned int rate,
 {
 	union phy_configure_opts phy_cfg;
 	int ret;
+	u32 val;
 
 	/* Move PHY to P3 */
 	regmap_update_bits(dp->regmap, DW_DP_PHYIF_CTRL, PHY_POWERDOWN,
@@ -668,8 +675,11 @@ static int dw_dp_phy_configure(struct dw_dp *dp, unsigned int rate,
 		return ret;
 
 	dw_dp_phy_set_rate(dp, rate);
+	regmap_update_bits(dp->regmap, DW_DP_PHYIF_CTRL, PHY_WIDTH,
+			   FIELD_PREP(PHY_WIDTH, 1));
 
-	phy_post_init_3(dp->phy);
+	ret = regmap_read_poll_timeout(dp->regmap, DW_DP_PHYIF_CTRL, val,
+				       !(val & PHY_BUSY_LANES_MASK(lanes)), 200, 200000);
 
 	regmap_update_bits(dp->regmap, DW_DP_PHYIF_CTRL, PHY_LANES,
 			   FIELD_PREP(PHY_LANES, lanes / 2));
@@ -681,6 +691,8 @@ static int dw_dp_phy_configure(struct dw_dp *dp, unsigned int rate,
 	regmap_update_bits(dp->regmap, DW_DP_PHYIF_PWRDOWN_CTRL,
 			   PER_LANE_PWRDOWN_CTL_EN, PER_LANE_PWRDOWN_CTL_EN);
 	mdelay(100);
+
+	phy_post_init_2(dp->phy);
 
 	dw_dp_phy_xmit_enable(dp, lanes);
 
@@ -1226,6 +1238,7 @@ static int dw_dp_video_set_msa(struct dw_dp *dp, u8 color_format, u8 bpc,
 			       u16 vstart, u16 hstart)
 {
 	u16 misc = 0;
+	struct phy_configure_opts_dp_format fmt;
 
 	if (dw_dp_video_need_vsc_sdp(dp))
 		misc |= DP_MSA_MISC_COLOR_VSC_SDP;
@@ -1233,14 +1246,18 @@ static int dw_dp_video_set_msa(struct dw_dp *dp, u8 color_format, u8 bpc,
 	switch (color_format) {
 	case DRM_COLOR_FORMAT_RGB444:
 		misc |= DP_MSA_MISC_COLOR_RGB;
+		fmt.format = DP_RGB;
 		break;
 	case DRM_COLOR_FORMAT_YCBCR444:
 		misc |= DP_MSA_MISC_COLOR_YCBCR_444_BT709;
+		fmt.format = DP_YCBCR444;
 		break;
 	case DRM_COLOR_FORMAT_YCBCR422:
 		misc |= DP_MSA_MISC_COLOR_YCBCR_422_BT709;
+		fmt.format = DP_YCBCR422;
 		break;
 	case DRM_COLOR_FORMAT_YCBCR420:
+		fmt.format = DP_YCBCR420;
 		break;
 	default:
 		return -EINVAL;
@@ -1249,18 +1266,23 @@ static int dw_dp_video_set_msa(struct dw_dp *dp, u8 color_format, u8 bpc,
 	switch (bpc) {
 	case 6:
 		misc |= DP_MSA_MISC_6_BPC;
+		fmt.depth = DP_6BPC;
 		break;
 	case 8:
 		misc |= DP_MSA_MISC_8_BPC;
+		fmt.depth = DP_8BPC;
 		break;
 	case 10:
 		misc |= DP_MSA_MISC_10_BPC;
+		fmt.depth = DP_10BPC;
 		break;
 	case 12:
 		misc |= DP_MSA_MISC_12_BPC;
+		fmt.depth = DP_12BPC;
 		break;
 	case 16:
 		misc |= DP_MSA_MISC_16_BPC;
+		fmt.depth = DP_16BPC;
 		break;
 	default:
 		return -EINVAL;
@@ -1270,6 +1292,8 @@ static int dw_dp_video_set_msa(struct dw_dp *dp, u8 color_format, u8 bpc,
 		     FIELD_PREP(VSTART, vstart) | FIELD_PREP(HSTART, hstart));
 	regmap_write(dp->regmap, DW_DP_VIDEO_MSA2, FIELD_PREP(MISC0, misc));
 	regmap_write(dp->regmap, DW_DP_VIDEO_MSA3, FIELD_PREP(MISC1, misc >> 8));
+
+	phy_set_dp_format(dp->phy, &fmt);
 
 	return 0;
 }
@@ -1705,6 +1729,11 @@ static int dw_dp_link_enable(struct dw_dp *dp)
 	if (ret < 0)
 		return ret;
 
+	/* Clear the MST state if any */
+	ret = drm_dp_dpcd_writeb(&dp->aux, DP_MSTM_CTRL, 0);
+	if (ret < 0)
+		return ret;
+
 	ret = dw_dp_link_train(dp);
 
 	return ret;
@@ -1712,13 +1741,11 @@ static int dw_dp_link_enable(struct dw_dp *dp)
 
 static int dw_dp_phy_init(struct dw_dp *dp)
 {
-	u32 val;
 	int ret;
-	u8 num_lanes;
 
 	ret = phy_init(dp->phy);
 	if (ret)
-		goto err;
+		return ret;
 
 	regmap_update_bits(dp->regmap, DW_DP_SOFT_RESET_CTRL, PHY_SOFT_RESET,
 			   FIELD_PREP(PHY_SOFT_RESET, 1));
@@ -1727,59 +1754,25 @@ static int dw_dp_phy_init(struct dw_dp *dp)
 	if (ret)
 		goto err;
 
-	regmap_update_bits(dp->regmap, DW_DP_PHYIF_CTRL, PHY_WIDTH,
-			   FIELD_PREP(PHY_WIDTH, 1));
+	regmap_update_bits(dp->regmap, DW_DP_SOFT_RESET_CTRL, PHY_SOFT_RESET,
+			   FIELD_PREP(PHY_SOFT_RESET, 0));
 
 	ret = phy_post_init_1(dp->phy);
 	if (ret)
 		goto err;
 
-	regmap_update_bits(dp->regmap, DW_DP_SOFT_RESET_CTRL, PHY_SOFT_RESET,
-			   FIELD_PREP(PHY_SOFT_RESET, 0));
+	regmap_write(dp->regmap, DW_DP_AUX_250US_CNT_LIMIT, DW_DP_AUX_250US_CNT_LIMIT_DFLT);
+	regmap_write(dp->regmap, DW_DP_AUX_2000US_CNT_LIMIT, DW_DP_AUX_2000US_CNT_LIMIT_DFLT);
+	regmap_write(dp->regmap, DW_DP_AUX_100000US_CNT_LIMIT, DW_DP_AUX_100000US_CNT_LIMIT_DFLT);
 
-	ret = phy_post_init_2(dp->phy);
-	if (ret)
-		goto err;
+	regmap_update_bits(dp->regmap, DW_DP_PM_CONFIG1,
+			   ML_POWEROFF_SEQ_CNT | ML_POWEROFF_START_LINE,
+			   FIELD_PREP(ML_POWEROFF_SEQ_CNT, ML_POWEROFF_SEQ_CNT_DFLT) |
+			   FIELD_PREP(ML_POWEROFF_START_LINE, ML_POWEROFF_START_LINE_DFLT));
 
-
-	ret = regmap_read_poll_timeout(dp->regmap, DW_DP_LANEN_DIG_ASIC_TX_ASIC_OUT, val,
-				       !(val & TX_ACK), 200, 20000000);
-	if (ret)
-		goto err;
-
-	ret = regmap_read_poll_timeout(dp->regmap, DW_DP_LANEN_DIG_ASIC_RX_ASIC_OUT_0, val,
-				       !(val & RX_ACK), 200, 20000000);
-	if (ret)
-		goto err;
-
-	ret = phy_post_init_3(dp->phy);
-	if (ret)
-		goto err;
-
-	num_lanes = dp->phy->attrs.bus_width;
-
-	ret = regmap_read_poll_timeout(dp->regmap, DW_DP_PHYIF_CTRL, val,
-				       !(val & PHY_BUSY_LANES_MASK(num_lanes)), 200, 200000);
-	if (ret)
-		goto err;
-
-	ret = phy_post_init_4(dp->phy);
-	if (ret)
-		goto err;
-
-	regmap_write(dp->regmap, DW_DP_AUX_250US_CNT_LIMIT, 0x102);
-	regmap_write(dp->regmap, DW_DP_AUX_2000US_CNT_LIMIT, 0x80c);
-	regmap_write(dp->regmap, DW_DP_AUX_100000US_CNT_LIMIT, 0x19258);
-
-	regmap_read(dp->regmap, DW_DP_PM_CONFIG1, &val);
-	val &=  ~(GENMASK(27, 20) | GENMASK(15, 0));
-	val |= 0x00400008;
-	regmap_write(dp->regmap, DW_DP_PM_CONFIG1, val);
-
-	regmap_read(dp->regmap, DW_DP_PM_CONFIG2, &val);
-	val &=  ~GENMASK(23, 16);
-	val |= 0x50000;
-	regmap_write(dp->regmap, DW_DP_PM_CONFIG2, val);
+	regmap_update_bits(dp->regmap, DW_DP_PM_CONFIG2, ML_POWEROFF_IDLE_PATTERN_CNT,
+			   FIELD_PREP(ML_POWEROFF_IDLE_PATTERN_CNT,
+				      ML_POWEROFF_IDLE_PATTERN_CNT_DFLT));
 
 	return 0;
 err:
@@ -1857,6 +1850,8 @@ static void dw_dp_reset(struct dw_dp *dp)
 	udelay(10);
 	regmap_update_bits(dp->regmap, DW_DP_SOFT_RESET_CTRL, CONTROLLER_RESET,
 			   FIELD_PREP(CONTROLLER_RESET, 0));
+
+	dw_dp_phy_init(dp);
 
 	dw_dp_init_hw(dp);
 	regmap_read_poll_timeout(dp->regmap, DW_DP_HPD_STATUS, val,
@@ -2107,7 +2102,6 @@ static const struct regmap_range dw_dp_readable_ranges[] = {
 	regmap_reg_range(DW_DP_PHYIF_CTRL, DW_DP_PHYIF_PWRDOWN_CTRL),
 	regmap_reg_range(DW_DP_AUX_CMD, DW_DP_AUX_DATA3),
 	regmap_reg_range(DW_DP_GENERAL_INTERRUPT, DW_DP_HPD_INTERRUPT_ENABLE),
-	regmap_reg_range(DW_DP_LANEN_DIG_ASIC_TX_ASIC_OUT, DW_DP_LANEN_DIG_ASIC_RX_ASIC_OUT_0),
 };
 
 static const struct regmap_access_table dw_dp_readable_table = {
