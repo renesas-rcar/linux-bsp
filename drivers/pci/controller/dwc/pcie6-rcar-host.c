@@ -25,6 +25,13 @@ static int rcar_gen5_pcie6_host_init(struct dw_pcie6_rp *pp)
 	struct dw_pcie6 *pci = to_dw_pcie6_from_pp(pp);
 	struct rcar_pcie6 *rcar_pcie6 = to_rcar_gen5_pcie6(pci);
 	u32 val;
+	int ret;
+
+	ret = reset_control_deassert(rcar_pcie6->rst);
+	if (ret) {
+		dev_err(pci->dev, "Failed to reset PCIe6 module: %d\n", ret);
+		return ret;
+	}
 
 	if (reset_control_assert(rcar_pcie6->perst))
 		dev_err(pci->dev, "Failed to assert PERST#");
@@ -32,9 +39,6 @@ static int rcar_gen5_pcie6_host_init(struct dw_pcie6_rp *pp)
 	val = readl(rcar_pcie6->base + PCIEMSR0);
 	val |= BIT(6);
 	writel(val, rcar_pcie6->base + PCIEMSR0);
-
-	rcar_gen5_pcie6_module_reset(pci);
-	rcar_gen5_pcie6_module_run(pci);
 
 	/* Set device type - RootComplex */
 	rcar_gen5_pcie6_set_device_type(rcar_pcie6, true);
@@ -135,8 +139,6 @@ static int rcar_add_pcie6_port(struct rcar_pcie6 *rcar_pcie6,
 	struct device *dev = &pdev->dev;
 	int ret;
 
-	rcar_gen5_pcie6_module_run(pci);
-
 	ret = clk_prepare_enable(rcar_pcie6->bus_clk);
 	if (ret)
 		dev_err(pci->dev, "failed to enable bus clock: %d\n", ret);
@@ -182,7 +184,7 @@ static int pcie6_rcar_host_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	rcar_pcie6->perst = devm_reset_control_get(dev, NULL);
+	rcar_pcie6->perst = devm_reset_control_get(dev, "perst");
 	if (IS_ERR(rcar_pcie6->perst)) {
 		if (PTR_ERR(rcar_pcie6->perst) != -EPROBE_DEFER)
 			dev_err(dev, "Failed to get PERST#\n");
@@ -228,11 +230,10 @@ static int rcar_gen5_pcie6_resume_noirq(struct device *dev)
 	struct dw_pcie6_rp *pp = &pci->pp;
 	u32 val, ret;
 
-	rcar_gen5_pcie6_module_run(pci);
-
 	ret = clk_prepare_enable(rcar_pcie6->bus_clk);
 	if (ret) {
-		dev_err(pci->dev, "failed to enable bus clock: %d\n", ret);
+		dev_err(pci->dev, "Failed to enable bulk clocks: %d\n", ret);
+		return ret;
 	}
 
 	/* Re-initialize Root Complex */

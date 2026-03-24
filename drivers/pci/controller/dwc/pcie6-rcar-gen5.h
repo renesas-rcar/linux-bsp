@@ -64,41 +64,14 @@
 #define	PCIEG6_PF0_GEN3_EQ_CONTROL_OFF		0x8a8
 #define	PCIEG6_PF0_SD_EQ_CONTROL1_REG		0x41c
 
-/* Module standby */
-#define	MDLC_HSCS_BASE		0xDE200000
-#define	MDLC_HSCS_SIZE		0x1000
-
-#define	STANDBY			0x0
-#define	RESET			0x1
-#define	STOP			0x2
-#define	RUN			0x3
-
-#define	PDID_PCI6		1
-
-#define	PCIE601_REG_NO		4
-#define	PCIE611_REG_NO		4
-#define	PCIE602_REG_NO		4
-#define	PCIE612_REG_NO		4
-
-#define	PCIE601_BIT_NO		0
-#define	PCIE611_BIT_NO		2
-#define	PCIE602_BIT_NO		4
-#define	PCIE612_BIT_NO		6
-
-#define	MDLC_PKCPROT0_OFFSET		0x0CF0
-#define	MDLC_PKCPROT1_OFFSET		0x0CF4
-#define	MDLC_MPDG_OFFSET(pdid)		(0x0200 + (pdid)*4)
-#define	MDLC_MPDGS_OFFSET(pdid)		(0x0300 + (pdid)*4)
-#define	MDLC_MSRES_OFFSET(regno)	(0x0900 + (regno)*4)
-#define	MDLC_MSRESS_OFFSET(regno)	(0x0960 + (regno)*4)
-
 struct rcar_pcie6 {
 	struct dw_pcie6		*pci;
 	void __iomem		*base;
 	void __iomem		*phy_base;
-	struct clk		*bus_clk;
+	struct clk			*bus_clk;
 	u32			ch;
 	struct reset_control	*perst;
+	struct reset_control	*rst;
 };
 
 #define to_rcar_gen5_pcie6(x)	dev_get_drvdata((x)->dev)
