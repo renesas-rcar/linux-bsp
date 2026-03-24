@@ -1646,5 +1646,132 @@
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CSITOP3>;
 			linux,uio-name = "csi_03";
 		};
+
+		rfso0: rfso@c05e0000 {
+			compatible="generic-uio";
+			reg=<0 0xc05e0000 0 0x1000>;
+			linux,uio-name="rfso_00";
+		};
+
+		rfso1: rfso@c05e1000 {
+			compatible="generic-uio";
+			reg=<0 0xc05e1000 0 0x1000>;
+			linux,uio-name="rfso_01";
+		};
+
+		rfso2: rfso@c05e2000 {
+			compatible="generic-uio";
+			reg=<0 0xc05e2000 0 0x1000>;
+			linux,uio-name="rfso_02";
+		};
+
+		rfso3: rfso@c05e3000 {
+			compatible="generic-uio";
+			reg=<0 0xc05e3000 0 0x1000>;
+			linux,uio-name="rfso_03";
+		};
+
+		rfso4: rfso@c05e4000 {
+			compatible="generic-uio";
+			reg=<0 0xc05e4000 0 0x1000>;
+			linux,uio-name="rfso_04";
+		};
+
+		rfso5: rfso@c05e5000 {
+			compatible="generic-uio";
+			reg=<0 0xc05e5000 0 0x1000>;
+			linux,uio-name="rfso_05";
+		};
+
+		rfso6: rfso@c05e6000 {
+			compatible="generic-uio";
+			reg=<0 0xc05e6000 0 0x1000>;
+			linux,uio-name="rfso_06";
+		};
+
+		rfso7: rfso@c05e7000 {
+			compatible="generic-uio";
+			reg=<0 0xc05e7000 0 0x1000>;
+			linux,uio-name="rfso_07";
+		};
+
+		rfso8: rfso@c05e8000 {
+			compatible="generic-uio";
+			reg=<0 0xc05e8000 0 0x1000>;
+			linux,uio-name="rfso_08";
+		};
+
+		rfso9: rfso@c05e9000 {
+			compatible="generic-uio";
+			reg=<0 0xc05e9000 0 0x1000>;
+			linux,uio-name="rfso_09";
+		};
+
+		rfso10: rfso@c05ea000 {
+			compatible="generic-uio";
+			reg=<0 0xc05ea000 0 0x1000>;
+			linux,uio-name="rfso_10";
+		};
+
+		rfso11: rfso@c05eb000 {
+			compatible="generic-uio";
+			reg=<0 0xc05eb000 0 0x1000>;
+			linux,uio-name="rfso_11";
+		};
+
+		rfso12: rfso@c05ec000 {
+			compatible="generic-uio";
+			reg=<0 0xc05ec000 0 0x1000>;
+			linux,uio-name="rfso_12";
+		};
+
+		rfso13: rfso@c05ed000 {
+			compatible="generic-uio";
+			reg=<0 0xc05ed000 0 0x1000>;
+			linux,uio-name="rfso_13";
+		};
+
+		rfso14: rfso@c05ee000 {
+			compatible="generic-uio";
+			reg=<0 0xc05ee000 0 0x1000>;
+			linux,uio-name="rfso_14";
+		};
+
+		rfso15: rfso@c05ef000 {
+			compatible="generic-uio";
+			reg=<0 0xc05ef000 0 0x1000>;
+			linux,uio-name="rfso_15";
+		};
+
+		rfso16: rfso@c05f0000 {
+			compatible="generic-uio";
+			reg=<0 0xc05f0000 0 0x1000>;
+			linux,uio-name="rfso_16";
+		};
+
+		rfso17: rfso@c05f1000 {
+			compatible="generic-uio";
+			reg=<0 0xc05f1000 0 0x1000>;
+			linux,uio-name="rfso_17";
+		};
+
+		rfso18: rfso@c05f2000 {
+			compatible="generic-uio";
+			reg=<0 0xc05f2000 0 0x1000>;
+			linux,uio-name="rfso_18";
+		};
+
+		rfso19: rfso@c05f3000 {
+			compatible="generic-uio";
+			reg=<0 0xc05f3000 0 0x1000>;
+			linux,uio-name="rfso_19";
+		};
+
+		rfso_common {
+			compatible="generic-uio";
+			reg=<0 0x0 0 0x0>;
+			interrupts=<GIC_SPI 4086 IRQ_TYPE_LEVEL_HIGH>;
+			linux,uio-name="rfso_common_00";
+		};
 	};
 };
