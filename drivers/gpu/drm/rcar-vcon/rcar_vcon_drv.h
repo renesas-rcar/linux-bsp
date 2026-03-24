@@ -54,6 +54,9 @@ struct rcar_vcon_device {
 	} props;
 
 	unsigned int vspd1_sink;
+
+	struct clk_bulk_data *clks;
+	int num_clks;
 };
 
 static inline struct rcar_vcon_device *to_rcar_vcon_device(struct drm_device *dev)

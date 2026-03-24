@@ -12,6 +12,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
+#include <linux/pm_domain.h>
 #include <linux/phy/phy.h>
 #include <linux/regmap.h>
 #include <linux/reset.h>
@@ -140,6 +141,9 @@ struct rcar_dw_dp {
 	struct phy *phy;
 	void __iomem *phy_addr;
 	void __iomem *fw_addr;
+	int num_pd;
+	struct device **pd_dev;
+	struct clk *clk;
 };
 
 static void rcar_dw_dp_phy_write(struct rcar_dw_dp *dw_dp, u32 reg, u32 data)
@@ -432,12 +436,80 @@ static const struct phy_ops rcar_dw_dp_phy_ops = {
 	.set_dp_format	= rcar_dw_dp_phy_dp_set_format,
 };
 
+static void rcar_dw_dp_detach_pd(struct rcar_dw_dp *dw_dp)
+{
+	int i;
+
+	for (i = 0; i < dw_dp->num_pd; i++) {
+		if (dw_dp->pd_dev[i] && !IS_ERR(dw_dp->pd_dev[i]))
+			dev_pm_domain_detach(dw_dp->pd_dev[i], true);
+		dw_dp->pd_dev[i] = NULL;
+	}
+}
+
+static int rcar_dw_dp_attach_pd(struct rcar_dw_dp *dw_dp)
+{
+	struct device *dev = dw_dp->dev;
+	struct device_node *np = dev->of_node;
+	int i, ret;
+
+	dw_dp->num_pd = of_count_phandle_with_args(np, "power-domains", "#power-domain-cells");
+	if (dw_dp->num_pd < 0) {
+		dev_err(dev, "No power domains defined\n");
+		return dw_dp->num_pd;
+	}
+
+	dw_dp->pd_dev = devm_kmalloc_array(dev, dw_dp->num_pd,
+					   sizeof(*dw_dp->pd_dev), GFP_KERNEL);
+	if (!dw_dp->pd_dev)
+		return -ENOMEM;
+
+	for (i = 0; i < dw_dp->num_pd; i++) {
+		dw_dp->pd_dev[i] = dev_pm_domain_attach_by_id(dev, i);
+		if (IS_ERR(dw_dp->pd_dev[i])) {
+			ret = PTR_ERR(dw_dp->pd_dev[i]);
+			goto err;
+		}
+	}
+
+	return 0;
+
+err:
+	rcar_dw_dp_detach_pd(dw_dp);
+	return ret;
+}
+
+static int rcar_dw_dp_clk_enable(struct rcar_dw_dp *dw_dp)
+{
+	int i, ret;
+
+	for (i = 0; i < dw_dp->num_pd; i++)
+		pm_runtime_get_sync(dw_dp->pd_dev[i]);
+
+	ret = clk_prepare_enable(dw_dp->clk);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
+static void rcar_dw_dp_clk_disable(struct rcar_dw_dp *dw_dp)
+{
+	int i;
+
+	clk_disable_unprepare(dw_dp->clk);
+
+	for (i = 0; i < dw_dp->num_pd; i++)
+		pm_runtime_put(dw_dp->pd_dev[i]);
+}
+
 static int rcar_dw_dp_probe(struct platform_device *pdev)
 {
 	struct rcar_dw_dp *dw_dp;
 	struct device *dev = &pdev->dev;
 	struct dw_dp_plat_data plat_data;
 	struct resource *res;
+	int ret;
 
 	dw_dp = devm_kzalloc(&pdev->dev, sizeof(*dw_dp), GFP_KERNEL);
 	if (!dw_dp)
@@ -462,6 +534,19 @@ static int rcar_dw_dp_probe(struct platform_device *pdev)
 	dw_dp->dev = dev;
 	platform_set_drvdata(pdev, dw_dp);
 
+	ret = rcar_dw_dp_attach_pd(dw_dp);
+	if (ret)
+		return ret;
+
+	dw_dp->clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(dw_dp->clk))
+		return PTR_ERR(dw_dp->clk);
+
+	pm_runtime_enable(dev);
+	ret = rcar_dw_dp_clk_enable(dw_dp);
+	if (ret)
+		return ret;
+
 	dw_dp->phy = devm_phy_create(dev, NULL, &rcar_dw_dp_phy_ops);
 	if (IS_ERR(dw_dp->phy))
 		return PTR_ERR(dw_dp->phy);
@@ -480,6 +565,11 @@ static int rcar_dw_dp_probe(struct platform_device *pdev)
 
 static int rcar_dw_dp_remove(struct platform_device *pdev)
 {
+	struct rcar_dw_dp *dw_dp = platform_get_drvdata(pdev);
+
+	rcar_dw_dp_clk_disable(dw_dp);
+	pm_runtime_disable(&pdev->dev);
+
 	return 0;
 }
 

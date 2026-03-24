@@ -8,6 +8,7 @@
 
 #include <linux/clk.h>
 #include <linux/mutex.h>
+#include <linux/of.h>
 #include <linux/platform_device.h>
 #include <linux/sys_soc.h>
 
@@ -183,8 +184,6 @@ static int rcar_vcon_crtc_get(struct rcar_vcon_crtc *rcrtc)
 	if (rcrtc->initialized)
 		return 0;
 
-	/* FIXME: Clock handling for non-VDK environenment */
-
 	rcar_vcon_crtc_setup(rcrtc);
 	rcrtc->initialized = true;
 
@@ -193,8 +192,6 @@ static int rcar_vcon_crtc_get(struct rcar_vcon_crtc *rcrtc)
 
 static void rcar_vcon_crtc_put(struct rcar_vcon_crtc *rcrtc)
 {
-	/* FIXME: Clock handling for non-VDK environenment */
-
 	rcrtc->initialized = false;
 }
 
@@ -610,22 +607,26 @@ int rcar_vcon_crtc_create(struct rcar_vcon_device *rvcon, unsigned int index)
 	struct platform_device *pdev = to_platform_device(rvcon->dev);
 	struct rcar_vcon_crtc *rcrtc = &rvcon->crtcs[index];
 	struct drm_crtc *crtc = &rcrtc->crtc;
-	char clk_name[9], irq_name[9];
 	struct drm_plane *primary;
+	char irq_name[9];
 	struct clk *clk;
 	char *name;
 	int irq;
 	int ret;
 
 	/* Get dot-clock */
-	sprintf(clk_name, "dclkin.%u", index);
-	clk = devm_clk_get(rvcon->dev, clk_name);
-	if (!IS_ERR(clk))
-		rcrtc->dclk_src = clk_get_rate(clk);
-	else if (PTR_ERR(clk) != -EPROBE_DEFER)
-		rcrtc->dclk_src = VCON_DCLK_SRC_DEFAULT;
-	else
-		return -EPROBE_DEFER;
+	clk = rvcon->clks[index].clk;
+	rcrtc->dclk_src = clk_get_rate(clk);
+
+	if (!rcrtc->dclk_src) {
+		u32 dclk_rate;
+
+		if (of_property_read_u32(pdev->dev.of_node,
+					 "renesas,dclk-rate", &dclk_rate))
+			return -EINVAL;
+
+		rcrtc->dclk_src = dclk_rate;
+	}
 
 	init_waitqueue_head(&rcrtc->flip_wait);
 	spin_lock_init(&rcrtc->vblank_lock);

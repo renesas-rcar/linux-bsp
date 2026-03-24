@@ -18,9 +18,9 @@
 
 #include <media/vsp1.h>
 
-#define VCON_DCLK_SRC_DEFAULT	600000000
 #define VCON_DCLK_MAX		594000000
 #define VCON_DCLK_MIN		25000000
+
 struct rcar_vcon_vsp;
 
 struct rcar_vcon_crtc {

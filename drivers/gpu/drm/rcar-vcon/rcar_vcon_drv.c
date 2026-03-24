@@ -14,6 +14,7 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/pm.h>
+#include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/wait.h>
 
@@ -128,6 +129,11 @@ static int rcar_vcon_remove(struct platform_device *pdev)
 	struct rcar_vcon_device *rvcon = platform_get_drvdata(pdev);
 	struct drm_device *ddev = &rvcon->ddev;
 
+	clk_bulk_disable_unprepare(rvcon->num_clks, rvcon->clks);
+
+	pm_runtime_put(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
+
 	drm_dev_unregister(ddev);
 	drm_atomic_helper_shutdown(ddev);
 
@@ -175,6 +181,17 @@ static int rcar_vcon_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
+	pm_runtime_enable(&pdev->dev);
+
+	ret = pm_runtime_get_sync(&pdev->dev);
+	if (ret)
+		return ret;
+
+	rvcon->num_clks = devm_clk_bulk_get_all(&pdev->dev, &rvcon->clks);
+	ret = clk_bulk_prepare_enable(rvcon->num_clks, rvcon->clks);
+	if (ret)
+		return ret;
+
 	ret = rcar_vcon_modeset_init(rvcon);
 	if (ret) {
 		if (ret != -EPROBE_DEFER)
@@ -195,7 +212,12 @@ static int rcar_vcon_probe(struct platform_device *pdev)
 	return 0;
 
 error:
+	clk_bulk_disable_unprepare(rvcon->num_clks, rvcon->clks);
+	pm_runtime_put(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
+
 	drm_kms_helper_poll_fini(&rvcon->ddev);
+
 	return ret;
 }
 
