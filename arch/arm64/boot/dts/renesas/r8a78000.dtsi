@@ -1192,6 +1192,11 @@
 				reg = <0x16>;
 				#reset-cells = <1>;
 			};
+
+			scmi_vendor: protocol@80 {
+				reg = <0x80>;
+				#reset-cells = <1>;
+			};
 		};
 
 		optee {
