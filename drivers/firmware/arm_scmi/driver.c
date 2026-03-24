@@ -166,6 +166,10 @@ struct scmi_info {
 	struct idr active_protocols;
 	unsigned int atomic_threshold;
 	void *notify_priv;
+#if defined(CONFIG_ARCH_R8A78000)
+	const struct scmi_vendor_ext_ops *vendor_ops;
+	const struct scmi_protocol_handle *vendor_ph;
+#endif
 	struct list_head node;
 	int users;
 	struct notifier_block bus_nb;
@@ -431,6 +435,58 @@ void *scmi_notification_instance_data_get(const struct scmi_handle *handle)
 	smp_rmb();
 	return info->notify_priv;
 }
+
+#if defined(CONFIG_ARCH_R8A78000)
+void scmi_vendor_ops_register(const struct scmi_protocol_handle *vph,
+			      const struct scmi_vendor_ext_ops *ops)
+{
+	const struct scmi_protocol_instance *vpi;
+	struct scmi_info *info;
+
+	if (!vph || !ops)
+		return;
+
+	vpi = ph_to_pi(vph);
+	info = handle_to_scmi_info(vpi->handle);
+
+	/*
+	 * Vendor ops/handle are immutable once set for a given SCMI instance.
+	 * Store ops first, then protocol handle.
+	 */
+	WRITE_ONCE(info->vendor_ops, ops);
+	WRITE_ONCE(info->vendor_ph, vph);
+}
+
+const struct scmi_vendor_ext_ops *
+scmi_vendor_ops_get(const struct scmi_protocol_handle *ph)
+{
+	const struct scmi_protocol_instance *pi;
+	struct scmi_info *info;
+
+	if (!ph)
+		return NULL;
+
+	pi = ph_to_pi(ph);
+	info = handle_to_scmi_info(pi->handle);
+
+	return READ_ONCE(info->vendor_ops);
+}
+
+const struct scmi_protocol_handle *
+scmi_vendor_ph_get(const struct scmi_protocol_handle *ph)
+{
+	const struct scmi_protocol_instance *pi;
+	struct scmi_info *info;
+
+	if (!ph)
+		return NULL;
+
+	pi = ph_to_pi(ph);
+	info = handle_to_scmi_info(pi->handle);
+
+	return READ_ONCE(info->vendor_ph);
+}
+#endif /* CONFIG_ARCH_R8A78000 */
 
 /**
  * scmi_xfer_token_set  - Reserve and set new token for the xfer at hand
@@ -3365,6 +3421,9 @@ static int __init scmi_driver_init(void)
 	scmi_system_register();
 	scmi_powercap_register();
 	scmi_pinctrl_register();
+#if defined(CONFIG_ARCH_R8A78000)
+	scmi_vendor_register();
+#endif /* CONFIG_ARCH_R8A78000 */
 
 	return platform_driver_register(&scmi_driver);
 }

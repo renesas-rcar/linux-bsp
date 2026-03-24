@@ -480,4 +480,23 @@ static struct platform_driver __drv = {					       \
 void scmi_notification_instance_data_set(const struct scmi_handle *handle,
 					 void *priv);
 void *scmi_notification_instance_data_get(const struct scmi_handle *handle);
+
+#if defined(CONFIG_ARCH_R8A78000)
+struct scmi_protocol_handle;
+struct scmi_vendor_ext_ops {
+	int (*reset_status_get)(const struct scmi_protocol_handle *ph, u32 domain);
+	/* future: powerdomain extra ops, clock extra ops, etc. */
+};
+
+/* Accessor to get vendor ops from a protocol handle */
+const struct scmi_vendor_ext_ops *
+scmi_vendor_ops_get(const struct scmi_protocol_handle *ph);
+
+const struct scmi_protocol_handle *
+scmi_vendor_ph_get(const struct scmi_protocol_handle *ph);
+
+void scmi_vendor_ops_register(const struct scmi_protocol_handle *vph,
+			      const struct scmi_vendor_ext_ops *ops);
+#endif /* CONFIG_ARCH_R8A78000 */
+
 #endif /* _SCMI_COMMON_H */

@@ -10,6 +10,7 @@
 #include <linux/module.h>
 #include <linux/scmi_protocol.h>
 
+#include "common.h"
 #include "protocols.h"
 #include "notify.h"
 
@@ -226,6 +227,24 @@ scmi_reset_domain_deassert(const struct scmi_protocol_handle *ph, u32 domain)
 	return scmi_domain_reset(ph, domain, 0, ARCH_COLD_RESET);
 }
 
+#if defined(CONFIG_ARCH_R8A78000)
+static int
+scmi_reset_domain_status_get(const struct scmi_protocol_handle *ph, u32 domain)
+{
+	const struct scmi_protocol_handle *vph;
+	const struct scmi_vendor_ext_ops *vops = scmi_vendor_ops_get(ph);
+
+	if (!vops || !vops->reset_status_get)
+		return -EOPNOTSUPP;
+
+	vph = scmi_vendor_ph_get(ph);
+	if (!vph)
+		return -EOPNOTSUPP;
+
+	return vops->reset_status_get(vph, domain);
+}
+#endif /* CONFIG_ARCH_R8A78000 */
+
 static const struct scmi_reset_proto_ops reset_proto_ops = {
 	.num_domains_get = scmi_reset_num_domains_get,
 	.name_get = scmi_reset_name_get,
@@ -233,6 +252,9 @@ static const struct scmi_reset_proto_ops reset_proto_ops = {
 	.reset = scmi_reset_domain_reset,
 	.assert = scmi_reset_domain_assert,
 	.deassert = scmi_reset_domain_deassert,
+#if defined(CONFIG_ARCH_R8A78000)
+	.status = scmi_reset_domain_status_get,
+#endif /* CONFIG_ARCH_R8A78000 */
 };
 
 static bool scmi_reset_notify_supported(const struct scmi_protocol_handle *ph,

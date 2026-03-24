@@ -543,6 +543,12 @@ struct scmi_reset_proto_ops {
 	int (*reset)(const struct scmi_protocol_handle *ph, u32 domain);
 	int (*assert)(const struct scmi_protocol_handle *ph, u32 domain);
 	int (*deassert)(const struct scmi_protocol_handle *ph, u32 domain);
+#if defined(CONFIG_ARCH_R8A78000)
+	/*
+	 * @status: get reset status of the specified reset domain
+	 */
+	int (*status)(const struct scmi_protocol_handle *ph, u32 domain);
+#endif /* CONFIG_ARCH_R8A78000 */
 };
 
 enum scmi_voltage_level_mode {
