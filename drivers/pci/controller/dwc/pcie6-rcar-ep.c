@@ -25,14 +25,18 @@ static void rcar_gen5_pcie6_ep_pre_init(struct dw_pcie6_ep *ep)
 	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
 	struct rcar_pcie6 *rcar_pcie6 = to_rcar_gen5_pcie6(pci);
 	u32 val;
+	int ret;
+
+	ret = reset_control_deassert(rcar_pcie6->rst);
+	if (ret) {
+		dev_err(pci->dev, "Failed to reset PCIe6 module: %d\n", ret);
+		return;
+	}
 
 	/* Separate clkreq */
 	val = readl(rcar_pcie6->base + PCIEMSR0);
 	val |= BIT(6);
 	writel(val, rcar_pcie6->base + PCIEMSR0);
-
-	rcar_gen5_pcie6_module_reset(pci);
-	rcar_gen5_pcie6_module_run(pci);
 
 	/* Set device type - Endpoint */
 	rcar_gen5_pcie6_set_device_type(rcar_pcie6, false);
@@ -209,6 +213,12 @@ static int pcie6_rcar_ep_probe(struct platform_device *pdev)
 	rcar_pcie6->pci = pci;
 	pci->ep.ops = &pcie6_rcar_ep_ops;
 
+	ret = rcar_gen5_pcie6_get_resources(rcar_pcie6, pdev);
+	if (ret < 0) {
+		dev_err(dev, "Failed to request resource: %d\n", ret);
+		return ret;
+	}
+
 	pm_runtime_enable(dev);
 	ret = pm_runtime_get_sync(dev);
 	if (ret < 0) {
@@ -216,25 +226,21 @@ static int pcie6_rcar_ep_probe(struct platform_device *pdev)
 		goto err_pm_put;
 	}
 
-	ret = rcar_gen5_pcie6_get_resources(rcar_pcie6, pdev);
-	if (ret < 0) {
-		dev_err(dev, "Failed to request resource: %d\n", ret);
-		return ret;
-	}
-
 	platform_set_drvdata(pdev, rcar_pcie6);
 
-	rcar_gen5_pcie6_module_run(pci);
-
 	ret = clk_prepare_enable(rcar_pcie6->bus_clk);
-	if (ret)
+	if (ret) {
 		dev_err(dev, "failed to enable bus clock: %d\n", ret);
+		goto err_pm_put;
+	}
 
 	rcar_gen5_pcie6_ep_pre_init(&pci->ep);
 
 	ret = dw_pcie6_ep_init(&pci->ep);
 	if (ret)
 		dev_err(dev, "failed to initialize endpoint\n");
+
+	return 0;
 
 err_pm_put:
 	pm_runtime_put(dev);

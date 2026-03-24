@@ -39,176 +39,6 @@ static void rcar_gen5_pcie6_fwupdate(struct rcar_pcie6 *rcar_pcie6)
 	}
 }
 
-void __iomem *mdlc_hscs_base = NULL;
-
-inline u32 mdlc_readl(u32 offset)
-{
-	return readl(mdlc_hscs_base + offset);
-}
-
-inline void mdlc_writel(u32 offset, u32 val)
-{
-	writel(val, mdlc_hscs_base + offset);
-}
-
-void module_power_gate_change(u32 pdid, u32 state)
-{
-	u32 val;
-
-	mdlc_writel(MDLC_PKCPROT0_OFFSET, 0xA5A5A501);
-
-	if ((mdlc_readl(MDLC_MPDGS_OFFSET(pdid)) & 0x3) == state)
-		return;
-
-	while (mdlc_readl(MDLC_MPDG_OFFSET(pdid)) !=
-		mdlc_readl(MDLC_MPDGS_OFFSET(pdid)));
-
-	switch (state) {
-	case STANDBY:
-		if ((mdlc_readl(MDLC_MPDGS_OFFSET(pdid)) & 0x3) == RUN) {
-			val = mdlc_readl(MDLC_MPDG_OFFSET(pdid));
-			val = (val & ~0x3) | RESET;
-			mdlc_writel(MDLC_MPDG_OFFSET(pdid), val);
-
-			while (mdlc_readl(MDLC_MPDG_OFFSET(pdid)) !=
-				mdlc_readl(MDLC_MPDGS_OFFSET(pdid)));
-		}
-
-		val = mdlc_readl(MDLC_MPDG_OFFSET(pdid));
-		val = (val & ~0x3) | STANDBY;
-		mdlc_writel(MDLC_MPDG_OFFSET(pdid), val);
-	break;
-
-	case RESET:
-		val = mdlc_readl(MDLC_MPDG_OFFSET(pdid));
-		val = (val & ~0x3) | RESET;
-		mdlc_writel(MDLC_MPDG_OFFSET(pdid), val);
-	break;
-
-	case RUN:
-		if ((mdlc_readl(MDLC_MPDGS_OFFSET(pdid)) & 0x3) == STANDBY) {
-			val = mdlc_readl(MDLC_MPDG_OFFSET(pdid));
-			val = (val & ~0x3) | RESET;
-			mdlc_writel(MDLC_MPDG_OFFSET(pdid), val);
-
-			while (mdlc_readl(MDLC_MPDG_OFFSET(pdid)) !=
-				mdlc_readl(MDLC_MPDGS_OFFSET(pdid)));
-		}
-		val = mdlc_readl(MDLC_MPDG_OFFSET(pdid));
-		val = (val & ~0x3) | RUN;
-		mdlc_writel(MDLC_MPDG_OFFSET(pdid), val);
-	break;
-	}
-	while (mdlc_readl(MDLC_MPDG_OFFSET(pdid)) !=
-		mdlc_readl(MDLC_MPDGS_OFFSET(pdid)));
-}
-
-void module_standby_change(u32 regno, u32 offsetnum, u32 state)
-{
-	u32 ckMSRESS, ckMSRES, val, cur;
-
-	mdlc_writel(MDLC_PKCPROT1_OFFSET, 0xA5A5A501);
-	if (((mdlc_readl(MDLC_MSRESS_OFFSET(regno)) >> offsetnum) & 0x3) == state)
-	return;
-
-	do {
-		ckMSRESS = mdlc_readl(MDLC_MSRESS_OFFSET(regno)) & (0x3 << offsetnum);
-		ckMSRES  = mdlc_readl(MDLC_MSRES_OFFSET(regno))  & (0x3 << offsetnum);
-	} while (ckMSRESS != ckMSRES);
-
-	cur = (ckMSRES >> offsetnum) & 0x3;
-
-	switch (state) {
-	case STANDBY:
-		if (cur == RUN) {
-			val = mdlc_readl(MDLC_MSRES_OFFSET(regno));
-			val = (val & ~(0x3 << offsetnum)) | (RESET << offsetnum);
-			mdlc_writel(MDLC_MSRES_OFFSET(regno), val);
-
-			do {
-				ckMSRESS = mdlc_readl(MDLC_MSRESS_OFFSET(regno)) & (0x3 << offsetnum);
-				ckMSRES  = mdlc_readl(MDLC_MSRES_OFFSET(regno))  & (0x3 << offsetnum);
-			} while (ckMSRESS != ckMSRES);
-		}
-		break;
-	case RESET:
-		if (cur == STOP) {
-			val = mdlc_readl(MDLC_MSRES_OFFSET(regno));
-			val = (val & ~(0x3 << offsetnum)) | (RUN << offsetnum);
-			mdlc_writel(MDLC_MSRES_OFFSET(regno), val);
-
-			do {
-				ckMSRESS = mdlc_readl(MDLC_MSRESS_OFFSET(regno)) & (0x3 << offsetnum);
-				ckMSRES  = mdlc_readl(MDLC_MSRES_OFFSET(regno))  & (0x3 << offsetnum);
-			} while (ckMSRESS != ckMSRES);
-		}
-		break;
-	case STOP:
-		if (cur == RESET) {
-			val = mdlc_readl(MDLC_MSRES_OFFSET(regno));
-			val = (val & ~(0x3 << offsetnum)) | (RUN << offsetnum);
-			mdlc_writel(MDLC_MSRES_OFFSET(regno), val);
-
-			do {
-				ckMSRESS = mdlc_readl(MDLC_MSRESS_OFFSET(regno)) & (0x3 << offsetnum);
-				ckMSRES  = mdlc_readl(MDLC_MSRES_OFFSET(regno))  & (0x3 << offsetnum);
-			} while (ckMSRESS != ckMSRES);
-		}
-		break;
-	case RUN:
-		if (cur == STANDBY) {
-			val = mdlc_readl(MDLC_MSRES_OFFSET(regno));
-			val = (val & ~(0x3 << offsetnum)) | (RESET << offsetnum);
-			mdlc_writel(MDLC_MSRES_OFFSET(regno), val);
-
-			do {
-				ckMSRESS = mdlc_readl(MDLC_MSRESS_OFFSET(regno)) & (0x3 << offsetnum);
-				ckMSRES  = mdlc_readl(MDLC_MSRES_OFFSET(regno))  & (0x3 << offsetnum);
-			} while (ckMSRESS != ckMSRES);
-		}
-		break;
-	}
-	val = mdlc_readl(MDLC_MSRES_OFFSET(regno));
-	val = (val & ~(0x3 << offsetnum)) | (state << offsetnum);
-	mdlc_writel(MDLC_MSRES_OFFSET(regno), val);
-
-	do {
-		ckMSRESS = mdlc_readl(MDLC_MSRESS_OFFSET(regno)) & (0x3 << offsetnum);
-		ckMSRES  = mdlc_readl(MDLC_MSRES_OFFSET(regno))  & (0x3 << offsetnum);
-	} while (ckMSRESS != ckMSRES);
-}
-
-void rcar_gen5_pcie6_module_reset(struct dw_pcie6 *pci)
-{
-	if (!mdlc_hscs_base) {
-		mdlc_hscs_base = ioremap(MDLC_HSCS_BASE, MDLC_HSCS_SIZE);
-		if (!mdlc_hscs_base) {
-			dev_err(pci->dev,"Failed to ioremap MDLC_HSCS_BASE\n");
-			return;							                }
-	}
-
-	module_power_gate_change(PDID_PCI6, RESET);
-	module_standby_change(PCIE601_REG_NO, PCIE601_BIT_NO, RESET);
-	module_standby_change(PCIE602_REG_NO, PCIE602_BIT_NO, RESET);
-	dev_info(pci->dev, "HSCS module powered and reset.\n");
-}
-
-void rcar_gen5_pcie6_module_run(struct dw_pcie6 *pci)
-{
-	if (!mdlc_hscs_base) {
-		mdlc_hscs_base = ioremap(MDLC_HSCS_BASE, MDLC_HSCS_SIZE);
-		if (!mdlc_hscs_base) {
-			dev_err(pci->dev,"Failed to ioremap MDLC_HSCS_BASE\n");
-			return;
-		}
-	}
-
-	module_power_gate_change(PDID_PCI6, RUN);
-	module_standby_change(PCIE601_REG_NO, PCIE601_BIT_NO, RUN);
-	module_standby_change(PCIE602_REG_NO, PCIE602_BIT_NO, RUN);
-	dev_info(pci->dev, "HSCS module powered and run.\n");
-}
-
 void rcar_gen5_pcie6_txpreset_coef_mapping(struct dw_pcie6 *pci)
 {
 	u32 val;
@@ -642,6 +472,13 @@ int rcar_gen5_pcie6_get_resources(struct rcar_pcie6 *rcar_pcie6,
 		}
 	}
 
+	rcar_pcie6->rst = devm_reset_control_get(&pdev->dev, "rst");
+	if (IS_ERR(rcar_pcie6->rst)) {
+		if (PTR_ERR(rcar_pcie6->rst) != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "Failed to get PCIe6 RESET\n");
+		return PTR_ERR(rcar_pcie6->rst);
+	}
+
 	/* Renesas-specific registers */
 	rcar_pcie6->base = devm_platform_ioremap_resource_byname(pdev, "apb");
 	if (IS_ERR(rcar_pcie6->base))
@@ -651,7 +488,7 @@ int rcar_gen5_pcie6_get_resources(struct rcar_pcie6 *rcar_pcie6,
 	if (IS_ERR(rcar_pcie6->phy_base))
 		return PTR_ERR(rcar_pcie6->phy_base);
 
-	rcar_pcie6->bus_clk = devm_clk_get(&pdev->dev, "pcie6_bus");
+	rcar_pcie6->bus_clk = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(rcar_pcie6->bus_clk)) {
 		dev_err(&pdev->dev, "Cannot get pcie bus clock\n");
 		return PTR_ERR(rcar_pcie6->bus_clk);
