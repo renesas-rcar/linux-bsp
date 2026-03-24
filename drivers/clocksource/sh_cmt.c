@@ -24,6 +24,7 @@
 #include <linux/sh_timer.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/reset.h>
 
 #ifdef CONFIG_SUPERH
 #include <asm/platform_early.h>
@@ -114,9 +115,11 @@ struct sh_cmt_device {
 	struct platform_device *pdev;
 
 	const struct sh_cmt_info *info;
+	struct reset_control *rstc;
 
 	void __iomem *mapbase;
 	struct clk *clk;
+	struct clk *ref_clk;
 	unsigned long rate;
 	unsigned int reg_delay;
 
@@ -1093,6 +1096,20 @@ static int sh_cmt_setup(struct sh_cmt_device *cmt, struct platform_device *pdev)
 		return -ENXIO;
 	}
 
+	cmt->rstc = devm_reset_control_get_exclusive(&cmt->pdev->dev, NULL);
+	if (IS_ERR(cmt->rstc)) {
+		ret = PTR_ERR(cmt->rstc);
+		if (ret != -EPROBE_DEFER)
+			dev_err(&cmt->pdev->dev, "cannot get reset control\n");
+		goto err_clk_disable;
+	}
+
+	ret = reset_control_deassert(cmt->rstc);
+	if (ret) {
+		dev_err(&cmt->pdev->dev, "failed to deassert reset\n");
+		goto err_clk_disable;
+	}
+
 	/* Get hold of clock. */
 	cmt->clk = clk_get(&cmt->pdev->dev, "fck");
 	if (IS_ERR(cmt->clk)) {
@@ -1104,6 +1121,14 @@ static int sh_cmt_setup(struct sh_cmt_device *cmt, struct platform_device *pdev)
 		return ret;
 	}
 
+	cmt->ref_clk = devm_clk_get(&pdev->dev, "dummy_clk");
+	if (IS_ERR(cmt->ref_clk)) {
+		dev_err(&pdev->dev, "cannot get dummy_clk\n");
+		ret = PTR_ERR(cmt->ref_clk);
+		return ret;
+	}
+	rate = clk_get_rate(cmt->ref_clk);
+
 	ret = clk_prepare(cmt->clk);
 	if (ret < 0)
 		goto err_clk_put;
@@ -1113,12 +1138,11 @@ static int sh_cmt_setup(struct sh_cmt_device *cmt, struct platform_device *pdev)
 	if (ret < 0)
 		goto err_clk_unprepare;
 
-	//rate = clk_get_rate(cmt->clk);
-	//if (!rate) {
-	//	ret = -EINVAL;
-	//	goto err_clk_disable;
-	//}
-	rate = 32768; /* CMT clock is fixed to 32.768kHz */
+	rate = clk_get_rate(cmt->clk);
+	if (!rate) {
+		dev_info(&cmt->pdev->dev, "clock rate is zero, using reference clock\n");
+		rate = clk_get_rate(cmt->ref_clk);
+	}
 
 	/* We shall wait 2 input clks after register writes */
 	if (cmt->info->model >= SH_CMT_48BIT)
