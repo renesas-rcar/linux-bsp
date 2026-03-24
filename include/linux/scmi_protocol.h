@@ -926,6 +926,9 @@ enum scmi_std_protocol {
 	SCMI_PROTOCOL_VOLTAGE = 0x17,
 	SCMI_PROTOCOL_POWERCAP = 0x18,
 	SCMI_PROTOCOL_PINCTRL = 0x19,
+#if defined(CONFIG_ARCH_R8A78000)
+	SCMI_PROTOCOL_VENDOR = 0x80,
+#endif /* CONFIG_ARCH_R8A78000 */
 };
 
 enum scmi_system_events {
