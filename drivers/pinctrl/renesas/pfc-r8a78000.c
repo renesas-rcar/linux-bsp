@@ -4635,6 +4635,18 @@ static const char * const usb3_groups[] = {
 	"usb3",
 };
 
+static const char * const dp0_hotplug_groups[] = {
+	"dp0_hotplug",
+};
+
+static const char * const dp1_hotplug_groups[] = {
+	"dp1_hotplug",
+};
+
+static const char * const dp2_hotplug_groups[] = {
+	"dp2_hotplug",
+};
+
 static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(hscif0),
 	SH_PFC_FUNCTION(hscif1),
@@ -4729,6 +4741,10 @@ static const struct sh_pfc_function pinmux_functions[] = {
 	SH_PFC_FUNCTION(usb1),
 	SH_PFC_FUNCTION(usb2),
 	SH_PFC_FUNCTION(usb3),
+
+	SH_PFC_FUNCTION(dp0_hotplug),
+	SH_PFC_FUNCTION(dp1_hotplug),
+	SH_PFC_FUNCTION(dp2_hotplug),
 };
 
 static const struct pinmux_cfg_reg pinmux_config_regs[] = {
