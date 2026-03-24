@@ -1301,11 +1301,6 @@
 		clock-output-names = "rtcatcki";
 	};
 
-	vcon_dclk: vcon_dclk {
-		compatible = "fixed-clock";
-		clock-frequency = <550000000>;
-		#clock-cells = <0>;
-	};
 
 	soc: soc {
 		compatible = "simple-bus";
@@ -4394,79 +4389,90 @@
 		fcpvd0: fcp@c5010000 {
 			compatible = "renesas,fcpv";
 			reg = <0 0xc5010000 0 0x200>;
-			clocks = <&dummy_clk>;
-			clock-name = "dummy_clk";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_FCPVD0>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVD0>;
 		};
 
 		fcpvd1: fcp@c5011000 {
 			compatible = "renesas,fcpv";
 			reg = <0 0xc5011000 0 0x200>;
-			clocks = <&dummy_clk>;
-			clock-name = "dummy_clk";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_FCPVD1>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVD1>;
 		};
 
-		fcpvd4: fcp@c5012000 {
+		fcpvd2: fcp@c5012000 {
 			compatible = "renesas,fcpv";
 			reg = <0 0xc5012000 0 0x200>;
-			clocks = <&dummy_clk>;
-			clock-name = "dummy_clk";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_FCPVD2>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVD2>;
 		};
 
-		fcpvd5: fcp@c5013000 {
+		fcpvd3: fcp@c5013000 {
 			compatible = "renesas,fcpv";
 			reg = <0 0xc5013000 0 0x200>;
-			clocks = <&dummy_clk>;
-			clock-name = "dummy_clk";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_FCPVD3>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVD3>;
 		};
 
-		fcpvd8: fcp@c5014000 {
+		fcpvd4: fcp@c5014000 {
 			compatible = "renesas,fcpv";
 			reg = <0 0xc5014000 0 0x200>;
-			clocks = <&dummy_clk>;
-			clock-name = "dummy_clk";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_FCPVD4>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVD4>;
 		};
 
-		fcpvd2: fcp@c5015000 {
+		fcpvd5: fcp@c5015000 {
 			compatible = "renesas,fcpv";
 			reg = <0 0xc5015000 0 0x200>;
-			clocks = <&dummy_clk>;
-			clock-name = "dummy_clk";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_FCPVD5>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVD5>;
 		};
 
-		fcpvd3: fcp@c5016000 {
+		fcpvd6: fcp@c5016000 {
 			compatible = "renesas,fcpv";
 			reg = <0 0xc5016000 0 0x200>;
-			clocks = <&dummy_clk>;
-			clock-name = "dummy_clk";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_FCPVD6>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVD6>;
 		};
 
-		fcpvd6: fcp@c5017000 {
+		fcpvd7: fcp@c5017000 {
 			compatible = "renesas,fcpv";
 			reg = <0 0xc5017000 0 0x200>;
-			clocks = <&dummy_clk>;
-			clock-name = "dummy_clk";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_FCPVD7>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVD7>;
 		};
 
-		fcpvd7: fcp@c5018000 {
+		fcpvd8: fcp@c5018000 {
 			compatible = "renesas,fcpv";
 			reg = <0 0xc5018000 0 0x200>;
-			clocks = <&dummy_clk>;
-			clock-name = "dummy_clk";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_FCPVD8>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVD8>;
 		};
 
 		fcpvd9: fcp@c5019000 {
 			compatible = "renesas,fcpv";
 			reg = <0 0xc5019000 0 0x200>;
-			clocks = <&dummy_clk>;
-			clock-name = "dummy_clk";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_FCPVD9>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVD9>;
 		};
 
 		vspd0: vsp@c4800000 {
 			compatible = "renesas,vsp2";
 			reg = <0 0xc4800000 0 0x8000>;
 			interrupts = <GIC_SPI 623 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&dummy_clk>;
-			clock-name = "dummy_clk";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VSPD0>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPD0>;
 			renesas,fcp = <&fcpvd0>;
 		};
 
@@ -4474,8 +4480,9 @@
 			compatible = "renesas,vsp2";
 			reg = <0 0xc4808000 0 0x8000>;
 			interrupts = <GIC_SPI 624 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&dummy_clk>;
-			clock-name = "dummy_clk";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VSPD1>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPD1>;
 			renesas,fcp = <&fcpvd1>;
 		};
 
@@ -4483,17 +4490,19 @@
 			compatible = "renesas,vsp2";
 			reg = <0 0xc4810000 0 0x8000>;
 			interrupts = <GIC_SPI 625 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&dummy_clk>;
-			clock-name = "dummy_clk";
-			renesas,fcp = <&fcpvd2>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VSPD2>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPD2>;
+			renesas,fcp = <&fcpvd4>;
 		};
 
 		vspd5: vsp@c4818000 {
 			compatible = "renesas,vsp2";
 			reg = <0 0xc4818000 0 0x8000>;
 			interrupts = <GIC_SPI 626 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&dummy_clk>;
-			clock-name = "dummy_clk";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VSPD3>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPD3>;
 			renesas,fcp = <&fcpvd3>;
 		};
 
@@ -4501,53 +4510,59 @@
 			compatible = "renesas,vsp2";
 			reg = <0 0xc4820000 0 0x8000>;
 			interrupts = <GIC_SPI 627 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&dummy_clk>;
-			clock-name = "dummy_clk";
-			renesas,fcp = <&fcpvd4>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VSPD4>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPD4>;
+			renesas,fcp = <&fcpvd8>;
 		};
 
 		vspd2: vsp@c4828000 {
 			compatible = "renesas,vsp2";
 			reg = <0 0xc4828000 0 0x8000>;
 			interrupts = <GIC_SPI 628 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&dummy_clk>;
-			clock-name = "dummy_clk";
-			renesas,fcp = <&fcpvd5>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VSPDB0>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPDB0>;
+			renesas,fcp = <&fcpvd2>;
 		};
 
 		vspd3: vsp@c4830000 {
 			compatible = "renesas,vsp2";
 			reg = <0 0xc4830000 0 0x8000>;
 			interrupts = <GIC_SPI 629 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&dummy_clk>;
-			clock-name = "dummy_clk";
-			renesas,fcp = <&fcpvd6>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VSPDB1>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPDB1>;
+			renesas,fcp = <&fcpvd3>;
 		};
 
 		vspd6: vsp@c4838000 {
 			compatible = "renesas,vsp2";
 			reg = <0 0xc4838000 0 0x8000>;
 			interrupts = <GIC_SPI 630 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&dummy_clk>;
-			clock-name = "dummy_clk";
-			renesas,fcp = <&fcpvd7>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VSPDB2>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPDB2>;
+			renesas,fcp = <&fcpvd6>;
 		};
 
 		vspd7: vsp@c4840000 {
 			compatible = "renesas,vsp2";
 			reg = <0 0xc4840000 0 0x8000>;
 			interrupts = <GIC_SPI 631 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&dummy_clk>;
-			clock-name = "dummy_clk";
-			renesas,fcp = <&fcpvd8>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VSPDB3>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPDB3>;
+			renesas,fcp = <&fcpvd7>;
 		};
 
 		vspd9: vsp@c4848000 {
 			compatible = "renesas,vsp2";
 			reg = <0 0xc4848000 0 0x8000>;
 			interrupts = <GIC_SPI 632 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&dummy_clk>;
-			clock-name = "dummy_clk";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VSPDB4>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPDB4>;
 			renesas,fcp = <&fcpvd9>;
 		};
 
@@ -4562,8 +4577,15 @@
 				     <GIC_SPI 667 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 668 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "ch0", "ch1", "ch2", "ch3";
-			clocks = <&vcon_dclk>, <&vcon_dclk>, <&vcon_dclk>, <&vcon_dclk>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VCON0>, <&scmi_clk X5H_CLOCK_ID_VCON1>,
+				 <&scmi_clk X5H_CLOCK_ID_VCON2>, <&scmi_clk X5H_CLOCK_ID_VCON3>;
 			clock-names = "dclkin.0", "dclkin.1", "dclkin.2", "dclkin.3";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VCON0>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_VCON1>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_VCON2>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_VCON3>;
+			renesas,dclk-rate = <550000000>;
 			channels = <4>;
 			renesas,vsps = <&vspd0 0>, <&vspd1 0>, <&vspd2 0>, <&vspd3 0>;
 			status = "disabled";
@@ -4592,8 +4614,15 @@
 				     <GIC_SPI 671 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 672 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "ch0", "ch1", "ch2", "ch3";
-			clocks = <&vcon_dclk>, <&vcon_dclk>, <&vcon_dclk>, <&vcon_dclk>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VCON4>, <&scmi_clk X5H_CLOCK_ID_VCON5>,
+				 <&scmi_clk X5H_CLOCK_ID_VCON6>, <&scmi_clk X5H_CLOCK_ID_VCON7>;
 			clock-names = "dclkin.0", "dclkin.1", "dclkin.2", "dclkin.3";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VCON4>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_VCON5>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_VCON6>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_VCON7>;
+			renesas,dclk-rate = <550000000>;
 			channels = <4>;
 			renesas,vsps = <&vspd4 0>, <&vspd5 0>, <&vspd6 0>, <&vspd7 0>;
 			status = "disabled";
@@ -4619,8 +4648,12 @@
 			interrupts = <GIC_SPI 673 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 674 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "ch0", "ch1";
-			clocks = <&vcon_dclk>, <&vcon_dclk>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_VCON8>, <&scmi_clk X5H_CLOCK_ID_VCON9>;
 			clock-names = "dclkin.0", "dclkin.1";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VCON8>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_VCON9>;
+			renesas,dclk-rate = <550000000>;
 			channels = <2>;
 			renesas,vsps = <&vspd8 0>, <&vspd9 0>;
 			status = "disabled";
@@ -4645,6 +4678,10 @@
 			      <0 0xc5480000 0 0x80000>;
 			reg-names = "io_base", "fw", "phy";
 			interrupts = <GIC_SPI 4309 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>,
+					<&scmi_devpd X5H_POWER_DOMAIN_ID_DP0>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_DPTX0>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_DPTX0>;
 			status = "disabled";
 
 			ports {
@@ -4667,6 +4704,10 @@
 			      <0 0xc5580000 0 0x80000>;
 			reg-names = "io_base", "fw", "phy";
 			interrupts = <GIC_SPI 4310 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>,
+					<&scmi_devpd X5H_POWER_DOMAIN_ID_DP1>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_DPTX1>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_DPTX1>;
 			status = "disabled";
 
 			ports {
@@ -4689,6 +4730,10 @@
 			      <0 0xc5680000 0 0x80000>;
 			reg-names = "io_base", "fw", "phy";
 			interrupts = <GIC_SPI 4311 IRQ_TYPE_LEVEL_HIGH>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>,
+					<&scmi_devpd X5H_POWER_DOMAIN_ID_DP2>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_DPTX2>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_DPTX2>;
 			status = "disabled";
 
 			ports {
