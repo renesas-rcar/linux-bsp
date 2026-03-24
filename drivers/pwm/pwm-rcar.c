@@ -282,6 +282,36 @@ static int rcar_pwm_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int rcar_pwm_resume(struct device *dev)
+{
+	struct rcar_pwm_chip *rcar_pwm = dev_get_drvdata(dev);
+	int ret;
+
+	ret = clk_prepare_enable(rcar_pwm->bus_clk);
+	if (ret < 0)
+		dev_err(dev, "failed to enable bus clock: %d\n", ret);
+
+	ret = clk_prepare_enable(rcar_pwm->clk);
+	if (ret < 0)
+		dev_err(dev, "failed to enable counter clock: %d\n", ret);
+
+	return ret;
+}
+
+static int rcar_pwm_suspend(struct device *dev)
+{
+	struct rcar_pwm_chip *rcar_pwm = dev_get_drvdata(dev);
+
+	clk_disable_unprepare(rcar_pwm->clk);
+	clk_disable_unprepare(rcar_pwm->bus_clk);
+
+	return 0;
+}
+
+static const struct dev_pm_ops rcar_pwm_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(rcar_pwm_suspend, rcar_pwm_resume)
+};
+
 static const struct of_device_id rcar_pwm_of_table[] = {
 	{ .compatible = "renesas,pwm-rcar", },
 	{ },
@@ -293,6 +323,7 @@ static struct platform_driver rcar_pwm_driver = {
 	.remove = rcar_pwm_remove,
 	.driver = {
 		.name = "pwm-rcar",
+		.pm = &rcar_pwm_pm_ops,
 		.of_match_table = of_match_ptr(rcar_pwm_of_table),
 	}
 };
