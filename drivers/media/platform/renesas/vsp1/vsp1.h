@@ -109,6 +109,8 @@ struct vsp1_device {
 	struct media_entity_operations media_ops;
 
 	struct vsp1_drm *drm;
+
+	struct clk *clk;
 };
 
 int vsp1_device_get(struct vsp1_device *vsp1);
