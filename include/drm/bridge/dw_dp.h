@@ -18,4 +18,5 @@ struct dw_dp_plat_data {
 
 struct dw_dp *dw_dp_bind(struct device *dev, struct drm_encoder *encoder,
 			 struct phy *phy, const struct dw_dp_plat_data *plat_data);
+void dw_dp_resume(struct dw_dp *dp);
 #endif /* __DW_DP__ */

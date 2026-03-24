@@ -2199,6 +2199,12 @@ struct dw_dp *dw_dp_bind(struct device *dev, struct drm_encoder *encoder,
 }
 EXPORT_SYMBOL_GPL(dw_dp_bind);
 
+void dw_dp_resume(struct dw_dp *dp)
+{
+	dw_dp_reset(dp);
+}
+EXPORT_SYMBOL_GPL(dw_dp_resume);
+
 MODULE_AUTHOR("Andy Yan <andyshrk@163.com>");
 MODULE_DESCRIPTION("DW DP Core Library");
 MODULE_LICENSE("GPL");
