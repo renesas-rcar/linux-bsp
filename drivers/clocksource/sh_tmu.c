@@ -23,6 +23,7 @@
 #include <linux/sh_timer.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/reset.h>
 
 #ifdef CONFIG_SUPERH
 #include <asm/platform_early.h>
@@ -54,6 +55,9 @@ struct sh_tmu_device {
 
 	void __iomem *mapbase;
 	struct clk *clk;
+	struct clk *ref_tmu0_clk;
+	struct clk *ref_tmu_clk;
+	struct reset_control *rstc;
 	unsigned long rate;
 
 	enum sh_tmu_model model;
@@ -535,6 +539,20 @@ static int sh_tmu_setup(struct sh_tmu_device *tmu, struct platform_device *pdev)
 		return -ENXIO;
 	}
 
+	tmu->rstc = devm_reset_control_get_exclusive(&tmu->pdev->dev, NULL);
+	if (IS_ERR(tmu->rstc)) {
+		ret = PTR_ERR(tmu->rstc);
+		if (ret != -EPROBE_DEFER)
+			dev_err(&tmu->pdev->dev, "cannot get reset control\n");
+		goto err_clk_unprepare;
+	}
+
+	ret = reset_control_deassert(tmu->rstc);
+	if (ret) {
+		dev_err(&tmu->pdev->dev, "failed to deassert reset\n");
+		goto err_clk_unprepare;
+	}
+
 	/* Get hold of clock. */
 	tmu->clk = clk_get(&tmu->pdev->dev, "fck");
 	if (IS_ERR(tmu->clk)) {
@@ -543,6 +561,20 @@ static int sh_tmu_setup(struct sh_tmu_device *tmu, struct platform_device *pdev)
 			dev_dbg(&tmu->pdev->dev, "clock not ready, deferring probe\n");
 		else
 			dev_err(&tmu->pdev->dev, "cannot get clock\n");
+		return ret;
+	}
+
+	tmu->ref_tmu0_clk = devm_clk_get_optional(&tmu->pdev->dev, "dummy_clk_tmu0");
+	if (IS_ERR(tmu->ref_tmu0_clk)) {
+		dev_err(&tmu->pdev->dev, "cannot get dummy_clk\n");
+		ret = PTR_ERR(tmu->ref_tmu0_clk);
+		return ret;
+	}
+
+	tmu->ref_tmu_clk = devm_clk_get_optional(&tmu->pdev->dev, "dummy_clk_tmu");
+	if (IS_ERR(tmu->ref_tmu_clk)) {
+		dev_err(&tmu->pdev->dev, "cannot get dummy_clk\n");
+		ret = PTR_ERR(tmu->ref_tmu_clk);
 		return ret;
 	}
 
@@ -556,10 +588,14 @@ static int sh_tmu_setup(struct sh_tmu_device *tmu, struct platform_device *pdev)
 		goto err_clk_unprepare;
 
 	//tmu->rate = clk_get_rate(tmu->clk) / 4;
-	if (tmu->clk_rate_channel0)
-		tmu->rate = 16666666 / 4;
-	else
-		tmu->rate = 133333333 / 4;
+	tmu->rate = clk_get_rate(tmu->clk);
+	if (tmu->rate == 0) {
+		dev_info(&tmu->pdev->dev, "clock rate is zero, using reference clock\n");
+		if (tmu->clk_rate_channel0)
+			tmu->rate = clk_get_rate(tmu->ref_tmu0_clk) / 4;
+		else
+			tmu->rate = clk_get_rate(tmu->ref_tmu_clk) / 4;
+	}
 
 	/* Map the memory resource. */
 	ret = sh_tmu_map_memory(tmu);
