@@ -7,6 +7,7 @@
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
 
+#include <linux/clk.h>
 #include <linux/device.h>
 #include <linux/dma-mapping.h>
 #include <linux/io.h>
@@ -30,6 +31,7 @@ struct rcar_fcp_device {
 	struct list_head list;
 	struct device *dev;
 	void __iomem *base;
+	struct clk *clk;
 };
 
 static LIST_HEAD(fcp_devices);
@@ -109,10 +111,16 @@ EXPORT_SYMBOL_GPL(rcar_fcp_get_device);
  */
 int rcar_fcp_enable(struct rcar_fcp_device *fcp)
 {
+	int ret;
+
 	if (!fcp)
 		return 0;
 
-	return pm_runtime_resume_and_get(fcp->dev);
+	ret = pm_runtime_resume_and_get(fcp->dev);
+	if (ret)
+		return ret;
+
+	return clk_prepare_enable(fcp->clk);
 }
 EXPORT_SYMBOL_GPL(rcar_fcp_enable);
 
@@ -125,8 +133,10 @@ EXPORT_SYMBOL_GPL(rcar_fcp_enable);
  */
 void rcar_fcp_disable(struct rcar_fcp_device *fcp)
 {
-	if (fcp)
+	if (fcp) {
+		clk_disable_unprepare(fcp->clk);
 		pm_runtime_put(fcp->dev);
+	}
 }
 EXPORT_SYMBOL_GPL(rcar_fcp_disable);
 
@@ -170,6 +180,11 @@ static int rcar_fcp_probe(struct platform_device *pdev)
 	dma_set_max_seg_size(fcp->dev, UINT_MAX);
 
 	pm_runtime_enable(&pdev->dev);
+	fcp->clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(fcp->clk)) {
+		pm_runtime_disable(&pdev->dev);
+		return PTR_ERR(fcp->clk);
+	}
 
 	mutex_lock(&fcp_lock);
 	list_add_tail(&fcp->list, &fcp_devices);
