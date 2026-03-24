@@ -77,9 +77,9 @@ struct rcar_pcie4 {
 	enum dw_pcie_device_mode	mode;
 	void __iomem			*base;
 	void __iomem			*phy_base;
+	struct clk				*bus_clk;
 	struct reset_control	*perst;
 	struct reset_control	*rst;
-	struct clk			*bus_clk;
 };
 
 static void rcar_gen5_pcie_ltssm_enable(struct rcar_pcie4 *rcar_pcie4,
@@ -196,150 +196,6 @@ static int rcar_gen5_pcie_set_device_type(struct rcar_pcie4 *rcar_pcie4, bool rc
 	return 0;
 }
 
-static void __iomem *mdlc_hscn_base = NULL;
-
-static inline u32 mdlc_readl(u32 offset) {
-	return readl(mdlc_hscn_base + offset);
-}
-
-static inline void mdlc_writel(u32 offset, u32 val) {
-	writel(val, mdlc_hscn_base + offset);
-}
-
-static void module_power_gate_change(u32 pdid, u32 state) {
-	u32 val;
-	mdlc_writel(MDLC_PKCPROT0_OFFSET, 0xA5A5A501);
-
-	if ((mdlc_readl(MDLC_MPDGS_OFFSET(pdid)) & 0x3) == state)
-		return;
-	while (mdlc_readl(MDLC_MPDG_OFFSET(pdid)) != mdlc_readl(MDLC_MPDGS_OFFSET(pdid)));
-
-	switch (state) {
-	case STANDBY:
-		if ((mdlc_readl(MDLC_MPDGS_OFFSET(pdid)) & 0x3) == RUN) {
-			val = mdlc_readl(MDLC_MPDG_OFFSET(pdid));
-			val = (val & ~0x3) | RESET;
-			mdlc_writel(MDLC_MPDG_OFFSET(pdid), val);
-			while (mdlc_readl(MDLC_MPDG_OFFSET(pdid)) != mdlc_readl(MDLC_MPDGS_OFFSET(pdid)));
-		}
-
-		val = mdlc_readl(MDLC_MPDG_OFFSET(pdid));
-		val = (val & ~0x3) | STANDBY;
-		mdlc_writel(MDLC_MPDG_OFFSET(pdid), val);
-	break;
-
-	case RESET:
-		val = mdlc_readl(MDLC_MPDG_OFFSET(pdid));
-		val = (val & ~0x3) | RESET;
-		mdlc_writel(MDLC_MPDG_OFFSET(pdid), val);
-	break;
-
-	case RUN:
-		if ((mdlc_readl(MDLC_MPDGS_OFFSET(pdid)) & 0x3) == STANDBY) {
-			val = mdlc_readl(MDLC_MPDG_OFFSET(pdid));
-			val = (val & ~0x3) | RESET;
-			mdlc_writel(MDLC_MPDG_OFFSET(pdid), val);
-			while (mdlc_readl(MDLC_MPDG_OFFSET(pdid)) != mdlc_readl(MDLC_MPDGS_OFFSET(pdid)));
-		}
-		val = mdlc_readl(MDLC_MPDG_OFFSET(pdid));
-		val = (val & ~0x3) | RUN;
-		mdlc_writel(MDLC_MPDG_OFFSET(pdid), val);
-	break;
-	}
-	while (mdlc_readl(MDLC_MPDG_OFFSET(pdid)) != mdlc_readl(MDLC_MPDGS_OFFSET(pdid)));
-}
-
-static void module_standby_change(u32 regno, u32 offsetnum, u32 state)
-{
-        u32 ckMSRESS, ckMSRES, val, cur;
-
-        mdlc_writel(MDLC_PKCPROT1_OFFSET, 0xA5A5A501);
-        if (((mdlc_readl(MDLC_MSRESS_OFFSET(regno)) >> offsetnum) & 0x3) == state)
-                return;
-
-        do {
-                ckMSRESS = mdlc_readl(MDLC_MSRESS_OFFSET(regno)) & (0x3 << offsetnum);
-                ckMSRES  = mdlc_readl(MDLC_MSRES_OFFSET(regno))  & (0x3 << offsetnum);
-        } while (ckMSRESS != ckMSRES);
-
-        cur = (ckMSRES >> offsetnum) & 0x3;
-
-        switch (state) {
-        case STANDBY:
-                if (cur == RUN) {
-                        val = mdlc_readl(MDLC_MSRES_OFFSET(regno));
-                        val = (val & ~(0x3 << offsetnum)) | (RESET << offsetnum);
-                        mdlc_writel(MDLC_MSRES_OFFSET(regno), val);
-
-                        do {
-                                ckMSRESS = mdlc_readl(MDLC_MSRESS_OFFSET(regno)) & (0x3 << offsetnum);
-                                ckMSRES  = mdlc_readl(MDLC_MSRES_OFFSET(regno))  & (0x3 << offsetnum);
-                        } while (ckMSRESS != ckMSRES);
-                }
-                break;
-        case RESET:
-                if (cur == STOP) {
-                        val = mdlc_readl(MDLC_MSRES_OFFSET(regno));
-                        val = (val & ~(0x3 << offsetnum)) | (RUN << offsetnum);
-                        mdlc_writel(MDLC_MSRES_OFFSET(regno), val);
-
-                        do {
-                                ckMSRESS = mdlc_readl(MDLC_MSRESS_OFFSET(regno)) & (0x3 << offsetnum);
-                                ckMSRES  = mdlc_readl(MDLC_MSRES_OFFSET(regno))  & (0x3 << offsetnum);
-                        } while (ckMSRESS != ckMSRES);
-                }
-                break;
-        case STOP:
-                if (cur == RESET) {
-                        val = mdlc_readl(MDLC_MSRES_OFFSET(regno));
-                        val = (val & ~(0x3 << offsetnum)) | (RUN << offsetnum);
-                        mdlc_writel(MDLC_MSRES_OFFSET(regno), val);
-
-                        do {
-                                ckMSRESS = mdlc_readl(MDLC_MSRESS_OFFSET(regno)) & (0x3 << offsetnum);
-                                ckMSRES  = mdlc_readl(MDLC_MSRES_OFFSET(regno))  & (0x3 << offsetnum);
-                        } while (ckMSRESS != ckMSRES);
-                }
-                break;
-        case RUN:
-                if (cur == STANDBY) {
-                        val = mdlc_readl(MDLC_MSRES_OFFSET(regno));
-                        val = (val & ~(0x3 << offsetnum)) | (RESET << offsetnum);
-                        mdlc_writel(MDLC_MSRES_OFFSET(regno), val);
-                        do {
-                                ckMSRESS = mdlc_readl(MDLC_MSRESS_OFFSET(regno)) & (0x3 << offsetnum);
-                                ckMSRES  = mdlc_readl(MDLC_MSRES_OFFSET(regno))  & (0x3 << offsetnum);
-                        } while (ckMSRESS != ckMSRES);
-                }
-                break;
-        }
-        val = mdlc_readl(MDLC_MSRES_OFFSET(regno));
-        val = (val & ~(0x3 << offsetnum)) | (state << offsetnum);
-        mdlc_writel(MDLC_MSRES_OFFSET(regno), val);
-        do {
-                ckMSRESS = mdlc_readl(MDLC_MSRESS_OFFSET(regno)) & (0x3 << offsetnum);
-                ckMSRES  = mdlc_readl(MDLC_MSRES_OFFSET(regno))  & (0x3 << offsetnum);
-        } while (ckMSRESS != ckMSRES);
-}
-
-void rcar_gen5_pcie_module_run(struct dw_pcie *pci)
-{
-	if (!mdlc_hscn_base) {
-		mdlc_hscn_base = ioremap(MDLC_HSCN_BASE, MDLC_HSCN_SIZE);
-		if (!mdlc_hscn_base) {
-			dev_err(pci->dev,"[PCIE] Failed to ioremap MDLC_HSCN_BASE\n");
-			return;
-		}
-	}
-
-	module_power_gate_change(PDID_PCI4, RUN);
-	module_standby_change(PCIE401_REG_NO, PCIE401_BIT_NO, RUN);
-	module_standby_change(PCIE402_REG_NO, PCIE402_BIT_NO, RUN);
-	module_standby_change(PCIE411_REG_NO, PCIE411_BIT_NO, RUN);
-	module_standby_change(PCIE412_REG_NO, PCIE412_BIT_NO, RUN);
-	dev_info(pci->dev,"[PCIE] HSCN module powered and running.\n");
-}
-
 static int rcar_gen5_pcie_host_init(struct dw_pcie_rp *pp)
 {
 	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
@@ -350,12 +206,13 @@ static int rcar_gen5_pcie_host_init(struct dw_pcie_rp *pp)
 	if (reset_control_assert(rcar_pcie4->perst))
 		dev_err(pci->dev, "Failed to assert PERST#");
 
-	rcar_gen5_pcie_module_run(pci);
-
 	ret = clk_prepare_enable(rcar_pcie4->bus_clk);
 	if (ret) {
 		dev_err(pci->dev, "failed to enable bus clock: %d\n", ret);
 	}
+
+	if (reset_control_deassert(rcar_pcie4->rst))
+		dev_err(pci->dev, "Failed to reset PCIe4 module\n");
 
 	ret = phy_set_mode_ext(rcar_pcie4->phy, PHY_MODE_PCIE,
 			       rcar_pcie4->phy_interface);
