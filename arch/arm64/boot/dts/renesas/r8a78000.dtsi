@@ -5227,9 +5227,11 @@
 					 0 0 0 2 &gic GIC_SPI 751 IRQ_TYPE_LEVEL_HIGH
 					 0 0 0 3 &gic GIC_SPI 751 IRQ_TYPE_LEVEL_HIGH
 					 0 0 0 4 &gic GIC_SPI 751 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&pcie6_bus_clk>;
-			clock-names = "pcie6_bus";
-			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_U266_PCIE6>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_PCI601>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PCI6>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_U266_PCIE6>,
+					 <&scmi_reset X5H_RESET_DOMAIN_ID_PCI601>;
+			reset-names = "perst", "rst";
 			max-link-speed = <4>;
 			num-lanes = <2>;
 			channel-id = <0>;
@@ -5250,8 +5252,10 @@
 				     <GIC_SPI 747 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 746 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "msi", "dma", "uncor", "corr", "vendor";
-			clocks = <&pcie6_bus_clk>;
-			clock-names = "pcie6_bus";
+			clocks = <&scmi_clk X5H_CLOCK_ID_PCI601>;
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PCI6>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_PCI601>;
+			reset-names = "rst";
 			max-link-speed = <4>;
 			num-lanes = <2>;
 			channel-id = <0>;
