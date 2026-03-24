@@ -1227,6 +1227,24 @@
 		clock-output-names = "watchdog";
 	};
 
+	dummy_clk_cmt: dummy_clk_cmt {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <32768>;
+	};
+
+	dummy_clk_tmu0: dummy_clk_tmu0 {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <16666666>;
+	};
+
+	dummy_clk_tmu: dummy_clk_tmu {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <133333333>;
+	};
+
 	rsw3_clk: rsw3_clk {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
@@ -1406,8 +1424,9 @@
 			reg = <0 0xc64c0000 0 0x1004>;
 			interrupts = <GIC_SPI 4088 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4089 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_CMT0>;
-			clock-names = "fck";
+			clocks = <&scmi_clk X5H_CLOCK_ID_CMT0>, <&dummy_clk_cmt>;
+			clock-names = "fck", "dummy_clk";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CMT0>;
 			status = "disabled";
 		};
 
@@ -1422,8 +1441,9 @@
 				     <GIC_SPI 4095 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4096 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4097 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_CMT1>;
-			clock-names = "fck";
+			clocks = <&scmi_clk X5H_CLOCK_ID_CMT1>, <&dummy_clk_cmt>;
+			clock-names = "fck", "dummy_clk";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CMT1>;
 			status = "disabled";
 		};
 
@@ -1438,8 +1458,9 @@
 				     <GIC_SPI 4103 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4104 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4105 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_CMT2>;
-			clock-names = "fck";
+			clocks = <&scmi_clk X5H_CLOCK_ID_CMT2>, <&dummy_clk_cmt>;
+			clock-names = "fck", "dummy_clk";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CMT2>;
 			status = "disabled";
 		};
 
@@ -1454,8 +1475,9 @@
 				     <GIC_SPI 4111 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4112 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4113 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_CMT3>;
-			clock-names = "fck";
+			clocks = <&scmi_clk X5H_CLOCK_ID_CMT3>, <&dummy_clk_cmt>;
+			clock-names = "fck", "dummy_clk";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_CMT3>;
 			status = "disabled";
 		};
 
@@ -1466,8 +1488,9 @@
 			interrupts = <GIC_SPI 4114 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4115 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4116 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_TMU0>;
-			clock-names = "fck";
+			clocks = <&scmi_clk X5H_CLOCK_ID_TMU0>, <&dummy_clk_tmu0>;
+			clock-names = "fck", "dummy_clk_tmu0";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_TMU0>;
 			status = "disabled";
 		};
 
@@ -1478,8 +1501,9 @@
 				     <GIC_SPI 4118 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4119 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4120 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_TMU1>;
-			clock-names = "fck";
+			clocks = <&scmi_clk X5H_CLOCK_ID_TMU1>, <&dummy_clk_tmu>;
+			clock-names = "fck", "dummy_clk_tmu";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_TMU1>;
 			status = "disabled";
 		};
 
@@ -1490,8 +1514,9 @@
 				     <GIC_SPI 4122 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4123 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4124 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_TMU2>;
-			clock-names = "fck";
+			clocks = <&scmi_clk X5H_CLOCK_ID_TMU2>, <&dummy_clk_tmu>;
+			clock-names = "fck", "dummy_clk_tmu";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_TMU2>;
 			status = "disabled";
 		};
 
@@ -1502,8 +1527,9 @@
 				     <GIC_SPI 4126 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4127 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4128 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_TMU3>;
-			clock-names = "fck";
+			clocks = <&scmi_clk X5H_CLOCK_ID_TMU3>, <&dummy_clk_tmu>;
+			clock-names = "fck", "dummy_clk_tmu";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_TMU3>;
 			status = "disabled";
 		};
 
@@ -1514,8 +1540,9 @@
 				     <GIC_SPI 4130 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4131 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4132 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&scmi_clk X5H_CLOCK_ID_TMU4>;
-			clock-names = "fck";
+			clocks = <&scmi_clk X5H_CLOCK_ID_TMU4>, <&dummy_clk_tmu>;
+			clock-names = "fck", "dummy_clk_tmu";
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_TMU4>;
 			status = "disabled";
 		};
 
