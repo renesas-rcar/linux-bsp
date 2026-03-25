@@ -190,6 +190,12 @@
 			reg = <0x1a 0xcccd0000 0x0 0x33330000>;
 		};
 
+		linux,cma@1c00000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x1c 0x0 0x0 0x40000000>;
+		};
+
 		ecc_data_region@1ccccd0000 {
 			no-map;
 			reg = <0x1c 0xcccd0000 0x0 0x33330000>;
