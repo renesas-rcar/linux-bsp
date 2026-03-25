@@ -1755,6 +1755,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_WWDT00>,
 				 <&scmi_clk X5H_CLOCK_ID_WWDT01>;
 			clock-names = "cntclk", "busclk";
+			renesas,cntclk = <32800>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT00>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT01>;
 			reset-names = "rstc1", "rstc2";
@@ -1769,6 +1770,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_WWDT10>,
 				 <&scmi_clk X5H_CLOCK_ID_WWDT11>;
 			clock-names = "cntclk", "busclk";
+			renesas,cntclk = <32800>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT10>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT11>;
 			reset-names = "rstc1", "rstc2";
@@ -1783,6 +1785,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_WWDT20>,
 				 <&scmi_clk X5H_CLOCK_ID_WWDT21>;
 			clock-names = "cntclk", "busclk";
+			renesas,cntclk = <32800>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT20>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT21>;
 			reset-names = "rstc1", "rstc2";
@@ -1797,6 +1800,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_WWDT30>,
 				 <&scmi_clk X5H_CLOCK_ID_WWDT31>;
 			clock-names = "cntclk", "busclk";
+			renesas,cntclk = <32800>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT30>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT31>;
 			reset-names = "rstc1", "rstc2";
@@ -1811,6 +1815,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_WWDT40>,
 				 <&scmi_clk X5H_CLOCK_ID_WWDT41>;
 			clock-names = "cntclk", "busclk";
+			renesas,cntclk = <32800>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT40>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT41>;
 			reset-names = "rstc1", "rstc2";
@@ -1825,6 +1830,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_WWDT50>,
 				 <&scmi_clk X5H_CLOCK_ID_WWDT51>;
 			clock-names = "cntclk", "busclk";
+			renesas,cntclk = <32800>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT50>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT51>;
 			reset-names = "rstc1", "rstc2";
@@ -1839,6 +1845,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_WWDT60>,
 				 <&scmi_clk X5H_CLOCK_ID_WWDT61>;
 			clock-names = "cntclk", "busclk";
+			renesas,cntclk = <32800>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT60>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT61>;
 			reset-names = "rstc1", "rstc2";
@@ -1853,6 +1860,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_WWDT70>,
 				 <&scmi_clk X5H_CLOCK_ID_WWDT71>;
 			clock-names = "cntclk", "busclk";
+			renesas,cntclk = <32800>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT70>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT71>;
 			reset-names = "rstc1", "rstc2";
@@ -1867,6 +1875,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_WWDT80>,
 				 <&scmi_clk X5H_CLOCK_ID_WWDT81>;
 			clock-names = "cntclk", "busclk";
+			renesas,cntclk = <32800>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT80>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT81>;
 			reset-names = "rstc1", "rstc2";
@@ -1881,6 +1890,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_WWDT90>,
 				 <&scmi_clk X5H_CLOCK_ID_WWDT91>;
 			clock-names = "cntclk", "busclk";
+			renesas,cntclk = <32800>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT90>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT91>;
 			reset-names = "rstc1", "rstc2";
@@ -1895,6 +1905,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_WWDT100>,
 				 <&scmi_clk X5H_CLOCK_ID_WWDT101>;
 			clock-names = "cntclk", "busclk";
+			renesas,cntclk = <32800>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT100>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT101>;
 			reset-names = "rstc1", "rstc2";
@@ -1909,6 +1920,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_WWDT110>,
 				 <&scmi_clk X5H_CLOCK_ID_WWDT111>;
 			clock-names = "cntclk", "busclk";
+			renesas,cntclk = <32800>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT110>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT111>;
 			reset-names = "rstc1", "rstc2";
@@ -1923,6 +1935,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_WWDT120>,
 				 <&scmi_clk X5H_CLOCK_ID_WWDT121>;
 			clock-names = "cntclk", "busclk";
+			renesas,cntclk = <32800>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT120>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT121>;
 			reset-names = "rstc1", "rstc2";
@@ -1937,6 +1950,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_WWDT130>,
 				 <&scmi_clk X5H_CLOCK_ID_WWDT131>;
 			clock-names = "cntclk", "busclk";
+			renesas,cntclk = <32800>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT130>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT131>;
 			reset-names = "rstc1", "rstc2";
@@ -1951,6 +1965,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_WWDT140>,
 				 <&scmi_clk X5H_CLOCK_ID_WWDT141>;
 			clock-names = "cntclk", "busclk";
+			renesas,cntclk = <32800>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT140>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT141>;
 			reset-names = "rstc1", "rstc2";
@@ -1965,6 +1980,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_WWDT150>,
 				 <&scmi_clk X5H_CLOCK_ID_WWDT151>;
 			clock-names = "cntclk", "busclk";
+			renesas,cntclk = <32800>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT150>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT151>;
 			reset-names = "rstc1", "rstc2";
@@ -1979,6 +1995,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_WWDT160>,
 				 <&scmi_clk X5H_CLOCK_ID_WWDT161>;
 			clock-names = "cntclk", "busclk";
+			renesas,cntclk = <32800>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT160>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT161>;
 			reset-names = "rstc1", "rstc2";
@@ -1993,6 +2010,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_WWDT170>,
 				 <&scmi_clk X5H_CLOCK_ID_WWDT171>;
 			clock-names = "cntclk", "busclk";
+			renesas,cntclk = <32800>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT170>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT171>;
 			reset-names = "rstc1", "rstc2";
@@ -2007,6 +2025,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_WWDT180>,
 				 <&scmi_clk X5H_CLOCK_ID_WWDT181>;
 			clock-names = "cntclk", "busclk";
+			renesas,cntclk = <32800>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT180>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT181>;
 			reset-names = "rstc1", "rstc2";
@@ -2021,6 +2040,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_WWDT190>,
 				 <&scmi_clk X5H_CLOCK_ID_WWDT191>;
 			clock-names = "cntclk", "busclk";
+			renesas,cntclk = <32800>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT190>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT191>;
 			reset-names = "rstc1", "rstc2";
@@ -2033,6 +2053,7 @@
 			clocks = <&scmi_clk X5H_CLOCK_ID_WWDT200>,
 				 <&scmi_clk X5H_CLOCK_ID_WWDT201>;
 			clock-names = "cntclk", "busclk";
+			renesas,cntclk = <240000>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT200>,
 				 <&scmi_reset X5H_RESET_DOMAIN_ID_WWDT201>;
 			reset-names = "rstc1", "rstc2";
