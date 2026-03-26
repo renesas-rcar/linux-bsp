@@ -18,6 +18,7 @@
 			interrupts = <GIC_SPI 606 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_IMN_IMS00>;
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_IM0>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_IMN_IMS00>;
 			linux,uio-name = "ims_00";
 		};
 
@@ -27,6 +28,7 @@
 			interrupts = <GIC_SPI 607 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_IMN_IMS01>;
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_IM0>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_IMN_IMS01>;
 			linux,uio-name = "ims_01";
 		};
 
@@ -36,6 +38,7 @@
 			interrupts = <GIC_SPI 608 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_IMN_IMS02>;
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_IM1>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_IMN_IMS02>;
 			linux,uio-name = "ims_02";
 		};
 
@@ -45,6 +48,7 @@
 			interrupts = <GIC_SPI 609 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_IMN_IMS03>;
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_IM1>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_IMN_IMS03>;
 			linux,uio-name = "ims_03";
 		};
 
@@ -54,6 +58,7 @@
 			interrupts = <GIC_SPI 614 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_IMN_IMR000>;
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_IM0>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_IMN_IMR000>;
 			linux,uio-name = "imr_00";
 		};
 
@@ -63,6 +68,7 @@
 			interrupts = <GIC_SPI 615 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_IMN_IMR001>;
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_IM1>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_IMN_IMR001>;
 			linux,uio-name = "imr_01";
 		};
 
@@ -72,6 +78,7 @@
 			interrupts = <GIC_SPI 610 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_IMS_IMS00>;
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_IM1>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_IMS_IMS00>;
 			linux,uio-name = "ims_10";
 		};
 
@@ -81,6 +88,7 @@
 			interrupts = <GIC_SPI 611 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_IMS_IMS01>;
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_IM2>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_IMS_IMS01>;
 			linux,uio-name = "ims_11";
 		};
 
@@ -90,6 +98,7 @@
 			interrupts = <GIC_SPI 612 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_IMS_IMS02>;
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_IM3>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_IMS_IMS02>;
 			linux,uio-name = "ims_12";
 		};
 
@@ -99,6 +108,7 @@
 			interrupts = <GIC_SPI 613 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_IMS_IMS03>;
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_IM3>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_IMS_IMS03>;
 			linux,uio-name = "ims_13";
 		};
 
@@ -108,6 +118,7 @@
 			interrupts = <GIC_SPI 616 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_IMS_IMR000>;
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_IM2>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_IMS_IMR000>;
 			linux,uio-name = "imr_10";
 		};
 
@@ -117,6 +128,7 @@
 			interrupts = <GIC_SPI 617 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_IMS_IMR001>;
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_IM3>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_IMS_IMR001>;
 			linux,uio-name = "imr_11";
 		};
 
