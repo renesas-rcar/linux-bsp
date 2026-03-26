@@ -41,7 +41,7 @@ static atomic_t thread_exit;
 #define TEE_LOG_NS_BASE		 (0x1050200000UL)
 #define TEE_LOG_NS_SIZE        (81920U)
 #define LOG_NS_CPU_AREA_SIZE   (1024U)
-#define TEE_CORE_NB_CORE   (8U)
+#define TEE_CORE_NB_CORE   (32U)
 
 static int debug_log_kthread(void *arg);
 static int tz_rcar_power_event(struct notifier_block *this,
