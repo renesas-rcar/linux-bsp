@@ -45,7 +45,7 @@ renesas_reset_status_get(const struct scmi_protocol_handle *ph, u32 domain)
 
 	ph->xops->xfer_put(ph, t);
 
-	return ret ? ret : (int)reset_status;
+	return ret ? ret : !reset_status;
 }
 
 static const struct scmi_vendor_ext_ops renesas_vendor_ops = {
