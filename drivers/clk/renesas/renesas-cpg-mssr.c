@@ -618,15 +618,15 @@ static int cpg_mssr_reset(struct reset_controller_dev *rcdev,
 	/* Reset module */
 	writel(bitmask, priv->base + priv->reset_regs[reg]);
 
-	/*
-	 * On R-Car Gen4, delay after SRCR has been written is 1ms.
-	 * On older SoCs, delay after SRCR has been written is 35us
-	 * (one cycle of the RCLK clock @ ca. 32 kHz).
-	 */
+    /*
+     * Replaced usleep_range() with udelay() because reset_control_reset()
+     * can be invoked from atomic context (e.g. SDHI), and sleeping here
+     * leads to "BUG: scheduling while atomic".
+     */
 	if (priv->reg_layout == CLK_REG_LAYOUT_RCAR_GEN4)
-		usleep_range(1000, 2000);
+		udelay(2000);
 	else
-		usleep_range(35, 1000);
+		udelay(35);
 
 	/* Release module from reset state */
 	writel(bitmask, priv->base + priv->reset_clear_regs[reg]);
