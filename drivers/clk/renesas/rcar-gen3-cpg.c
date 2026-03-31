@@ -180,6 +180,9 @@ struct cpg_z_clk {
 	unsigned long max_rate;		/* Maximum rate for normal mode */
 	unsigned int fixed_div;
 	u32 mask;
+
+	/* store SoC quirks used in Z-clock rate calculation */
+	u32 quirks;
 };
 
 #define to_z_clk(_hw)	container_of(_hw, struct cpg_z_clk, hw)
@@ -192,10 +195,10 @@ static unsigned long cpg_z_clk_recalc_rate(struct clk_hw *hw,
 	unsigned int mult;
 	u32 val;
 
-	if (cpg_quirks & Z2_SYSCPU_1) {
+	if (zclk->quirks & Z2_SYSCPU_1) {
 		/* SYS-CPU divider 2 is 1 == 32/32) */
 		mult = 32;
-	} else if (cpg_quirks & Z2_SYSCPU_2) {
+	} else if (zclk->quirks & Z2_SYSCPU_2) {
 		/* SYS-CPU divider 2 is 1/2 == 16/32) */
 		mult = 16;
 	} else {
@@ -316,6 +319,7 @@ static struct clk * __init cpg_z_clk_register(const char *name,
 	zclk->hw.init = &init;
 	zclk->mask = GENMASK(offset + 4, offset);
 	zclk->fixed_div = div; /* PLLVCO x 1/div x SYS-CPU divider */
+	zclk->quirks = cpg_quirks;   /* copy quirks for runtime use */
 
 	clk = clk_register(NULL, &zclk->hw);
 	if (IS_ERR(clk)) {
