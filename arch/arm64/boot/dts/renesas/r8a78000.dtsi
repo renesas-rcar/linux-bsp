@@ -1553,6 +1553,8 @@
 			interrupts = <GIC_SPI 4807 IRQ_TYPE_LEVEL_HIGH>;
 			i2c-scl-internal-delay-ns = <110>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_I2C0>;
+			renesas,i2c-clk = <150000000>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_I2C0>;
 			dmas = <&scp_dmac0 0x31>, <&scp_dmac0 0x30>,
 			       <&scp_dmac1 0x31>, <&scp_dmac1 0x30>;
 			dma-names = "tx", "rx", "tx", "rx";
@@ -1568,6 +1570,8 @@
 			interrupts = <GIC_SPI 956 IRQ_TYPE_LEVEL_HIGH>;
 			i2c-scl-internal-delay-ns = <110>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_I2C1>;
+			renesas,i2c-clk = <133333333>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_I2C1>;
 			dmas = <&sys_dmac10 0x93>, <&sys_dmac10 0x92>,
 			       <&sys_dmac11 0x93>, <&sys_dmac11 0x92>,
 			       <&sys_dmac12 0x93>, <&sys_dmac12 0x92>;
@@ -1584,6 +1588,8 @@
 			interrupts = <GIC_SPI 957 IRQ_TYPE_LEVEL_HIGH>;
 			i2c-scl-internal-delay-ns = <110>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_I2C2>;
+			renesas,i2c-clk = <133333333>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_I2C2>;
 			dmas = <&sys_dmac10 0x95>, <&sys_dmac10 0x94>,
 			       <&sys_dmac11 0x95>, <&sys_dmac11 0x94>,
 			       <&sys_dmac12 0x95>, <&sys_dmac12 0x94>;
@@ -1600,6 +1606,8 @@
 			interrupts = <GIC_SPI 958 IRQ_TYPE_LEVEL_HIGH>;
 			i2c-scl-internal-delay-ns = <110>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_I2C3>;
+			renesas,i2c-clk = <133333333>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_I2C3>;
 			dmas = <&sys_dmac10 0x97>, <&sys_dmac10 0x96>,
 			       <&sys_dmac11 0x97>, <&sys_dmac11 0x96>,
 			       <&sys_dmac12 0x97>, <&sys_dmac12 0x96>;
@@ -1616,6 +1624,8 @@
 			interrupts = <GIC_SPI 959 IRQ_TYPE_LEVEL_HIGH>;
 			i2c-scl-internal-delay-ns = <110>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_I2C4>;
+			renesas,i2c-clk = <133333333>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_I2C4>;
 			dmas = <&sys_dmac10 0x99>, <&sys_dmac10 0x98>,
 			       <&sys_dmac11 0x99>, <&sys_dmac11 0x98>,
 			       <&sys_dmac12 0x99>, <&sys_dmac12 0x98>;
@@ -1632,6 +1642,8 @@
 			interrupts = <GIC_SPI 4064 IRQ_TYPE_LEVEL_HIGH>;
 			i2c-scl-internal-delay-ns = <110>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_I2C5>;
+			renesas,i2c-clk = <133333333>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_I2C5>;
 			dmas = <&sys_dmac10 0x9b>, <&sys_dmac10 0x9a>,
 			       <&sys_dmac11 0x9b>, <&sys_dmac11 0x9a>,
 			       <&sys_dmac12 0x9b>, <&sys_dmac12 0x9a>;
@@ -1648,6 +1660,8 @@
 			interrupts = <GIC_SPI 4065 IRQ_TYPE_LEVEL_HIGH>;
 			i2c-scl-internal-delay-ns = <110>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_I2C6>;
+			renesas,i2c-clk = <133333333>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_I2C6>;
 			dmas = <&sys_dmac10 0x9d>, <&sys_dmac10 0x9c>,
 			       <&sys_dmac11 0x9d>, <&sys_dmac11 0x9c>,
 			       <&sys_dmac12 0x9d>, <&sys_dmac12 0x9c>;
@@ -1664,6 +1678,8 @@
 			interrupts = <GIC_SPI 4066 IRQ_TYPE_LEVEL_HIGH>;
 			i2c-scl-internal-delay-ns = <110>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_I2C7>;
+			renesas,i2c-clk = <133333333>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_I2C7>;
 			dmas = <&sys_dmac10 0x9f>, <&sys_dmac10 0x9e>,
 			       <&sys_dmac11 0x9f>, <&sys_dmac11 0x9e>,
 			       <&sys_dmac12 0x9f>, <&sys_dmac12 0x9e>;
@@ -1680,6 +1696,8 @@
 			interrupts = <GIC_SPI 4067 IRQ_TYPE_LEVEL_HIGH>;
 			i2c-scl-internal-delay-ns = <110>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_I2C8>;
+			renesas,i2c-clk = <133333333>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_I2C8>;
 			dmas = <&sys_dmac10 0xb1>, <&sys_dmac10 0xb0>,
 			       <&sys_dmac11 0xb1>, <&sys_dmac11 0xb0>,
 			       <&sys_dmac12 0xb1>, <&sys_dmac12 0x9e>;
