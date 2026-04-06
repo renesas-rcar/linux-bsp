@@ -319,6 +319,16 @@ static int rcar_i2c_clock_calculate(struct rcar_i2c_priv *priv)
 	 * F[]  : integer up-valuation
 	 */
 	rate = clk_get_rate(priv->clk);
+	if (!rate) {
+		u32 clk_rate;
+
+		if (of_property_read_u32(dev->of_node,
+					 "renesas,i2c-clk", &clk_rate))
+			goto err_no_val;
+
+		rate = clk_rate;
+	}
+
 	cdf = rate / 20000000;
 	cdf_width = (priv->devtype == I2C_RCAR_GEN1) ? 2 : 3;
 	if (cdf >= 1U << cdf_width)
