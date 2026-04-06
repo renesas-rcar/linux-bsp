@@ -12,6 +12,15 @@
 	compatible = "renesas,rfs2x", "renesas,r8a78000";
 
 	aliases {
+		i2c0 = &i2c0;
+		i2c1 = &i2c1;
+		i2c2 = &i2c2;
+		i2c3 = &i2c3;
+		i2c4 = &i2c4;
+		i2c5 = &i2c5;
+		i2c6 = &i2c6;
+		i2c7 = &i2c7;
+		i2c8 = &i2c8;
 		serial0 = &scif0;
 		serial1 = &pl011;
 	};
@@ -592,6 +601,66 @@
 };
 
 &gsx {
+	status = "okay";
+};
+
+&i2c0 {
+	clock-frequency = <400000>;
+
+	status = "okay";
+};
+
+&i2c1 {
+	clock-frequency = <400000>;
+
+	status = "okay";
+};
+
+&i2c2 {
+	clock-frequency = <400000>;
+
+	status = "okay";
+};
+
+&i2c3 {
+	clock-frequency = <400000>;
+
+	status = "okay";
+};
+
+&i2c4 {
+	clock-frequency = <400000>;
+
+	status = "okay";
+};
+
+&i2c5 {
+	clock-frequency = <400000>;
+
+	status = "okay";
+};
+
+&i2c6 {
+	clock-frequency = <400000>;
+
+	status = "okay";
+};
+
+&i2c7 {
+	clock-frequency = <400000>;
+
+	status = "okay";
+};
+
+&i2c8 {
+	clock-frequency = <400000>;
+
+	status = "okay";
+};
+
+&i2c6 {
+	clock-frequency = <400000>;
+
 	status = "okay";
 };
 
