@@ -47,6 +47,8 @@ struct scmi_clock_info {
 	bool rate_discrete;
 	bool rate_changed_notifications;
 	bool rate_change_requested_notifications;
+	u64 min_rate;
+	u64 max_rate;
 	union {
 		struct {
 			int num_rates;
