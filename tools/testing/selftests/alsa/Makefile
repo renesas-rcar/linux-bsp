@@ -8,5 +8,6 @@ LDLIBS += -lasound
 endif
 
 TEST_GEN_PROGS := mixer-test
+TEST_PROGS := rcar-audio-perf.sh
 
 include ../lib.mk
