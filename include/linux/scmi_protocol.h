@@ -49,17 +49,6 @@ struct scmi_clock_info {
 	bool rate_change_requested_notifications;
 	u64 min_rate;
 	u64 max_rate;
-	union {
-		struct {
-			int num_rates;
-			u64 rates[SCMI_MAX_NUM_RATES];
-		} list;
-		struct {
-			u64 min_rate;
-			u64 max_rate;
-			u64 step_size;
-		} range;
-	};
 };
 
 enum scmi_power_scale {
