@@ -219,20 +219,27 @@ static const struct irq_chip gpio_rcar_irq_chip = {
 
 static irqreturn_t gpio_rcar_irq_handler(int irq, void *dev_id)
 {
-	struct gpio_rcar_priv *p = dev_id;
-	u32 pending;
-	unsigned int offset, irqs_handled = 0;
+    return IRQ_WAKE_THREAD;
+}
 
-	while ((pending = gpio_rcar_read(p, INTDT) &
-			  gpio_rcar_read(p, INTMSK))) {
-		offset = __ffs(pending);
-		gpio_rcar_write(p, INTCLR, BIT(offset));
-		generic_handle_domain_irq(p->gpio_chip.irq.domain,
-					  offset);
-		irqs_handled++;
-	}
+static irqreturn_t gpio_rcar_irq_thread(int irq, void *dev_id)
+{
+    struct gpio_rcar_priv *p = dev_id;
+    u32 pending;
+    unsigned int offset, irqs_handled = 0;
 
-	return irqs_handled ? IRQ_HANDLED : IRQ_NONE;
+    while ((pending = gpio_rcar_read(p, INTDT) &
+              gpio_rcar_read(p, INTMSK))) {
+        offset = __ffs(pending);
+        gpio_rcar_write(p, INTCLR, BIT(offset));
+
+        handle_nested_irq(irq_find_mapping(
+                p->gpio_chip.irq.domain, offset));
+
+        irqs_handled++;
+    }
+
+    return irqs_handled ? IRQ_HANDLED : IRQ_NONE;
 }
 
 static void gpio_rcar_config_general_input_output_mode(struct gpio_chip *chip,
@@ -569,8 +576,11 @@ static int gpio_rcar_probe(struct platform_device *pdev)
 	}
 
 	irq_domain_set_pm_device(gpio_chip->irq.domain, dev);
-	ret = devm_request_irq(dev, p->irq_parent, gpio_rcar_irq_handler,
-			       IRQF_SHARED, name, p);
+	ret = devm_request_threaded_irq(dev, p->irq_parent,
+					gpio_rcar_irq_handler,
+					gpio_rcar_irq_thread,
+			       	IRQF_SHARED | IRQF_ONESHOT,
+					name, p);
 	if (ret) {
 		dev_err(dev, "failed to request IRQ\n");
 		goto err1;
