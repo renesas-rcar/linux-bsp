@@ -7,8 +7,10 @@
 #ifndef __RSWITCH_H__
 #define __RSWITCH_H__
 
+#include <linux/if_vlan.h>
 #include <linux/platform_device.h>
 #include <linux/phy.h>
+#include <net/switchdev.h>
 
 #include "rcar_gen4_ptp.h"
 
@@ -221,7 +223,7 @@ enum rswitch_reg {
 	FWMACTL1	= FWRO + 0x4634,
 	FWMACTL2	= FWRO + 0x4638,
 	FWMACTL3	= FWRO + 0x463c,
-	FWMACTL4	= FWRO + 0x4640,
+	FWMACTL40	= FWRO + 0x4640,
 	FWMACTL5	= FWRO + 0x4650,
 	FWMACTLR	= FWRO + 0x4654,
 	FWMACTIM	= FWRO + 0x4660,
@@ -249,7 +251,7 @@ enum rswitch_reg {
 	FWVLANTL0	= FWRO + 0x4910,
 	FWVLANTL1	= FWRO + 0x4914,
 	FWVLANTL2	= FWRO + 0x4918,
-	FWVLANTL3	= FWRO + 0x4920,
+	FWVLANTL30	= FWRO + 0x4920,
 	FWVLANTL4	= FWRO + 0x4930,
 	FWVLANTLR	= FWRO + 0x4934,
 	FWVLANTIM	= FWRO + 0x4940,
@@ -508,7 +510,7 @@ enum rswitch_reg {
 	EACTDQMLM	= TARO + 0x010c,
 	EAVCC		= TARO + 0x0130,
 	EAVTC		= TARO + 0x0134,
-	EATTFC		= TARO + 0x0138,
+	EARTFC		= TARO + 0x0138,
 	EACAEC		= TARO + 0x0200,
 	EACC		= TARO + 0x0204,
 	EACAIVC0	= TARO + 0x0220,
@@ -729,6 +731,41 @@ enum rswitch_etha_mode {
 
 #define EAMS_OPS_MASK		EAMC_OPC_OPERATION
 
+/* bit field definitions for EAVCC and GWVCC */
+#define VEM			GENMASK(18, 16)
+#define VIM			BIT(0)
+
+/* bit field definitions for EAVTC and GWVTC */
+#define STD			BIT(31)
+#define STP			GENMASK(30, 28)
+#define STV			GENMASK(27, 16)
+#define CTD			BIT(15)
+#define CTP			GENMASK(14, 12)
+#define CTV			GENMASK(11, 0)
+
+/* bit field definitions for EARTFC and GWTTCF */
+#define UT			BIT(8)
+#define SCRT			BIT(7)
+#define SCT			BIT(6)
+#define CRT			BIT(5)
+#define CT			BIT(4)
+#define CSRT			BIT(3)
+#define CST			BIT(2)
+#define RT			BIT(1)
+#define NT			BIT(0)
+
+/* bit field definitions for EARDQDC and GWRDQDC */
+#define DQD			GENMASK(10, 0)
+#define DES_RAM_DP		0x400
+
+enum vlan_egress_mode {
+	NO_VLAN,
+	C_TAG_VLAN,
+	HW_C_TAG_VLAN,
+	SC_TAG_VLAN,
+	HW_SC_TAG_VLAN,
+};
+
 #define EAVCC_VEM_SC_TAG	(0x3 << 16)
 
 #define MPIC_PIS		GENMASK(2, 0)
@@ -812,6 +849,22 @@ enum rswitch_gwca_mode {
 #define CABPPFLC_INIT_VALUE	0x00800080
 
 /* MFWD */
+#define FWGC_SVM		GENMASK(1, 0)
+
+enum switch_vlan_mode {
+	NO_VLAN_MODE,
+	C_TAG,
+	SC_TAG,
+};
+
+/* FWCEPRC2 */
+#define FDMACSLFEF		BIT(19)
+#define FDMACUFEF		BIT(3)
+
+/* FWCEPTC */
+#define EPCS			GENMASK(17, 16)
+#define EPCSD			GENMASK(6, 0)
+
 #define FWPC0(i)		(FWPC00 + (i) * 0x10)
 #define FWPC0_LTHTA		BIT(0)
 #define FWPC0_IP4UE		BIT(3)
@@ -822,10 +875,13 @@ enum rswitch_gwca_mode {
 #define FWPC0_IPDSA		BIT(12)
 #define FWPC0_IPHLA		BIT(18)
 #define FWPC0_MACDSA		BIT(20)
+#define FWPC0_MACRUDA           BIT(21)
 #define FWPC0_MACSSA		BIT(23)
 #define FWPC0_MACHLA		BIT(26)
 #define FWPC0_MACHMA		BIT(27)
 #define FWPC0_VLANSA		BIT(28)
+#define FWPC0_VLANRU            BIT(29)
+#define FWPC0_VLANRUS           BIT(30)
 
 #define FWPC1(i)		(FWPC10 + (i) * 0x10)
 #define FWCP1_LTHFW		GENMASK(16 + (RSWITCH_NUM_AGENTS - 1), 16)
@@ -852,6 +908,98 @@ enum rswitch_gwca_mode {
 #define FWMACAGC_MACDES		BIT(24)
 #define FWMACAGC_MACAGOG	BIT(28)
 #define FWMACAGC_MACDESOG	BIT(29)
+
+/* FWMACTL0 */
+#define FWMACTL0_ED		BIT(16)
+#define FWMACTL0_HLD		BIT(10)
+#define FWMACTL0_DE		BIT(9)
+#define FWMACTL0_SL		BIT(8)
+
+/* FWMACTL3 */
+#define FWMACTL3_DSLV		GENMASK(16 + RSWITCH_NUM_AGENTS - 1, 16)
+#define FWMACTL3_SSLV		GENMASK(RSWITCH_NUM_AGENTS - 1, 0)
+
+/* FWMACTL4 */
+#define FWMACTL4(i)		(FWMACTL40 + (i) * 4)
+#define FWMACTL4_CSDL		GENMASK(6, 0)
+
+/* FWMACTL5 */
+#define FWMACTL5_CME		BIT(21)
+#define FWMACTL5_EME		BIT(20)
+#define FWMACTL5_IPU		BIT(19)
+#define FWMACTL5_IPV		GENMASK(18, 16)
+#define FWMACTL5_DV		GENMASK(6, 0)
+
+/* FWMACTLR */
+#define FWMACTLR_L		BIT(31)
+#define FWMACTLR_LCN		GENMASK(25, 16)
+#define FWMACTLR_LO		BIT(3)
+#define FWMACTLR_LEF		BIT(2)
+#define FWMACTLR_LSF		BIT(1)
+#define FWMACTLR_LF		BIT(0)
+
+/* FWVLANTEC */
+#define VLANTMUE		GENMASK(28, 16)
+
+/* FWVLANTL0 */
+#define VLANED			BIT(16)
+#define VLANHLDL		BIT(10)
+#define VLANSLL			BIT(8)
+
+/* FWVLANTL1 */
+#define VLANVIDL		GENMASK(11, 0)
+
+/* FWVLANTL2 */
+#define VLANSLVL		GENMASK(6, 0)
+
+/* FWVLANTL3 */
+#define FWVLANTL3(i)		(FWVLANTL30 + (i) * 4)
+#define VLANCSDL		GENMASK(6, 0)
+
+/* FWVLANTL4 */
+#define VLANCMEL		BIT(21)
+#define VLANEMEL		BIT(20)
+#define VLANIPUL		BIT(19)
+#define VLANIPVL		GENMASK(18, 16)
+#define VLANDVL			GENMASK(6, 0)
+
+/* FWVLANTLR */
+#define VLANTL			BIT(31)
+#define VLANLO			BIT(3)
+#define VLANLEF			BIT(2)
+#define VLANLSF			BIT(1)
+#define VLANLF			BIT(0)
+
+/* FWVLANTIM */
+#define VLANTR			BIT(1)
+#define VLANTIOG		BIT(0)
+
+/* FWVLANTEM */
+#define VLANTUEN		GENMASK(28, 16)
+#define VLANTEN			GENMASK(12, 0)
+
+/* FWVLANTS */
+#define VLANVIDS		GENMASK(11, 0)
+
+/* FWVLANTSR0 */
+#define VLANTS			BIT(31)
+#define VLANHLDS		BIT(10)
+#define VLANSLS			BIT(8)
+#define VLANSNF			BIT(1)
+#define VLANSEF			BIT(0)
+
+/* FWVLANTSR1 */
+#define VLANSLVS		GENMASK(6, 0)
+
+/* FWVLANTSR2 */
+#define FWVLANTSR2(i)		(FWVLANTSR20 + (i) * 4)
+
+/* FWVLANTSR3 */
+#define VLANCMES		BIT(21)
+#define VLANEMES		BIT(20)
+#define VLANIPUS		BIT(19)
+#define VLANIPVS		GENMASK(18, 16)
+#define VLANDVS			GENMASK(6, 0)
 
 #define RSW_AGEING_CLK_PER_US	0x140
 #define RSW_AGEING_TIME		300
@@ -910,7 +1058,7 @@ enum DIE_DT {
 #define INFO1_DV(port_vector)	((u64)(port_vector) << 48ULL)
 
 /* For reception */
-#define INFO1_SPN(port)		((u64)(port) << 36ULL)
+#define SPN			GENMASK_U64(38, 36)
 
 /* For timestamp descriptor in dptrl (Byte 4 to 7) */
 #define TS_DESC_TSUN(dptrl)	((dptrl) & GENMASK(7, 0))
