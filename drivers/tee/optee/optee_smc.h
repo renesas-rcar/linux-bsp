@@ -104,6 +104,9 @@ struct optee_smc_call_get_os_revision_result {
 	unsigned long reserved1;
 };
 
+/* Config to request getting the R-Car Software revision of optee_os */
+#define OPTEE_SMC_GET_RCAR_REVISION	1
+
 /*
  * Load Trusted OS from optee/tee.bin in the Linux firmware.
  *

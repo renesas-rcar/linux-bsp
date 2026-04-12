@@ -1277,6 +1277,11 @@ static void optee_msg_get_os_revision(optee_invoke_fn *invoke_fn)
 			res.result.minor, res.result.build_id);
 	else
 		pr_info("revision %lu.%lu", res.result.major, res.result.minor);
+
+	/* For getting the R-Car Trusted OS revision */
+	invoke_fn(OPTEE_SMC_CALL_GET_OS_REVISION, 0, 0, 0, 0, 0, OPTEE_SMC_GET_RCAR_REVISION, 0,&res.smccc);
+	pr_info("OPTEE_OS RCar BSP Revision: %lu.%lu.%lu\r\n", res.smccc.a0, res.smccc.a1, res.smccc.a2);
+
 }
 
 static bool optee_msg_api_revision_is_compatible(optee_invoke_fn *invoke_fn)
