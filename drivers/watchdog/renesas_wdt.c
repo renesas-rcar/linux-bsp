@@ -232,6 +232,8 @@ static int rwdt_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->clk))
 		return PTR_ERR(priv->clk);
 
+	clk_prepare_enable(priv->clk);
+
 	pm_runtime_enable(dev);
 	pm_runtime_get_sync(dev);
 	priv->clk_rate = clk_get_rate(priv->clk);
@@ -240,8 +242,12 @@ static int rwdt_probe(struct platform_device *pdev)
 	pm_runtime_put(dev);
 
 	if (!priv->clk_rate) {
-		ret = -ENOENT;
-		goto out_pm_disable;
+		u32 rwdt_rate;
+
+		if (of_property_read_u32(dev->of_node,
+					 "renesas,rwdt-clk", &rwdt_rate))
+			goto out_pm_disable;
+		priv->clk_rate = rwdt_rate;
 	}
 
 	for (i = ARRAY_SIZE(clk_divs) - 1; i >= 0; i--) {
