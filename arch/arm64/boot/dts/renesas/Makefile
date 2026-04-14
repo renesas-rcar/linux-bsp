@@ -42,6 +42,8 @@ dtb-$(CONFIG_ARCH_R8A77951) += r8a779m1-salvator-xs.dtb
 dtb-$(CONFIG_ARCH_R8A77951) += r8a779m1-ulcb.dtb
 dtb-$(CONFIG_ARCH_R8A77951) += r8a779m1-ulcb-kf.dtb
 
+dtb-$(CONFIG_ARCH_R8A77951) += r8a779mb-salvator-xs.dtb
+
 dtb-$(CONFIG_ARCH_R8A77960) += r8a77960-salvator-x.dtb
 dtb-$(CONFIG_ARCH_R8A77960) += r8a77960-salvator-xs.dtb
 dtb-$(CONFIG_ARCH_R8A77960) += r8a77960-ulcb.dtb

@@ -1,0 +1,183 @@
+// SPDX-License-Identifier: (GPL-2.0 or MIT)
+/*
+ * Device Tree Source for the Salvator-X 2nd version board with R-Car H3Ne-1.7G
+ * Based on r8a77951-salvator-xs.dts
+ * Copyright (C) 2015-2026 Renesas Electronics Corp.
+ */
+
+/dts-v1/;
+#include "r8a779mb.dtsi"
+#include "salvator-xs.dtsi"
+
+/ {
+	model = "Renesas Salvator-X 2nd version board based on r8a779mb";
+	compatible = "renesas,salvator-xs", "renesas,r8a779mb",
+		     "renesas,r8a7795";
+
+	memory@48000000 {
+		device_type = "memory";
+		/* first 128MB is reserved for secure area. */
+		reg = <0x0 0x48000000 0x0 0x78000000>;
+	};
+
+	memory@500000000 {
+		device_type = "memory";
+		reg = <0x5 0x00000000 0x0 0x80000000>;
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* device specific region for Lossy Decompression */
+		lossy_decompress: linux,lossy_decompress@54000000 {
+			no-map;
+			reg = <0x00000000 0x54000000 0x0 0x03000000>;
+		};
+
+		/* For Audio DSP */
+		adsp_reserved: linux,adsp@57000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x57000000 0x0 0x01000000>;
+		};
+
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma@58000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x58000000 0x0 0x18000000>;
+			linux,cma-default;
+		};
+
+		/* device specific region for contiguous allocations */
+		mmp_reserved: linux,multimedia@70000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x70000000 0x0 0x10000000>;
+		};
+	};
+
+	mmngr {
+		compatible = "renesas,mmngr";
+		memory-region = <&mmp_reserved>, <&lossy_decompress>;
+	};
+
+	mmngrbuf {
+		compatible = "renesas,mmngrbuf";
+	};
+
+	vspm_if {
+		compatible = "renesas,vspm_if";
+	};
+
+	soc: soc {
+		/delete-node/ hdmi@feae0000;
+
+		du: display@feb00000 {
+			ports {
+				/delete-node/ port@2;
+			};
+		};
+
+		rcar_sound: sound@ec500000 {
+			ports {
+				/delete-node/ port@2;
+			};
+		};
+
+		/delete-node/ csi2@feab0000;
+
+		vin4: video@e6ef4000 {
+			ports {
+				port@1 {
+					/delete-node/ endpoint@3;
+				};
+			};
+		};
+
+		vin5: video@e6ef5000 {
+			ports {
+				port@1 {
+					/delete-node/ endpoint@3;
+				};
+			};
+		};
+
+		vin6: video@e6ef6000 {
+			ports {
+				port@1 {
+					/delete-node/ endpoint@3;
+				};
+			};
+		};
+
+		vin7: video@e6ef7000 {
+			ports {
+				port@1 {
+					/delete-node/ endpoint@3;
+				};
+			};
+		};
+
+		/delete-node/ usb@ee0c0100;
+		/delete-node/ usb@ee0e0100;
+		/delete-node/ usb@ee0c0000;
+		/delete-node/ usb@ee0e0000;
+		/delete-node/ usb-phy@ee0c0200;
+		/delete-node/ usb-phy@ee0e0200;
+		/delete-node/ usb@e659c000;
+	};
+
+	/delete-node/ hdmi1-out;
+
+	sound_card: sound {
+		dais = <&rsnd_port0 /* ak4613 */
+				&rsnd_port1>; /* HDMI0 */
+	};
+};
+
+&adsp {
+	status = "okay";
+	memory-region = <&adsp_reserved>;
+};
+
+&du {
+	clocks = <&cpg CPG_MOD 724>,
+		 <&cpg CPG_MOD 723>,
+		 <&cpg CPG_MOD 722>,
+		 <&cpg CPG_MOD 721>,
+		 <&versaclock6 1>,
+		 <&x21_clk>,
+		 <&x22_clk>,
+		 <&versaclock6 2>;
+	clock-names = "du.0", "du.1", "du.2", "du.3",
+		      "dclkin.0", "dclkin.1", "dclkin.2", "dclkin.3";
+};
+
+&lvds0 {
+	ports {
+		port@1 {
+			lvds0_out: endpoint {
+				remote-endpoint = <&lvds_in>;
+			};
+		};
+	};
+};
+
+&vspbc {
+	status = "okay";
+};
+
+&vspbd {
+	status = "okay";
+};
+
+&vspi0 {
+	status = "okay";
+};
+
+&vspi1 {
+	status = "okay";
+};
