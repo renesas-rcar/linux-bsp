@@ -491,7 +491,7 @@ config PCIE6_RCAR_EP
 
 config PCIE4_RCAR_HOST
         tristate "Renesas R-Car Gen5 PCIe 4.0 Controller - Host mode"
-        depends on PCI && PCI_MSI_IRQ_DOMAIN
+        depends on PCI && PCI_MSI
         select PCIE_DW_HOST
         help
           Enables support for the PCIe 4.0 controller in the Designware IP to
