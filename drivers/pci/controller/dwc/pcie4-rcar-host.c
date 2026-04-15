@@ -415,7 +415,7 @@ static int rcar_gen5_pcie_host_init(struct dw_pcie_rp *pp)
 }
 
 static const struct dw_pcie_host_ops rcar_gen5_pcie_host_ops = {
-	.host_init = rcar_gen5_pcie_host_init,
+	.init = rcar_gen5_pcie_host_init,
 };
 
 static int rcar_gen5_pcie_devm_reset_get(struct rcar_pcie4 *rcar_pcie4,
