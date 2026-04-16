@@ -14,6 +14,15 @@
 	#address-cells = <2>;
 	#size-cells = <2>;
 
+	aliases {
+		i2c0 = &i2c0;
+		i2c1 = &i2c1;
+		i2c2 = &i2c2;
+		i2c3 = &i2c3;
+		i2c4 = &i2c4;
+		i2c5 = &i2c5;
+	};
+
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -648,6 +657,18 @@
 			freq-table-hz = <200000000 200000000>, <38400000 38400000>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			resets = <&cpg 1514>;
+			status = "disabled";
+		};
+
+		rswitch: ethernet@e6880000 {
+			compatible = "renesas,etherswitch-r8a779f0",
+				     "renesas,etherswitch";
+			reg = <0 0xe6880000 0 0x00020000>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			clocks = <&cpg CPG_MOD 1505>,
+				<&cpg CPG_MOD 1506>;
+			clock-names = "rsw2", "eth-phy";
 			status = "disabled";
 		};
 
