@@ -3472,13 +3472,16 @@ static int rswitch_init(struct rswitch_private *priv)
 			if (err)
 				goto out;
 
-			err = rswitch_mii_register(priv->rdev[i]);
-			if (err)
-				goto out;
+			/* Only setup MII and PHY in normal mode (not parallel_mode) */
+			if (!parallel_mode) {
+				err = rswitch_mii_register(priv->rdev[i]);
+				if (err)
+					goto out;
 
-			err = rswitch_phy_init(priv->rdev[i]);
-			if (err)
-				goto out;
+				err = rswitch_phy_init(priv->rdev[i]);
+				if (err)
+					goto out;
+			}
 		}
 	}
 
