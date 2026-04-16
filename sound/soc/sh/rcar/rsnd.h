@@ -676,6 +676,9 @@ int rsnd_adg_set_cmd_timsel_gen5(struct rsnd_mod *cmd_mod,
 #define rsnd_adg_clk_disable(priv)	rsnd_adg_clk_control(priv, 0)
 void rsnd_adg_clk_control(struct rsnd_priv *priv, int enable);
 void rsnd_adg_clk_dbg_info(struct rsnd_priv *priv, struct seq_file *m);
+#define rsnd_adg_module_run(priv)      rsnd_adg_module_control(priv, 1)
+#define rsnd_adg_module_stop(priv)     rsnd_adg_module_control(priv, 0)
+int rsnd_adg_module_control(struct rsnd_priv *priv, int enable);
 
 /*
  *	R-Car sound priv
@@ -714,6 +717,7 @@ struct rsnd_priv {
 	 */
 	void *ssi;
 	int ssi_nr;
+	struct clk *ssi_all_clk;
 
 	/*
 	 * below value will be filled on rsnd_ssiu_probe()
@@ -726,6 +730,7 @@ struct rsnd_priv {
 	 */
 	void *src;
 	int src_nr;
+	struct clk *scu_all_clk;
 
 	/*
 	 * below value will be filled on rsnd_ctu_probe()

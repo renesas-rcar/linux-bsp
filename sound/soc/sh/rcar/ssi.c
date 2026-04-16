@@ -485,15 +485,28 @@ static int rsnd_ssi_init(struct rsnd_mod *mod,
 	if (!rsnd_ssi_is_run_mods(mod, io))
 		return 0;
 
+	if (rsnd_is_gen5(priv)) {
+		/*
+		 * It is necessary to turn on SSIx clock
+		 * at this point before any change is made
+		 * to SSIU_AUDIO_CLK_SEL register.
+		 */
+		ret = rsnd_mod_power_on(mod);
+		if (ret < 0)
+			return ret;
+	}
+
 	ret = rsnd_ssi_master_clk_start(mod, io);
 	if (ret < 0)
 		return ret;
 
 	ssi->usrcnt++;
 
-	ret = rsnd_mod_power_on(mod);
-	if (ret < 0)
-		return ret;
+	if (!rsnd_is_gen5(priv)) {
+		ret = rsnd_mod_power_on(mod);
+		if (ret < 0)
+			return ret;
+	}
 
 	rsnd_ssi_config_init(mod, io);
 
@@ -1202,6 +1215,19 @@ int rsnd_ssi_probe(struct rsnd_priv *priv)
 
 	priv->ssi	= ssi;
 	priv->ssi_nr	= nr;
+	if (rsnd_is_gen5(priv)) {
+		priv->ssi_all_clk = devm_clk_get(dev, "ssi-all");
+		if (IS_ERR(priv->ssi_all_clk)) {
+			ret = PTR_ERR(priv->ssi_all_clk);
+			goto rsnd_ssi_probe_done;
+		}
+
+		ret = clk_prepare(priv->ssi_all_clk);
+		if (ret) {
+			clk_unprepare(priv->ssi_all_clk);
+			goto rsnd_ssi_probe_done;
+		}
+	}
 
 	i = 0;
 	for_each_child_of_node(node, np) {
@@ -1271,4 +1297,7 @@ void rsnd_ssi_remove(struct rsnd_priv *priv)
 	for_each_rsnd_ssi(ssi, priv, i) {
 		rsnd_mod_quit(rsnd_mod_get(ssi));
 	}
+
+	if (rsnd_is_gen5(priv))
+		clk_unprepare(priv->ssi_all_clk);
 }
