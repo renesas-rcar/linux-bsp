@@ -4750,6 +4750,13 @@
 			status = "disabled";
 		};
 
+		cr52_rproc3: cr52_3 {
+			compatible = "renesas,rcar-gen5-rproc";
+			memory-region = <&cr52_ram3 &vdev0vring0 &vdev0vring1
+					 &vdev0buffer &proc_kick3>;
+			status = "disabled";
+		};
+
 		mfis: mfis@18800000 {
 			compatible = "renesas,mfis";
 			reg = <0x0 0x18800000 0x0 0x1000>,

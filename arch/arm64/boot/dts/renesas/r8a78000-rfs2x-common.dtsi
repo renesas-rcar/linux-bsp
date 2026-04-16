@@ -115,6 +115,26 @@
 			reg = <0x0 0x96650000 0x0 0x50000>;
 		};
 
+		cr52_ram3: cr52_ram3@90100000 {
+			no-map;
+			reg = <0x0 0x90100000 0x0 0x1000>;
+		};
+
+		vdev0vring0: vdev0vring0@90101000 {
+			no-map;
+			reg = <0x0 0x90101000 0x0 0x4000>;
+		};
+
+		vdev0vring1: vdev0vring1@90105000 {
+			no-map;
+			reg = <0x0 0x90105000 0x0 0x4000>;
+		};
+
+		vdev0buffer: vdev0buffer@90110000 {
+			no-map;
+			reg = <0x0 0x90110000 0x0 0x40000>;
+		};
+
 		cr52_ram2: cr52_ram2@966a0000 {
 			no-map;
 			reg = <0x0 0x966a0000 0x0 0x50000>;
@@ -896,6 +916,11 @@
 
 &cr52_rproc1 {
 	memory-region = <&cr52_ram1>;
+	status = "okay";
+};
+
+&cr52_rproc3 {
+	memory-region = <&cr52_ram3 &vdev0vring0 &vdev0vring1 &vdev0buffer>;
 	status = "okay";
 };
 
