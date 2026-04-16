@@ -453,6 +453,32 @@ static int rsnd_dmapp_attach(struct rsnd_dai_stream *io,
 	return 0;
 }
 
+static int rsnd_dmapp_quit(struct rsnd_mod *mod,
+			   struct rsnd_dai_stream *io,
+			   struct rsnd_priv *priv)
+{
+	int ret;
+
+	ret = rsnd_dmapp_stop(mod, io, priv);
+	if (ret)
+		return ret;
+
+	if (rsnd_is_gen5(priv))
+		rsnd_mod_power_off(mod);
+
+	return 0;
+}
+
+static int rsnd_dmapp_init(struct rsnd_mod *mod,
+			   struct rsnd_dai_stream *io,
+			   struct rsnd_priv *priv)
+{
+	if (!rsnd_is_gen5(priv))
+		return 0;
+
+	return rsnd_mod_power_on(mod);
+}
+
 #ifdef CONFIG_DEBUG_FS
 static void rsnd_dmapp_debug_info(struct seq_file *m,
 				  struct rsnd_dai_stream *io,
@@ -473,9 +499,10 @@ static void rsnd_dmapp_debug_info(struct seq_file *m,
 
 static struct rsnd_mod_ops rsnd_dmapp_ops = {
 	.name		= "audmac-pp",
+	.init		= rsnd_dmapp_init,
 	.start		= rsnd_dmapp_start,
 	.stop		= rsnd_dmapp_stop,
-	.quit		= rsnd_dmapp_stop,
+	.quit		= rsnd_dmapp_quit,
 	.get_status	= rsnd_mod_get_status,
 	DEBUG_INFO
 };
@@ -902,8 +929,20 @@ static int rsnd_dma_alloc(struct rsnd_dai_stream *io, struct rsnd_mod *mod,
 
 	*dma_mod = rsnd_mod_get(dma);
 
-	ret = rsnd_mod_init(priv, *dma_mod, ops, NULL,
-			    type, dma_id);
+	if (rsnd_is_gen5(priv) && type == RSND_MOD_AUDMAPP) {
+		struct clk *clk;
+
+		clk = devm_clk_get(dev, "dmapp");
+		if (IS_ERR(clk))
+			return PTR_ERR(clk);
+
+		ret = rsnd_mod_init(priv, *dma_mod, ops, clk,
+				    type, dma_id);
+	} else {
+		ret = rsnd_mod_init(priv, *dma_mod, ops, NULL,
+				    type, dma_id);
+	}
+
 	if (ret < 0)
 		return ret;
 

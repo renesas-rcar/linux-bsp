@@ -2053,6 +2053,34 @@ static void rsnd_remove(struct platform_device *pdev)
 		remove_func[i](priv);
 }
 
+static int rsnd_runtime_suspend(struct device *dev)
+{
+	struct rsnd_priv *priv = dev_get_drvdata(dev);
+
+	if (!rsnd_is_gen5(priv))
+		return 0;
+
+	clk_disable(priv->scu_all_clk);
+	clk_disable(priv->ssi_all_clk);
+
+	return 0;
+}
+
+static int rsnd_runtime_resume(struct device *dev)
+{
+	struct rsnd_priv *priv = dev_get_drvdata(dev);
+	int ret;
+
+	if (!rsnd_is_gen5(priv))
+		return 0;
+
+	ret = clk_enable(priv->ssi_all_clk);
+	if (ret < 0)
+		return ret;
+
+	return clk_enable(priv->scu_all_clk);
+}
+
 static int __maybe_unused rsnd_suspend(struct device *dev)
 {
 	struct rsnd_priv *priv = dev_get_drvdata(dev);
@@ -2070,6 +2098,7 @@ static int __maybe_unused rsnd_resume(struct device *dev)
 }
 
 static const struct dev_pm_ops rsnd_pm_ops = {
+	SET_RUNTIME_PM_OPS(rsnd_runtime_suspend, rsnd_runtime_resume, NULL)
 	SET_SYSTEM_SLEEP_PM_OPS(rsnd_suspend, rsnd_resume)
 };
 

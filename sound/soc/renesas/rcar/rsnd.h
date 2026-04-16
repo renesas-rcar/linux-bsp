@@ -697,6 +697,7 @@ struct rsnd_priv {
 	 */
 	void *ssi;
 	int ssi_nr;
+	struct clk *ssi_all_clk;
 
 	/*
 	 * below value will be filled on rsnd_ssiu_probe()
@@ -709,6 +710,7 @@ struct rsnd_priv {
 	 */
 	void *src;
 	int src_nr;
+	struct clk *scu_all_clk;
 
 	/*
 	 * below value will be filled on rsnd_ctu_probe()

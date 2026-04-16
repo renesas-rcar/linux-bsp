@@ -767,6 +767,19 @@ int rsnd_src_probe(struct rsnd_priv *priv)
 
 	priv->src_nr	= nr;
 	priv->src	= src;
+	if (rsnd_is_gen5(priv)) {
+		priv->scu_all_clk = devm_clk_get(dev, "scu-all");
+		if (IS_ERR(priv->scu_all_clk)) {
+			ret = PTR_ERR(priv->scu_all_clk);
+			goto rsnd_src_probe_done;
+		}
+
+		ret = clk_prepare(priv->scu_all_clk);
+		if (ret) {
+			clk_unprepare(priv->scu_all_clk);
+			goto rsnd_src_probe_done;
+		}
+	}
 
 	i = 0;
 	for_each_child_of_node(node, np) {
@@ -826,4 +839,7 @@ void rsnd_src_remove(struct rsnd_priv *priv)
 	for_each_rsnd_src(src, priv, i) {
 		rsnd_mod_quit(rsnd_mod_get(src));
 	}
+
+	if (rsnd_is_gen5(priv))
+		clk_unprepare(priv->scu_all_clk);
 }
