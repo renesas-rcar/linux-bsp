@@ -36,14 +36,29 @@ static int rcar_gen5_pcie6_host_init(struct dw_pcie6_rp *pp)
 	if (reset_control_assert(rcar_pcie6->perst))
 		dev_err(pci->dev, "Failed to assert PERST#");
 
-	val = readl(rcar_pcie6->base + PCIEMSR0);
-	val |= BIT(6);
-	writel(val, rcar_pcie6->base + PCIEMSR0);
+	/* 1. Module Reset State */
+	rcar_gen5_pcie6_module_reset(pci);
+	rcar_gen5_pcie6_module_run(pci);
 
-	/* Set device type - RootComplex */
+	/* 2. Set device type - RootComplex */
 	rcar_gen5_pcie6_set_device_type(rcar_pcie6, true);
 
+	/* 3..5 Channel aggregation */
+	rcar_gen5_pcie6_channel_aggregation(rcar_pcie6, pci->num_lanes);
+
+	/* DBI_RO_WR_EN */
 	dw_pcie6_dbi_ro_wr_en(pci);
+	if (pci->num_lanes == 8) {
+		val = readl(rcar_pcie6->dbi_shared + PCIE_MISC_CONTROL_1_OFF);
+		val |= PCIE_DBI_RO_WR_EN;
+		writel(val, rcar_pcie6->dbi_shared + PCIE_MISC_CONTROL_1_OFF);
+	}
+
+	/* 6. Reference Register for PHY1 */
+	rcar_gen5_pcie6_refres_phy1(rcar_pcie6, rcar_pcie6->ch);
+
+	/* 7. Sharing REFCLK setting */
+	rcar_gen5_pcie6_refclk_phy1(rcar_pcie6, rcar_pcie6->ch);
 
 	if (IS_ENABLED(CONFIG_PCI_MSI)) {
 		/* Enable MSI interrupt signal */
@@ -56,61 +71,89 @@ static int rcar_gen5_pcie6_host_init(struct dw_pcie6_rp *pp)
 		dw_pcie6_writel_dbi(pci, MSICAP0F0, val);
 	}
 
-	rcar_gen5_pcie6_set_max_link_width(rcar_pcie6, pci->num_lanes);
-
-	/* Sharing REFCLK setting */
-	rcar_gen5_pcie6_refclk_phy1(rcar_pcie6, pci->num_lanes);
-
-	/* Power Manegement Setting */
+	/* 8..9 Power Manegement and Control State Machine Setting */
 	val = readl(rcar_pcie6->base + PCIEPWRMNGCTRL);
-	val |= GENMASK(11, 10);
+	val |= APP_CLK_PM_EN_REQ_N;
 	writel(val, rcar_pcie6->base + PCIEPWRMNGCTRL);
 
-	/* Error Status Enable */
+	/* 10. Lane Setting */
+	rcar_gen5_pcie6_set_max_link_width(rcar_pcie6, pci->num_lanes);
+
+	/* 11. Error Status Enable */
 	val = readl(rcar_pcie6->base + PCIEERRSTS0EN);
-	val |= BIT(9) | BIT(5) | BIT(4);
+	val |= CFG_SYS_ERR_RC | CFG_SAFETY_UNCORR | CFG_SAFETY_CORR;
 	writel(val, rcar_pcie6->base + PCIEERRSTS0EN);
 
-	/* Clear hold phy reset */
+	/* 12. Clear hold phy reset */
 	val = readl(rcar_pcie6->base + PCIERSTCTRL1);
-	val &= ~BIT(16);
+	val &= ~APP_HOLD_PHY_RST;
 	writel(val, rcar_pcie6->base + PCIERSTCTRL1);
 
 	rcar_gen5_pcie6_bootload(rcar_pcie6, pci->num_lanes, rcar_pcie6->ch);
 
-	/* Separate REFCLK */
+	/* 19. Separate REFCLK */
 	val = readl(rcar_pcie6->base + PCIEMSR0);
-	val |= BIT(6);
+	val |= APP_SRIS_MODE;
 	writel(val, rcar_pcie6->base + PCIEMSR0);
 
 	val = dw_pcie6_readl_dbi(pci, PRTLGC2);
-	val |= BIT(23);
+	val |= PCIE_CAP_COMMON_CLK_CONFIG;
 	dw_pcie6_writel_dbi(pci, PRTLGC2, val);
 
-	/* ECRC */
+	val = dw_pcie6_readl_dbi(pci, EXPCAP(PCI_EXP_LNKCTL));
+	val &= ~DO_DESKEW_FOR_SRIS;
+	dw_pcie6_writel_dbi(pci, EXPCAP(PCI_EXP_LNKCTL), val);
+
+	if (pci->num_lanes == 8) {
+		val = readl(rcar_pcie6->dbi_shared + PRTLGC2);
+		val |= PCIE_CAP_COMMON_CLK_CONFIG;
+		writel(val, rcar_pcie6->dbi_shared + PRTLGC2);
+
+		val = readl(rcar_pcie6->dbi_shared +  EXPCAP(PCI_EXP_LNKCTL));
+		val &= ~DO_DESKEW_FOR_SRIS;
+		writel(val, rcar_pcie6->dbi_shared +  EXPCAP(PCI_EXP_LNKCTL));
+	}
+
+	/* 20. Set Max Link Speed*/
+	val = dw_pcie6_readl_dbi(pci, PCIEG6_LINK_CONTROL2_LINK_STATUS2_REG);
+	val &= ~PCIE_CAP_TARGET_LINK_SPEED;
+	val |= (pci->link_gen);
+	dw_pcie6_writel_dbi(pci, PCIEG6_LINK_CONTROL2_LINK_STATUS2_REG, val);
+
+	/* 21. ECRC gen&Chk for Function0/1 */
 	val = dw_pcie6_readl_dbi(pci, PCIE_ADV_ERR_CTRL);
-	val |= BIT(8) | BIT(6);
+	val |= ECRC_CHECK_EN | ECRC_GEN_EN;
 	dw_pcie6_writel_dbi(pci, PCIE_ADV_ERR_CTRL, val);
 
-	/* IDE Logic disable  */
+	/* 22. IDE Logic disable  */
 	val = dw_pcie6_readl_dbi(pci, PCIE_PF0_IDE_CTRL);
-	val |= BIT(0);
+	val |= IDE_CTRL_DISABLE;
 	dw_pcie6_writel_dbi(pci, PCIE_PF0_IDE_CTRL, val);
 
-	/* Disable CXL Mode by default */
+	val = dw_pcie6_readl_dbi(pci, PCIEG6_FLIT_INJECT_CAP_HDR_REG);
+	val &= FLIT_INJECT_CAP_NEXT_OFFSET;
+	dw_pcie6_writel_dbi(pci, PCIEG6_FLIT_INJECT_CAP_HDR_REG, val);
+
+	/* 23. Disable CXL Mode by default */
 	val = dw_pcie6_readl_dbi(pci, PCIE6_PL32G_CAP);
-	val &= ~GENMASK(10, 8);
+	val &= ~MOD_TS_USAGE_MODE_SELECT;
 	dw_pcie6_writel_dbi(pci, PCIE6_PL32G_CAP, val);
 
-	/* Disable flit mode by default */
+	/* 24. Enable flit mode by default */
 	val = dw_pcie6_readw_dbi(pci, EXPCAP(PCI_EXP_LNKCTL));
-	val |= BIT(13);
+	val &= ~PCIE_CAP_FLIT_MODE_DISABLE;
 	dw_pcie6_writew_dbi(pci, EXPCAP(PCI_EXP_LNKCTL), val);
 
-	/* Monitor PMD */
-	if (!rcar_gen5_pcie6_monitor_pmd(rcar_pcie6))
+	/* 25. DirectSpeed Change */
+	val = dw_pcie6_readl_dbi(pci, PCIE_LINK_WIDTH_SPEED_CONTROL);
+	val &= ~PORT_LOGIC_SPEED_CHANGE;
+	dw_pcie6_writel_dbi(pci, PCIE_LINK_WIDTH_SPEED_CONTROL, val);
+
+	/* 26. Monitor PMD */
+	if (!rcar_gen5_pcie6_monitor_pmd(rcar_pcie6, pci->num_lanes))
 		dev_info(pci->dev, "All PMD check passed\n");
 
+	/* 28. TxPreset, Coefficient Mapping */
 	rcar_gen5_pcie6_txpreset_coef_mapping(pci);
 
 	/* lane0 Rx 10kohm change to 60ohm */
@@ -122,7 +165,13 @@ static int rcar_gen5_pcie6_host_init(struct dw_pcie6_rp *pp)
 	if (reset_control_deassert(rcar_pcie6->perst))
 		dev_err(pci->dev, "Failed to deassert PERST#");
 
+	/* DBI_RO_WR_DIS */
 	dw_pcie6_dbi_ro_wr_dis(pci);
+	if (pci->num_lanes == 8) {
+		val = readl(rcar_pcie6->dbi_shared + PCIE_MISC_CONTROL_1_OFF);
+		val &= ~PCIE_DBI_RO_WR_EN;
+		writel(val, rcar_pcie6->dbi_shared + PCIE_MISC_CONTROL_1_OFF);
+	}
 
 	return 0;
 }
@@ -139,9 +188,14 @@ static int rcar_add_pcie6_port(struct rcar_pcie6 *rcar_pcie6,
 	struct device *dev = &pdev->dev;
 	int ret;
 
-	ret = clk_prepare_enable(rcar_pcie6->bus_clk);
-	if (ret)
-		dev_err(pci->dev, "failed to enable bus clock: %d\n", ret);
+	for (int i = 0; i < PCIE6_RCAR_NUM_CLKS; i++) {
+		ret = clk_prepare_enable(rcar_pcie6->clks[i].clk);
+		if (ret) {
+			dev_err(dev, "Failed to enable clks[%s] clock: %d\n",
+				rcar_pcie6->clks[i].id, ret);
+			return ret;
+		}
+	}
 
 	pp->irq = platform_get_irq(pdev, 1);
 	if (pp->irq < 0)
@@ -202,7 +256,7 @@ static int pcie6_rcar_host_probe(struct platform_device *pdev)
 
 	ret = rcar_add_pcie6_port(rcar_pcie6, pdev);
 	if (ret)
-		dev_err(dev, "failed to initialize host\n");
+		dev_err(dev, "Failed to initialize host\n");
 
 	return 0;
 
@@ -217,7 +271,9 @@ static int rcar_gen5_pcie6_suspend_noirq(struct device *dev)
 {
 	struct rcar_pcie6 *rcar_pcie6 = dev_get_drvdata(dev);
 
-	clk_disable_unprepare(rcar_pcie6->bus_clk);
+	for (int i = 0; i < PCIE6_RCAR_NUM_CLKS; i++)
+		clk_disable_unprepare(rcar_pcie6->clks[i].clk);
+
 	dev_info(dev, "Renesas PCIe6 glue layer suspended.\n");
 
 	return 0;
@@ -230,10 +286,13 @@ static int rcar_gen5_pcie6_resume_noirq(struct device *dev)
 	struct dw_pcie6_rp *pp = &pci->pp;
 	u32 val, ret;
 
-	ret = clk_prepare_enable(rcar_pcie6->bus_clk);
-	if (ret) {
-		dev_err(pci->dev, "Failed to enable bulk clocks: %d\n", ret);
-		return ret;
+	for (int i = 0; i < PCIE6_RCAR_NUM_CLKS; i++) {
+		ret = clk_prepare_enable(rcar_pcie6->clks[i].clk);
+		if (ret) {
+			dev_err(dev, "Failed to enable clks[%s] clock: %d\n",
+				rcar_pcie6->clks[i].id, ret);
+			return ret;
+		}
 	}
 
 	/* Re-initialize Root Complex */
