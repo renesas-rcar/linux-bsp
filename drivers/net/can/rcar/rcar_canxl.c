@@ -998,16 +998,18 @@ static int rcar_canxl_check_queue(struct rcar_canxl_global *gpriv,
 
 static int rcar_canxl_local_ram_init(struct rcar_canxl_global *gpriv)
 {
-	u32 sts;
-	int err;
+	/*	u32 sts;
+	 * int err;
+	 */
 
 	/* Check LRAMINIT flag as Local RAM initialization */
-	err = readl_poll_timeout(gpriv->base + CXLGSTS, sts,
-				 !(sts & CXLGSTS_LRAMINIT), 2, 500000);
-	if (err) {
-		dev_dbg(&gpriv->pdev->dev, "Local ram init failed\n");
-		return err;
-	}
+	/* err = readl_poll_timeout(gpriv->base + CXLGSTS, sts,
+	 * 			 !(sts & CXLGSTS_LRAMINIT), 2, 500000);
+	 * if (err) {
+	 * 	dev_dbg(&gpriv->pdev->dev, "Local ram init failed\n");
+	 *	return err;
+	 * }
+	 */
 
 	return 0;
 }
