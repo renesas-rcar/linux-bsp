@@ -1073,3 +1073,15 @@
 	/* Auto-enable UCIe mapping at probe for shared memory at 0x90000000 */
 	shared-region = <&ucie_shared>;
 };
+
+&canxl0 {
+	channel0;
+
+	status = "okay";
+};
+
+&canxl1 {
+	channel1;
+
+	status = "okay";
+};
