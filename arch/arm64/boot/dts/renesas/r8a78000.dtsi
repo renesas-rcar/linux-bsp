@@ -5898,7 +5898,7 @@
 				 <&scmi_clk X5H_CLOCK_ID_SCU01>, <&scmi_clk X5H_CLOCK_ID_SCU00>,
 				 <&scmi_clk X5H_CLOCK_ID_SCU01>, <&scmi_clk X5H_CLOCK_ID_SCU00>,
 				 <&scmi_clk X5H_CLOCK_ID_DVC00>, <&scmi_clk X5H_CLOCK_ID_DVC01>,
-				 <&scmi_clk X5H_CLOCK_ID_APD00>, <&scmi_clk X5H_CLOCK_ID_APD01>,
+				 <&scmi_clk X5H_CLOCK_ID_APD00>,
 				 <&audio_clk_a>, <&audio_clk_b>,
 				 <&audio_clk_c>;
 			clock-names = "adg", "ssi-all",
@@ -5912,7 +5912,7 @@
 				      "mix.1", "mix.0",
 				      "ctu.1", "ctu.0",
 				      "dvc.0", "dvc.1",
-				      "dmapp.0", "dmapp.1",
+				      "dmapp",
 				      "clk_a", "clk_b", "clk_c";
 			status = "disabled";
 
