@@ -163,6 +163,34 @@
 	vspm_if {
 		compatible = "renesas,vspm_if";
 	};
+
+	gsx_opp0: gsx_opp_table0 {
+		compatible = "operating-points-v2";
+		opp-200000000 {
+			opp-hz = /bits/ 64 <200000000>;
+			opp-microvolt = <830000>;
+		};
+		opp-300000000 {
+			opp-hz = /bits/ 64 <300000000>;
+			opp-microvolt = <830000>;
+		};
+		opp-400000000 {
+			opp-hz = /bits/ 64 <400000000>;
+			opp-microvolt = <830000>;
+		};
+		opp-600000000 {
+			opp-hz = /bits/ 64 <600000000>;
+			opp-microvolt = <830000>;
+		};
+		opp-800000000 {
+			opp-hz = /bits/ 64 <800000000>;
+			opp-microvolt = <830000>;
+		};
+		opp-1000000000 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <830000>;
+		};
+	};
 };
 
 /* Enable serial console */
@@ -602,6 +630,7 @@
 
 &gsx {
 	status = "okay";
+	operating-points-v2 = <&gsx_opp0>;
 };
 
 &i2c0 {
