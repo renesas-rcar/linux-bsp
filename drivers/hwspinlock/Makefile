@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
 #
 # Generic Hardware Spinlock framework
+obj-$(CONFIG_HWSPINLOCK_RCAR)		+= rcar_hwspinlock.o
 #
 
 obj-$(CONFIG_HWSPINLOCK)		+= hwspinlock_core.o
