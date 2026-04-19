@@ -385,4 +385,13 @@ config PCIE_FU740
 	  Say Y here if you want PCIe controller support for the SiFive
 	  FU740.
 
+config PCIE_RENESAS
+	bool "Renesas R-Car PCIe v4.0 Host controller"
+	depends on ARCH_RENESAS || COMPILE_TEST
+	depends on PCI_MSI_IRQ_DOMAIN
+	select PCIE_DW_HOST
+	help
+	  Say Y here if you want PCIe host controller support on R-Car V3U SoCs.
+	  This uses the DesignWare core.
+
 endmenu
