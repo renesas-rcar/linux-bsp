@@ -176,6 +176,8 @@ struct sci_port {
 	bool has_rtscts;
 	bool autorts;
 	bool tx_occurred;
+
+	bool				use_dma;
 };
 
 #define SCI_NPORTS CONFIG_SERIAL_SH_SCI_NR_UARTS
@@ -2209,7 +2211,8 @@ static int sci_startup(struct uart_port *port)
 	dev_dbg(port->dev, "%s(%d)\n", __func__, port->line);
 
 	s->tx_occurred = false;
-	sci_request_dma(port);
+	if (s->use_dma)
+		sci_request_dma(port);
 
 	ret = sci_request_irq(s);
 	if (unlikely(ret < 0)) {
@@ -3295,6 +3298,7 @@ static struct plat_sci_port *sci_parse_dt(struct platform_device *pdev,
 	p->regtype = SCI_OF_REGTYPE(data);
 
 	sp->has_rtscts = of_property_read_bool(np, "uart-has-rtscts");
+	sp->use_dma = of_property_read_bool(np, "dmas");
 
 	return p;
 }
@@ -3524,13 +3528,16 @@ static __maybe_unused int sci_suspend(struct device *dev)
 	struct sci_port *sport = dev_get_drvdata(dev);
 
 	if (sport) {
+		pm_runtime_get_sync(sport->port.dev);
 		uart_suspend_port(&sci_uart_driver, &sport->port);
+		pm_runtime_put(sport->port.dev);
+	}
 
 		if (!console_suspend_enabled && uart_console(&sport->port))
 			sci_console_save(sport);
 		else
 			return reset_control_assert(sport->rstc);
-	}
+
 
 	return 0;
 }
@@ -3540,6 +3547,7 @@ static __maybe_unused int sci_resume(struct device *dev)
 	struct sci_port *sport = dev_get_drvdata(dev);
 
 	if (sport) {
+
 		if (!console_suspend_enabled && uart_console(&sport->port)) {
 			sci_console_restore(sport);
 		} else {
@@ -3549,7 +3557,10 @@ static __maybe_unused int sci_resume(struct device *dev)
 				return ret;
 		}
 
+		pm_runtime_get_sync(sport->port.dev);
 		uart_resume_port(&sci_uart_driver, &sport->port);
+		pm_runtime_put(sport->port.dev);
+
 	}
 
 	return 0;
