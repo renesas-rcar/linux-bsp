@@ -1534,6 +1534,7 @@ static struct cpumask		***sched_domains_numa_masks;
 	(SD_SHARE_CPUCAPACITY	|	\
 	 SD_SHARE_PKG_RESOURCES |	\
 	 SD_NUMA		|	\
+	 SD_ASYM_CPUCAPACITY	|	\
 	 SD_ASYM_PACKING)
 
 static struct sched_domain *
@@ -1607,6 +1608,26 @@ sd_init(struct sched_domain_topology_level *tl,
 	WARN_ONCE((sd->flags & (SD_SHARE_CPUCAPACITY | SD_ASYM_CPUCAPACITY)) ==
 		  (SD_SHARE_CPUCAPACITY | SD_ASYM_CPUCAPACITY),
 		  "CPU capacity asymmetry not supported on SMT\n");
+
+	/*
+	 * Check if cpu_map eclipses cpu capacity asymmetry.
+	 */
+
+	if (sd->flags & SD_ASYM_CPUCAPACITY) {
+		int i;
+		bool disable = true;
+		long capacity = arch_scale_cpu_capacity(sd_id);
+
+		for_each_cpu(i, sched_domain_span(sd)) {
+			if (capacity != arch_scale_cpu_capacity(i)) {
+				disable = false;
+				break;
+			}
+		}
+
+		if (disable)
+			sd->flags &= ~SD_ASYM_CPUCAPACITY;
+	}
 
 	/*
 	 * Convert topological properties into behaviour.

@@ -4,8 +4,13 @@
  *
  * Copyright (C) 2014  Magnus Damm
  * Copyright (C) 2015-2017 Glider bvba
+ * Copyright (C) 2021 Renesas Electronics Corporation
  */
 
+#include <dt-bindings/power/r8a7795-sysc.h>
+#include <dt-bindings/power/r8a7796-sysc.h>
+#include <dt-bindings/power/r8a77965-sysc.h>
+#include <dt-bindings/power/r8a77980-sysc.h>
 #include <linux/clk/renesas.h>
 #include <linux/delay.h>
 #include <linux/err.h>
@@ -17,6 +22,8 @@
 #include <linux/io.h>
 #include <linux/iopoll.h>
 #include <linux/soc/renesas/rcar-sysc.h>
+#include <linux/sys_soc.h>
+#include <linux/syscore_ops.h>
 
 #include "rcar-sysc.h"
 
@@ -45,16 +52,326 @@
 #define PWRER_OFFS		0x14	/* Power Shutoff/Resume Error */
 
 
-#define SYSCSR_TIMEOUT		100
-#define SYSCSR_DELAY_US		1
+#define SYSCSR_TIMEOUT		10000
+#define SYSCSR_DELAY_US		10
 
-#define PWRER_RETRIES		100
-#define PWRER_DELAY_US		1
+#define PWRER_RETRIES		1000
+#define PWRER_DELAY_US		10
 
-#define SYSCISR_TIMEOUT		1000
-#define SYSCISR_DELAY_US	1
+#define SYSCISR_TIMEOUT		10000
+#define SYSCISR_DELAY_US	10
 
 #define RCAR_PD_ALWAYS_ON	32	/* Always-on power area */
+
+/* Number of areas need to fixup data when enable PDMODE */
+#define NUM_FIXUP_AREAS		14
+
+/* Module Stop Control/Status Register */
+static const u16 mstpsr_addr[] = {
+	0x030, 0x038, 0x040, 0x048, 0x04C, 0x03C, 0x1C0, 0x1C4,
+	0x9A0, 0x9A4, 0x9A8, 0x9AC,
+};
+
+static const u16 smstpcr_addr[] = {
+	0x130, 0x134, 0x138, 0x13C, 0x140, 0x144, 0x148, 0x14C,
+	0x990, 0x994, 0x998, 0x99C,
+};
+
+#define MSTP_BASE_ADDR			0xE6150000
+/* MSTP Register 1 */
+#define MSTP_BIT_3DGE			12
+#define MSTP_BIT_FDP1_1			18
+#define MSTP_BIT_FDP1_0			19
+#define MSTP_BIT_iVDP1C			28
+#define MSTP_BIT_VCPLF_iVDP1C	30
+#define MSTP_BIT_VDPB			31
+/* MSTP Register 6 */
+#define MSTP_BIT_FCPVD2			1
+#define MSTP_BIT_FCPVD1			2
+#define MSTP_BIT_FCPVD0			3
+#define MSTP_BIT_FCPVB1			6
+#define MSTP_BIT_FCPVB0			7
+#define MSTP_BIT_FCPVI1			10
+#define MSTP_BIT_FCPVI0			11
+#define MSTP_BIT_FCPF1			14
+#define MSTP_BIT_FCPF0			15
+#define MSTP_BIT_FCPCS			19
+#define MSTP_BIT_VSPD2			21
+#define MSTP_BIT_VSPD1			22
+#define MSTP_BIT_VSPD0			23
+#define MSTP_BIT_VSPBC			24
+#define MSTP_BIT_VSPBD			26
+#define MSTP_BIT_VSPI1			30
+#define MSTP_BIT_VSPI0			31
+/* MSTP Register 8 */
+#define MSTP_BIT_IMR3			20
+#define MSTP_BIT_IMR2			21
+#define MSTP_BIT_IMR1			22
+#define MSTP_BIT_IMR0			23
+
+struct rcar_clk_ctrl_reg {
+	u8 id;
+	u32 mask;
+	u32 no_off_mask;
+};
+
+struct rcar_clk_ctrl_pd {
+	const char *pd_name;
+	size_t regs_cnt;
+	struct rcar_clk_ctrl_reg *regs;
+};
+
+struct rcar_clk_ctrl {
+	size_t pds_cnt;
+	struct rcar_clk_ctrl_pd *pd;
+};
+
+static struct rcar_clk_ctrl_reg gen3_clk_ctrl_pd_3dg[] = {
+	{.id = 1, .mask = BIT(MSTP_BIT_3DGE), .no_off_mask = BIT(MSTP_BIT_3DGE)},
+};
+
+/* H3 MSTP Registers List for PD clock control */
+static struct rcar_clk_ctrl_reg h3_clk_ctrl_pd_a3vp[] = {
+	{.id = 1, .mask = BIT(MSTP_BIT_FDP1_1) | BIT(MSTP_BIT_FDP1_0)},
+	{.id = 6,
+	 .mask = BIT(MSTP_BIT_FCPVD2) | BIT(MSTP_BIT_FCPVD1) | BIT(MSTP_BIT_FCPVD0) |
+			 BIT(MSTP_BIT_FCPVB1) | BIT(MSTP_BIT_FCPVB0) | BIT(MSTP_BIT_FCPVI1) |
+			 BIT(MSTP_BIT_FCPVI0) | BIT(MSTP_BIT_FCPF1) | BIT(MSTP_BIT_FCPF0) |
+			 BIT(MSTP_BIT_VSPD2) | BIT(MSTP_BIT_VSPD1) | BIT(MSTP_BIT_VSPD0) |
+			 BIT(MSTP_BIT_VSPBC) | BIT(MSTP_BIT_VSPBD) | BIT(MSTP_BIT_VSPI1) |
+			 BIT(MSTP_BIT_VSPI0),
+	 .no_off_mask = BIT(MSTP_BIT_FCPVD2) | BIT(MSTP_BIT_FCPVD1) |
+					BIT(MSTP_BIT_FCPVD0) | BIT(MSTP_BIT_FCPVB1) |
+					BIT(MSTP_BIT_FCPVB0) | BIT(MSTP_BIT_FCPVI1) |
+					BIT(MSTP_BIT_FCPVI0) | BIT(MSTP_BIT_VSPD2) |
+					BIT(MSTP_BIT_VSPD1) | BIT(MSTP_BIT_VSPD0) |
+					BIT(MSTP_BIT_VSPBC) | BIT(MSTP_BIT_VSPBD) |
+					BIT(MSTP_BIT_VSPI1) | BIT(MSTP_BIT_VSPI0)},
+};
+
+static struct rcar_clk_ctrl_reg h3_clk_ctrl_pd_a3vc[] = {
+	{.id = 6, .mask = BIT(MSTP_BIT_FCPCS)},
+	{.id = 8, .mask = BIT(MSTP_BIT_IMR3) | BIT(MSTP_BIT_IMR2) |
+					  BIT(MSTP_BIT_IMR1) | BIT(MSTP_BIT_IMR0)},
+};
+
+static struct rcar_clk_ctrl_reg h3_clk_ctrl_pd_a2vc1[] = {
+	{.id = 1, .mask = BIT(MSTP_BIT_VCPLF_iVDP1C) | BIT(MSTP_BIT_VDPB)},
+};
+
+/* H3 PDs List for Clock Control */
+static struct rcar_clk_ctrl_pd h3_clk_ctrl_pds[] = {
+	{
+		.pd_name = "a3vp",
+		.regs_cnt = ARRAY_SIZE(h3_clk_ctrl_pd_a3vp),
+		.regs = h3_clk_ctrl_pd_a3vp,
+	},
+	{
+		.pd_name = "a3vc",
+		.regs_cnt = ARRAY_SIZE(h3_clk_ctrl_pd_a3vc),
+		.regs = h3_clk_ctrl_pd_a3vc,
+	},
+	{
+		.pd_name = "a2vc1",
+		.regs_cnt = ARRAY_SIZE(h3_clk_ctrl_pd_a2vc1),
+		.regs = h3_clk_ctrl_pd_a2vc1,
+	},
+	{
+		.pd_name = "3dg-",
+		.regs_cnt = ARRAY_SIZE(gen3_clk_ctrl_pd_3dg),
+		.regs = gen3_clk_ctrl_pd_3dg,
+	},
+};
+
+/* M3W MSTP Registers List for PD clock control */
+static struct rcar_clk_ctrl_reg m3w_clk_ctrl_pd_a2vc0[] = {
+	{.id = 1, .mask = BIT(MSTP_BIT_iVDP1C) | BIT(MSTP_BIT_VDPB)},
+};
+
+static struct rcar_clk_ctrl_reg m3w_clk_ctrl_pd_a2vc1[] = {
+	{.id = 1, .mask = BIT(MSTP_BIT_VCPLF_iVDP1C)},
+};
+
+/* M3W PDs List for Clock Control */
+static struct rcar_clk_ctrl_pd m3w_clk_ctrl_pds[] = {
+	{
+		.pd_name = "a2vc0",
+		.regs_cnt = ARRAY_SIZE(m3w_clk_ctrl_pd_a2vc0),
+		.regs = m3w_clk_ctrl_pd_a2vc0,
+	},
+	{
+		.pd_name = "a2vc1",
+		.regs_cnt = ARRAY_SIZE(m3w_clk_ctrl_pd_a2vc1),
+		.regs = m3w_clk_ctrl_pd_a2vc1,
+	},
+	{
+		.pd_name = "3dg-",
+		.regs_cnt = ARRAY_SIZE(gen3_clk_ctrl_pd_3dg),
+		.regs = gen3_clk_ctrl_pd_3dg,
+	},
+};
+
+/* M3W+ MSTP Registers List for PD clock control */
+static struct rcar_clk_ctrl_reg m3wp_clk_ctrl_pd_a2vc1[] = {
+	{.id = 1, .mask = BIT(MSTP_BIT_VCPLF_iVDP1C) | BIT(MSTP_BIT_VDPB)},
+	{.id = 6, .mask = BIT(MSTP_BIT_FCPCS)},
+};
+
+/* M3W+ PDs List for Clock Control */
+static struct rcar_clk_ctrl_pd m3wp_clk_ctrl_pds[] = {
+	{
+		.pd_name = "a2vc1",
+		.regs_cnt = ARRAY_SIZE(m3wp_clk_ctrl_pd_a2vc1),
+		.regs = m3wp_clk_ctrl_pd_a2vc1,
+	},
+	{
+		.pd_name = "3dg-",
+		.regs_cnt = ARRAY_SIZE(gen3_clk_ctrl_pd_3dg),
+		.regs = gen3_clk_ctrl_pd_3dg,
+	},
+};
+
+/* M3N MSTP Registers List for PD clock control */
+static struct rcar_clk_ctrl_reg m3n_clk_ctrl_pd_a3vp[] = {
+	{.id = 1, .mask = BIT(MSTP_BIT_FDP1_0)},
+	{.id = 6,
+	 .mask = BIT(MSTP_BIT_FCPVD1) | BIT(MSTP_BIT_FCPVD0) | BIT(MSTP_BIT_FCPVB0) |
+			 BIT(MSTP_BIT_FCPVI0) | BIT(MSTP_BIT_FCPF0) | BIT(MSTP_BIT_VSPD1) |
+			 BIT(MSTP_BIT_VSPD0) | BIT(MSTP_BIT_VSPBD) | BIT(MSTP_BIT_VSPI0),
+	 .no_off_mask = BIT(MSTP_BIT_FCPVD1) | BIT(MSTP_BIT_FCPVD0) |
+					BIT(MSTP_BIT_FCPVB0) | BIT(MSTP_BIT_FCPVI0) |
+					BIT(MSTP_BIT_VSPD1) | BIT(MSTP_BIT_VSPD0) |
+					BIT(MSTP_BIT_VSPBD) | BIT(MSTP_BIT_VSPI0)},
+};
+
+static struct rcar_clk_ctrl_reg m3n_clk_ctrl_pd_a3vc[] = {
+	{.id = 8, .mask = BIT(MSTP_BIT_IMR1) | BIT(MSTP_BIT_IMR0)},
+};
+
+static struct rcar_clk_ctrl_reg m3n_clk_ctrl_pd_a2vc1[] = {
+	{.id = 1, .mask = BIT(MSTP_BIT_VCPLF_iVDP1C) | BIT(MSTP_BIT_VDPB)},
+	{.id = 6, .mask = BIT(MSTP_BIT_FCPCS)},
+};
+
+/* M3N PDs List for Clock Control */
+static struct rcar_clk_ctrl_pd m3n_clk_ctrl_pds[] = {
+	{
+		.pd_name = "a3vp",
+		.regs_cnt = ARRAY_SIZE(m3n_clk_ctrl_pd_a3vp),
+		.regs = m3n_clk_ctrl_pd_a3vp,
+	},
+	{
+		.pd_name = "a3vc",
+		.regs_cnt = ARRAY_SIZE(m3n_clk_ctrl_pd_a3vc),
+		.regs = m3n_clk_ctrl_pd_a3vc,
+	},
+	{
+		.pd_name = "a2vc1",
+		.regs_cnt = ARRAY_SIZE(m3n_clk_ctrl_pd_a2vc1),
+		.regs = m3n_clk_ctrl_pd_a2vc1,
+	},
+	{
+		.pd_name = "3dg-",
+		.regs_cnt = ARRAY_SIZE(gen3_clk_ctrl_pd_3dg),
+		.regs = gen3_clk_ctrl_pd_3dg,
+	},
+};
+
+/* V3H MSTP Registers List for PD clock control */
+static struct rcar_clk_ctrl_reg v3h_clk_ctrl_pd_a3ir[] = {
+	{.id = 5, .mask = 0xbf200001},
+	{.id = 8, .mask = 0xff000000},
+};
+
+/* V3H PDs List for Clock Control */
+static struct rcar_clk_ctrl_pd v3h_clk_ctrl_pds[] = {
+	{
+		.pd_name = "a3ir",
+		.regs_cnt = ARRAY_SIZE(v3h_clk_ctrl_pd_a3ir),
+		.regs = v3h_clk_ctrl_pd_a3ir,
+	},
+};
+
+/* E3 PDs List for Clock Control */
+static struct rcar_clk_ctrl_pd e3_clk_ctrl_pds[] = {
+	{
+		.pd_name = "3dg-",
+		.regs_cnt = ARRAY_SIZE(gen3_clk_ctrl_pd_3dg),
+		.regs = gen3_clk_ctrl_pd_3dg,
+	},
+};
+
+static struct rcar_clk_ctrl rcar_clk_ctrl_list[] = {
+	/* H3 Clock Control */
+	{
+		.pds_cnt = ARRAY_SIZE(h3_clk_ctrl_pds),
+		.pd = h3_clk_ctrl_pds,
+	},
+	/* M3W Clock Control */
+	{
+		.pds_cnt = ARRAY_SIZE(m3w_clk_ctrl_pds),
+		.pd = m3w_clk_ctrl_pds,
+	},
+	/* M3W+ Clock Control */
+	{
+		.pds_cnt = ARRAY_SIZE(m3wp_clk_ctrl_pds),
+		.pd = m3wp_clk_ctrl_pds,
+	},
+	/* M3N Clock Control */
+	{
+		.pds_cnt = ARRAY_SIZE(m3n_clk_ctrl_pds),
+		.pd = m3n_clk_ctrl_pds,
+	},
+	/* V3H Clock Control */
+	{
+		.pds_cnt = ARRAY_SIZE(v3h_clk_ctrl_pds),
+		.pd = v3h_clk_ctrl_pds,
+	},
+	/* E3 Clock Control */
+	{
+		.pds_cnt = ARRAY_SIZE(e3_clk_ctrl_pds),
+		.pd = e3_clk_ctrl_pds,
+	},
+};
+
+enum _rcar_clk_ctrl_soc_idx {
+	RCAR_H3_CLK_CTRL_IDX,
+	RCAR_M3W_CLK_CTRL_IDX,
+	RCAR_M3WP_CLK_CTRL_IDX,
+	RCAR_M3N_CLK_CTRL_IDX,
+	RCAR_V3H_CLK_CTRL_IDX,
+	RCAR_E3_CLK_CTRL_IDX,
+};
+
+static struct rcar_clk_ctrl *rcar_clk_ctrl;
+
+static const struct soc_device_attribute rcar_clk_ctrl_quirks_match[] __initconst = {
+	{.soc_id = "r8a7795", .revision = "ES1.1",	/* H3 v1.1 */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_H3_CLK_CTRL_IDX]},
+	{.soc_id = "r8a7795", .revision = "ES2.0",	/* H3 v2.0 */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_H3_CLK_CTRL_IDX]},
+	{.soc_id = "r8a7795", .revision = "ES3.0",	/* H3 v3.0 */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_H3_CLK_CTRL_IDX]},
+	{.soc_id = "r8a7796", .revision = "ES1.0",  /* M3 v1.0 */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_M3W_CLK_CTRL_IDX]},
+	{.soc_id = "r8a7796", .revision = "ES1.1",  /* M3 v1.1 */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_M3W_CLK_CTRL_IDX]},
+	{.soc_id = "r8a7796", .revision = "ES1.2",  /* M3 v1.2 */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_M3W_CLK_CTRL_IDX]},
+	{.soc_id = "r8a7796", .revision = "ES1.3",  /* M3 v1.3 */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_M3W_CLK_CTRL_IDX]},
+	{.soc_id = "r8a77961", .revision = "ES3.0", /* M3 v3.0 */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_M3WP_CLK_CTRL_IDX]},
+	{.soc_id = "r8a77965", .revision = "ES1.0",	/* M3N v1.0 */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_M3N_CLK_CTRL_IDX]},
+	{.soc_id = "r8a77965", .revision = "ES1.1",	/* M3N v1.1 */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_M3N_CLK_CTRL_IDX]},
+	{.soc_id = "r8a77980",						/* V3H */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_V3H_CLK_CTRL_IDX]},
+	{.soc_id = "r8a77990",						/* E3 */
+		.data = (void *)&rcar_clk_ctrl_list[RCAR_E3_CLK_CTRL_IDX]},
+	{ /* sentinel */ },
+};
 
 struct rcar_sysc_ch {
 	u16 chan_offs;
@@ -62,9 +379,90 @@ struct rcar_sysc_ch {
 	u8 isr_bit;
 };
 
+static
+const struct soc_device_attribute rcar_sysc_quirks_match[] __initconst = {
+	{
+		.soc_id = "r8a7795", .revision = "ES2.0",
+		.data = (void *)(BIT(R8A7795_PD_A3VP) | BIT(R8A7795_PD_CR7)
+			| BIT(R8A7795_PD_A3VC) | BIT(R8A7795_PD_A2VC0)
+			| BIT(R8A7795_PD_A2VC1) | BIT(R8A7795_PD_A3IR)
+			| BIT(R8A7795_PD_3DG_A) | BIT(R8A7795_PD_3DG_B)
+			| BIT(R8A7795_PD_3DG_C) | BIT(R8A7795_PD_3DG_D)
+			| BIT(R8A7795_PD_3DG_E)),
+	},
+	{
+		.soc_id = "r8a7795", .revision = "ES1.*",
+		.data = (void *)(BIT(R8A7795_PD_A3VP) | BIT(R8A7795_PD_CR7)
+			| BIT(R8A7795_PD_A3VC) | BIT(R8A7795_PD_A2VC0)
+			| BIT(R8A7795_PD_A2VC1) | BIT(R8A7795_PD_A3IR)
+			| BIT(R8A7795_PD_3DG_A) | BIT(R8A7795_PD_3DG_B)
+			| BIT(R8A7795_PD_3DG_C) | BIT(R8A7795_PD_3DG_D)
+			| BIT(R8A7795_PD_3DG_E)),
+
+	},
+	{
+		.soc_id = "r8a7796", .revision = "ES1.*",
+		.data = (void *)(BIT(R8A7796_PD_CR7) | BIT(R8A7796_PD_A3VC)
+			| BIT(R8A7796_PD_A2VC0) | BIT(R8A7796_PD_A2VC1)
+			| BIT(R8A7796_PD_A3IR) | BIT(R8A7796_PD_3DG_A)
+			| BIT(R8A7796_PD_3DG_B)),
+	},
+	{
+		.soc_id = "r8a77961", .revision = "ES3.0",
+		.data = (void *)(BIT(R8A7796_PD_A3VC)),
+	},
+	{ /* sentinel */ }
+};
+
+static struct
+rcar_sysc_area r8a77980_fixup_areas[3][NUM_FIXUP_AREAS] __initdata = {
+{
+	/* Fix-up area for PDMODE = 1 */
+	{ "a2ir0",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2ir1",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2ir2",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2ir3",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2ir4",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2ir5",	0x400, 5, R8A77980_PD_A2IR5,	R8A77980_PD_A3IR },
+	{ "a2sc0",	0x400, 6, R8A77980_PD_A2SC0,	R8A77980_PD_A3IR },
+	{ "a2sc1",	0x400, 6, R8A77980_PD_A2SC0,	R8A77980_PD_A3IR },
+	{ "a2sc2",	0x400, 6, R8A77980_PD_A2SC0,	R8A77980_PD_A3IR },
+	{ "a2sc3",	0x400, 6, R8A77980_PD_A2SC0,	R8A77980_PD_A3IR },
+	{ "a2sc4",	0x400, 6, R8A77980_PD_A2SC0,	R8A77980_PD_A3IR },
+	{ "a2dp0",	0x400, 11, R8A77980_PD_A2DP0,	R8A77980_PD_A3IR },
+	{ "a2dp1",	0x400, 11, R8A77980_PD_A2DP0,	R8A77980_PD_A3IR },
+	{ "a2cn",	0x400, 13, R8A77980_PD_A2CN,	R8A77980_PD_A3IR },
+},
+{
+    /* No handle for PDMODE = 2 */
+},
+{
+	/* Fix-up area for PDMODE = 3 */
+	{ "a2ir0",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2ir1",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2ir2",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2ir3",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2ir4",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2ir5",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2sc0",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2sc1",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2sc2",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2sc3",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2sc4",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2dp0",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2dp1",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+	{ "a2cn",	0x400, 0, R8A77980_PD_A2IR0,	R8A77980_PD_A3IR },
+}
+
+};
+
+static u32 rcar_sysc_quirks;
+
 static void __iomem *rcar_sysc_base;
 static DEFINE_SPINLOCK(rcar_sysc_lock); /* SMP CPUs + I/O devices */
 static u32 rcar_sysc_extmask_offs, rcar_sysc_extmask_val;
+
+static const char *to_pd_name(const struct rcar_sysc_ch *sysc_ch);
 
 static int rcar_sysc_pwr_on_off(const struct rcar_sysc_ch *sysc_ch, bool on)
 {
@@ -86,6 +484,12 @@ static int rcar_sysc_pwr_on_off(const struct rcar_sysc_ch *sysc_ch, bool on)
 					SYSCSR_TIMEOUT);
 	if (ret)
 		return -EAGAIN;
+
+	/* Start W/A for A3VP, A3VC, and A3IR domains */
+	if (!on && (!strcmp("a3vp", to_pd_name(sysc_ch)) ||
+		    !strcmp("a3ir", to_pd_name(sysc_ch)) ||
+		    !strcmp("a3vc", to_pd_name(sysc_ch))))
+		udelay(1);
 
 	/* Submit power shutoff or power resume request */
 	iowrite32(BIT(sysc_ch->chan_bit),
@@ -185,9 +589,118 @@ static inline struct rcar_sysc_pd *to_rcar_pd(struct generic_pm_domain *d)
 	return container_of(d, struct rcar_sysc_pd, genpd);
 }
 
+static inline const char *to_pd_name(const struct rcar_sysc_ch *sysc_ch)
+{
+	return container_of(sysc_ch, struct rcar_sysc_pd, ch)->genpd.name;
+}
+
+/* Necessary to enable/disable clock before power domain on/off */
+static int  rcar_sysc_clk_ctrl(bool clk_en, u8 id, u32 mask, u32 *on_mask)
+{
+		void __iomem *mstpsr, *smstpcr;
+		u32 val, timeout = 0;
+
+		mstpsr = ioremap(MSTP_BASE_ADDR + mstpsr_addr[id], 0x04);
+		smstpcr = ioremap(MSTP_BASE_ADDR + smstpcr_addr[id], 0x04);
+
+		if (clk_en) {
+			val = readl(smstpcr);
+			/*
+			 * The *on_mask holds the bits which are 0 (ON) before
+			 * clock control ON.
+			 */
+			*on_mask = mask & ~val;
+			val &= ~mask;
+			writel(val, smstpcr);
+
+			while (readl(mstpsr) & mask) {
+				udelay(1);
+				timeout++;
+
+				if (timeout > 100)
+					break;
+			}
+		} else {
+			val = readl(smstpcr) | mask;
+			writel(val, smstpcr);
+
+			while (!(readl(mstpsr) & mask)) {
+				udelay(1);
+				timeout++;
+
+				if (timeout > 100)
+					break;
+				}
+	}
+
+	if (timeout > 100) {
+		pr_debug("%s : Fail in %s clock\n", __func__,
+			 clk_en ? "enable" : "disable");
+		return -EBUSY;
+	}
+
+	iounmap(smstpcr);
+	iounmap(mstpsr);
+
+	return 0;
+}
+
+static void rcar_clk_ctrl_apply(bool enable, const char *pd_name)
+{
+	int i;
+	struct rcar_clk_ctrl_pd *pd;
+	u32 mask, on_mask;
+
+	if (!pd_name || !rcar_clk_ctrl)
+		return;
+
+	for (i = 0; i < rcar_clk_ctrl->pds_cnt; ++i) {
+		pd = &rcar_clk_ctrl->pd[i];
+		if (strstr(pd_name, pd->pd_name))
+			break;
+	}
+
+	if (i == rcar_clk_ctrl->pds_cnt)
+		return;
+
+	for (i = 0; i < pd->regs_cnt; ++i) {
+		/*
+		 * There are some devices use modules through clock framework directly
+		 * instead of PM frameworks, or some are set to another power domain for
+		 * their purpose use. It will causes conflicts with clock control.
+		 * A solution is provided which will not turn those modules OFF by the
+		 * no_off_mask field.
+		 */
+		if (!enable && pd->regs[i].no_off_mask)
+			mask = pd->regs[i].mask & ~pd->regs[i].no_off_mask;
+		else
+			mask = pd->regs[i].mask;
+
+		if (mask) {
+			rcar_sysc_clk_ctrl(enable,
+					pd->regs[i].id,
+					mask, &on_mask);
+			/*
+			 * There might be some unknown cases that modules in the need clock
+			 * control PDs are ON before clock control set. Those will be included
+			 * in the.no_off_mask field.
+			 */
+			pd->regs[i].no_off_mask |= on_mask;
+		}
+	}
+}
+
 static int rcar_sysc_pd_power_off(struct generic_pm_domain *genpd)
 {
 	struct rcar_sysc_pd *pd = to_rcar_pd(genpd);
+
+	if (rcar_sysc_power_is_off(&pd->ch))
+		return 0;
+
+	/* Disable clock if need for V3H */
+	if (rcar_clk_ctrl &&
+		rcar_clk_ctrl == &rcar_clk_ctrl_list[RCAR_V3H_CLK_CTRL_IDX])
+		rcar_clk_ctrl_apply(false, genpd->name);
 
 	pr_debug("%s: %s\n", __func__, genpd->name);
 	return rcar_sysc_power(&pd->ch, false);
@@ -196,6 +709,27 @@ static int rcar_sysc_pd_power_off(struct generic_pm_domain *genpd)
 static int rcar_sysc_pd_power_on(struct generic_pm_domain *genpd)
 {
 	struct rcar_sysc_pd *pd = to_rcar_pd(genpd);
+
+	if (!rcar_sysc_power_is_off(&pd->ch))
+		return 0;
+
+	/* Enable clock if need */
+	if (rcar_clk_ctrl) {
+		rcar_clk_ctrl_apply(true, genpd->name);
+		/*
+		 * Originally, clock control refers the commit ff5b13e33576 which
+		 * fixed A3IR power on sequence for V3H. So leave it as original
+		 * fix.
+		 */
+		if (rcar_clk_ctrl != &rcar_clk_ctrl_list[RCAR_V3H_CLK_CTRL_IDX]) {
+			int ret;
+
+			ret = rcar_sysc_power(&pd->ch, true);
+			rcar_clk_ctrl_apply(false, genpd->name);
+
+			return ret;
+		}
+	}
 
 	pr_debug("%s: %s\n", __func__, genpd->name);
 	return rcar_sysc_power(&pd->ch, true);
@@ -266,6 +800,45 @@ finalize:
 
 	return error;
 }
+
+struct rcar_sysc_pd *rcar_domains[RCAR_PD_ALWAYS_ON + 1];
+
+static void rcar_power_on_force(void)
+{
+	int i;
+
+	for (i = 0; i < RCAR_PD_ALWAYS_ON; i++) {
+		struct rcar_sysc_pd *pd = rcar_domains[i];
+
+		if (!pd)
+			continue;
+
+		if (rcar_sysc_quirks & BIT(pd->ch.isr_bit)) {
+			if (!rcar_sysc_power_is_off(&pd->ch))
+				continue;
+
+			if (rcar_clk_ctrl) {
+				rcar_clk_ctrl_apply(true, pd->name);
+				rcar_sysc_power(&pd->ch, true);
+				rcar_clk_ctrl_apply(false, pd->name);
+			} else
+				rcar_sysc_power(&pd->ch, true);
+		}
+	}
+}
+
+#ifdef CONFIG_PM_SLEEP
+static void rcar_sysc_resume(void)
+{
+	pr_debug("%s\n", __func__);
+
+	rcar_power_on_force();
+}
+
+static struct syscore_ops rcar_sysc_syscore_ops = {
+	.resume = rcar_sysc_resume,
+};
+#endif
 
 static const struct of_device_id rcar_sysc_matches[] __initconst = {
 #ifdef CONFIG_SYSC_R8A7742
@@ -345,6 +918,23 @@ struct rcar_pm_domains {
 
 static struct genpd_onecell_data *rcar_sysc_onecell_data;
 
+/* Fix up power domain area in case PDMODE != 0 */
+static void rcar_sysc_fixup_area(struct rcar_sysc_pd *pd, unsigned int mode)
+{
+	int i;
+
+	/* Convert PDMODE to fix-up array position */
+	mode = mode - 1;
+
+	for (i = 0; i < NUM_FIXUP_AREAS; i++) {
+		if (!strcmp(pd->genpd.name, r8a77980_fixup_areas[mode][i].name)) {
+			pd->ch.chan_offs = r8a77980_fixup_areas[mode][i].chan_offs;
+			pd->ch.chan_bit = r8a77980_fixup_areas[mode][i].chan_bit;
+			pd->ch.isr_bit = r8a77980_fixup_areas[mode][i].isr_bit;
+		}
+	}
+}
+
 static int __init rcar_sysc_pd_init(void)
 {
 	const struct rcar_sysc_info *info;
@@ -352,8 +942,14 @@ static int __init rcar_sysc_pd_init(void)
 	struct rcar_pm_domains *domains;
 	struct device_node *np;
 	void __iomem *base;
-	unsigned int i;
+	unsigned int i, mode;
 	int error;
+	const struct soc_device_attribute *attr;
+
+	/* Get the index of SoC needs to control clock */
+	attr = soc_device_match(rcar_clk_ctrl_quirks_match);
+	if (attr)
+		rcar_clk_ctrl = (struct rcar_clk_ctrl *)attr->data;
 
 	np = of_find_matching_node_and_match(NULL, rcar_sysc_matches, &match);
 	if (!np)
@@ -369,6 +965,10 @@ static int __init rcar_sysc_pd_init(void)
 
 	has_cpg_mstp = of_find_compatible_node(NULL, NULL,
 					       "renesas,cpg-mstp-clocks");
+
+	attr = soc_device_match(rcar_sysc_quirks_match);
+	if (attr)
+		rcar_sysc_quirks = (uintptr_t)attr->data;
 
 	base = of_iomap(np, 0);
 	if (!base) {
@@ -392,6 +992,11 @@ static int __init rcar_sysc_pd_init(void)
 	domains->onecell_data.domains = domains->domains;
 	domains->onecell_data.num_domains = ARRAY_SIZE(domains->domains);
 	rcar_sysc_onecell_data = &domains->onecell_data;
+
+	if (info->mode)
+		mode = *info->mode;
+	else
+		mode = 0;	/* No handle PDMODE */
 
 	for (i = 0; i < info->num_areas; i++) {
 		const struct rcar_sysc_area *area = &info->areas[i];
@@ -417,11 +1022,18 @@ static int __init rcar_sysc_pd_init(void)
 		pd->ch.isr_bit = area->isr_bit;
 		pd->flags = area->flags;
 
+		if (mode)
+			rcar_sysc_fixup_area(pd, mode);
+
+		if (rcar_sysc_quirks & BIT(pd->ch.isr_bit))
+			pd->flags |= PD_NO_CR;
+
 		error = rcar_sysc_pd_setup(pd);
 		if (error)
 			goto out_put;
 
 		domains->domains[area->isr_bit] = &pd->genpd;
+		rcar_domains[i] = pd;
 
 		if (area->parent < 0)
 			continue;
@@ -435,9 +1047,16 @@ static int __init rcar_sysc_pd_init(void)
 		}
 	}
 
+	rcar_power_on_force();
+
 	error = of_genpd_add_provider_onecell(np, &domains->onecell_data);
 	if (!error)
 		of_node_set_flag(np, OF_POPULATED);
+
+#ifdef CONFIG_PM_SLEEP
+	if (!error)
+		register_syscore_ops(&rcar_sysc_syscore_ops);
+#endif
 
 out_put:
 	of_node_put(np);
