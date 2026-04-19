@@ -1855,6 +1855,74 @@ bool iommu_present(struct bus_type *bus)
 }
 EXPORT_SYMBOL_GPL(iommu_present);
 
+static int iommu_bus_init(struct bus_type *bus, const struct iommu_ops *ops)
+{
+	struct notifier_block *nb;
+	int err;
+
+	nb = kzalloc(sizeof(*nb), GFP_KERNEL);
+	if (!nb)
+		return -ENOMEM;
+
+	nb->notifier_call = iommu_bus_notifier;
+
+	err = bus_register_notifier(bus, nb);
+	if (err)
+		goto out_free;
+
+	err = bus_iommu_probe(bus);
+	if (err)
+		goto out_err;
+
+	return 0;
+
+out_err:
+	/* Clean up */
+	bus_for_each_dev(bus, NULL, NULL, remove_iommu_group);
+	bus_unregister_notifier(bus, nb);
+
+out_free:
+	kfree(nb);
+
+	return err;
+}
+
+/**
+ * bus_set_iommu - set iommu-callbacks for the bus
+ * @bus: bus.
+ * @ops: the callbacks provided by the iommu-driver
+ *
+ * This function is called by an iommu driver to set the iommu methods
+ * used for a particular bus. Drivers for devices on that bus can use
+ * the iommu-api after these ops are registered.
+ * This special function is needed because IOMMUs are usually devices on
+ * the bus itself, so the iommu drivers are not initialized when the bus
+ * is set up. With this function the iommu-driver can set the iommu-ops
+ * afterwards.
+ */
+int bus_set_iommu(struct bus_type *bus, const struct iommu_ops *ops)
+{
+	int err;
+
+	if (!ops) {
+		bus->iommu_ops = NULL;
+		return 0;
+	}
+
+	if (bus->iommu_ops)
+		return -EBUSY;
+
+	bus->iommu_ops = ops;
+
+	/* Do IOMMU specific setup for this bus-type */
+	err = iommu_bus_init(bus, ops);
+	if (err)
+		bus->iommu_ops = NULL;
+
+	return err;
+}
+EXPORT_SYMBOL_GPL(bus_set_iommu);
+
 /**
  * device_iommu_capable() - check for a general IOMMU capability
  * @dev: device to which the capability would be relevant, if available
