@@ -618,15 +618,15 @@ static int cpg_mssr_reset(struct reset_controller_dev *rcdev,
 	/* Reset module */
 	writel(bitmask, priv->base + priv->reset_regs[reg]);
 
-	/*
-	 * On R-Car Gen4, delay after SRCR has been written is 1ms.
-	 * On older SoCs, delay after SRCR has been written is 35us
-	 * (one cycle of the RCLK clock @ ca. 32 kHz).
-	 */
+    /*
+     * Replaced usleep_range() with udelay() because reset_control_reset()
+     * can be invoked from atomic context (e.g. SDHI), and sleeping here
+     * leads to "BUG: scheduling while atomic".
+     */
 	if (priv->reg_layout == CLK_REG_LAYOUT_RCAR_GEN4)
-		usleep_range(1000, 2000);
+		udelay(2000);
 	else
-		usleep_range(35, 1000);
+		udelay(35);
 
 	/* Release module from reset state */
 	writel(bitmask, priv->base + priv->reset_clear_regs[reg]);
@@ -1120,6 +1120,19 @@ static int __init cpg_mssr_init(void)
 
 subsys_initcall(cpg_mssr_init);
 
+void __init cpg_core_nullify_range(struct cpg_core_clk *core_clks,
+				   unsigned int num_core_clks,
+				   unsigned int first_clk,
+				   unsigned int last_clk)
+{
+	unsigned int i;
+
+	for (i = 0; i < num_core_clks; i++)
+		if (core_clks[i].id >= first_clk &&
+		    core_clks[i].id <= last_clk)
+			core_clks[i].name = NULL;
+}
+
 void __init mssr_mod_nullify(struct mssr_mod_clk *mod_clks,
 			     unsigned int num_mod_clks,
 			     const unsigned int *clks, unsigned int n)
@@ -1129,6 +1142,20 @@ void __init mssr_mod_nullify(struct mssr_mod_clk *mod_clks,
 	for (i = 0, j = 0; i < num_mod_clks && j < n; i++)
 		if (mod_clks[i].id == clks[j]) {
 			mod_clks[i].name = NULL;
+			j++;
+		}
+}
+
+void __init mssr_mod_reparent(struct mssr_mod_clk *mod_clks,
+			      unsigned int num_mod_clks,
+			      const struct mssr_mod_reparent *clks,
+			      unsigned int n)
+{
+	unsigned int i, j;
+
+	for (i = 0, j = 0; i < num_mod_clks && j < n; i++)
+		if (mod_clks[i].id == clks[j].clk) {
+			mod_clks[i].parent = clks[j].parent;
 			j++;
 		}
 }

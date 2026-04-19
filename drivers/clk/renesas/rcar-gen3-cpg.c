@@ -38,6 +38,16 @@
 
 #define CPG_RCKCR_CKSEL	BIT(15)	/* RCLK Clock Source Select */
 
+static u32 cpg_quirks __initdata;
+
+/*
+ * Z2: SYS-CPU divider 2 on V3H seems to be fixed to 1/2 and 1 on V3M.
+ * It is not 100% clear from the User's Manual but at least
+ * FRQCRC register is missed on V3x.
+ */
+#define Z2_SYSCPU_1	BIT(5)	/* Z2 is fixed with SYS-CPU divider 2 set to 1   - V3M */
+#define Z2_SYSCPU_2	BIT(6)	/* Z2 is fixed with SYS-CPU divider 2 set to 1/2 - V3H */
+
 /* PLL Clocks */
 struct cpg_pll_clk {
 	struct clk_hw hw;
@@ -159,7 +169,9 @@ static struct clk * __init cpg_pll_clk_register(const char *name,
  */
 #define CPG_FRQCRB			0x00000004
 #define CPG_FRQCRB_KICK			BIT(31)
+#define CPG_FRQCRB_ZGFC_MASK		GENMASK(28, 24)
 #define CPG_FRQCRC			0x000000e0
+#define Z_CLK_ROUND(f)	(100000000 * DIV_ROUND_CLOSEST_ULL((f), 100000000))
 
 struct cpg_z_clk {
 	struct clk_hw hw;
@@ -168,6 +180,9 @@ struct cpg_z_clk {
 	unsigned long max_rate;		/* Maximum rate for normal mode */
 	unsigned int fixed_div;
 	u32 mask;
+
+	/* store SoC quirks used in Z-clock rate calculation */
+	u32 quirks;
 };
 
 #define to_z_clk(_hw)	container_of(_hw, struct cpg_z_clk, hw)
@@ -176,14 +191,22 @@ static unsigned long cpg_z_clk_recalc_rate(struct clk_hw *hw,
 					   unsigned long parent_rate)
 {
 	struct cpg_z_clk *zclk = to_z_clk(hw);
+	unsigned long prate = parent_rate / zclk->fixed_div;
 	unsigned int mult;
 	u32 val;
 
-	val = readl(zclk->reg) & zclk->mask;
-	mult = 32 - (val >> __ffs(zclk->mask));
+	if (zclk->quirks & Z2_SYSCPU_1) {
+		/* SYS-CPU divider 2 is 1 == 32/32) */
+		mult = 32;
+	} else if (zclk->quirks & Z2_SYSCPU_2) {
+		/* SYS-CPU divider 2 is 1/2 == 16/32) */
+		mult = 16;
+	} else {
+		val = readl(zclk->reg) & zclk->mask;
+		mult = 32 - (val >> __ffs(zclk->mask));
+	}
 
-	return DIV_ROUND_CLOSEST_ULL((u64)parent_rate * mult,
-				     32 * zclk->fixed_div);
+	return Z_CLK_ROUND(prate * mult / 32);
 }
 
 static int cpg_z_clk_determine_rate(struct clk_hw *hw,
@@ -221,11 +244,18 @@ static int cpg_z_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 			      unsigned long parent_rate)
 {
 	struct cpg_z_clk *zclk = to_z_clk(hw);
+	unsigned long prate = parent_rate / zclk->fixed_div;
 	unsigned int mult;
 	unsigned int i;
 
 	mult = DIV64_U64_ROUND_CLOSEST(rate * 32ULL * zclk->fixed_div,
 				       parent_rate);
+	if (!zclk->max_rate)
+		mult = DIV_ROUND_CLOSEST_ULL(rate * 32ULL, prate);
+	else if (rate <= zclk->max_rate)
+		mult = DIV_ROUND_CLOSEST_ULL(rate * 32ULL, zclk->max_rate);
+	else
+		mult = 32;
 	mult = clamp(mult, 1U, 32U);
 
 	if (readl(zclk->kick_reg) & CPG_FRQCRB_KICK)
@@ -289,6 +319,7 @@ static struct clk * __init cpg_z_clk_register(const char *name,
 	zclk->hw.init = &init;
 	zclk->mask = GENMASK(offset + 4, offset);
 	zclk->fixed_div = div; /* PLLVCO x 1/div x SYS-CPU divider */
+	zclk->quirks = cpg_quirks;   /* copy quirks for runtime use */
 
 	clk = clk_register(NULL, &zclk->hw);
 	if (IS_ERR(clk)) {
@@ -301,6 +332,152 @@ static struct clk * __init cpg_z_clk_register(const char *name,
 	return clk;
 }
 
+static struct clk * __init cpg_zg_clk_register(const char *name,
+					       const char *parent_name,
+					       void __iomem *reg,
+					       unsigned int div,
+						   unsigned int offset)
+{
+	struct clk_init_data init;
+	struct cpg_z_clk *zclk;
+	struct clk *clk;
+
+	zclk = kzalloc(sizeof(*zclk), GFP_KERNEL);
+	if (!zclk)
+		return ERR_PTR(-ENOMEM);
+
+	init.name = name;
+	init.ops = &cpg_z_clk_ops;
+	init.flags = 0;
+	init.parent_names = &parent_name;
+	init.num_parents = 1;
+
+	zclk->reg = reg + CPG_FRQCRB;
+	zclk->kick_reg = reg + CPG_FRQCRB;
+	zclk->hw.init = &init;
+	zclk->mask = GENMASK(offset + 4, offset);
+	zclk->fixed_div = div; /* PLLVCO x 1/div1 x 3DGE divider x 1/div2 */
+
+	clk = clk_register(NULL, &zclk->hw);
+	if (IS_ERR(clk))
+		kfree(zclk);
+
+	return clk;
+}
+
+static unsigned long cpg_zg_pll0_clk_recalc_rate(struct clk_hw *hw,
+						 unsigned long parent_rate)
+{
+	struct cpg_z_clk *zclk = to_z_clk(hw);
+	unsigned long prate = parent_rate / zclk->fixed_div;
+	unsigned int div;
+	u32 val;
+
+	val = readl(zclk->reg) & zclk->mask;
+	div = ((val >> __bf_shf(zclk->mask)) & 0x4) ? 2 : 1;
+	return Z_CLK_ROUND(prate / div);
+}
+
+static long cpg_zg_pll0_clk_round_rate(struct clk_hw *hw,
+				       unsigned long rate,
+				       unsigned long *parent_rate)
+{
+	struct cpg_z_clk *zclk = to_z_clk(hw);
+	unsigned long prate = *parent_rate / zclk->fixed_div;
+	unsigned int div;
+
+	div = DIV_ROUND_CLOSEST(prate, rate);
+	div = clamp(div, 1U, 2U);
+	*parent_rate = prate * zclk->fixed_div;
+
+	return Z_CLK_ROUND(prate / div);
+}
+
+static int cpg_zg_pll0_clk_set_rate(struct clk_hw *hw,
+				    unsigned long rate,
+				    unsigned long parent_rate)
+{
+	struct cpg_z_clk *zclk = to_z_clk(hw);
+	unsigned long prate = parent_rate / zclk->fixed_div;
+	unsigned int div;
+	unsigned int i;
+	u32 val, kick;
+
+	div = DIV_ROUND_CLOSEST(prate, rate);
+	div = clamp(div, 1U, 2U);
+
+	if (readl(zclk->kick_reg) & CPG_FRQCRB_KICK)
+		return -EBUSY;
+
+	val = readl(zclk->reg) & ~zclk->mask;
+	val |= (((div == 2) ? 0x4 : 0x0) << __bf_shf(zclk->mask)) & zclk->mask;
+	writel(val, zclk->reg);
+
+	/*
+	 * Set KICK bit in FRQCRB to update hardware setting and wait for
+	 * clock change completion.
+	 */
+	kick = readl(zclk->kick_reg);
+	kick |= CPG_FRQCRB_KICK;
+	writel(kick, zclk->kick_reg);
+
+	/*
+	 * Note: There is no HW information about the worst case latency.
+	 *
+	 * Using experimental measurements, it seems that no more than
+	 * ~10 iterations are needed, independently of the CPU rate.
+	 * Since this value might be dependent of external xtal rate, pll0
+	 * rate or even the other emulation clocks rate, use 1000 as a
+	 * "super" safe value.
+	 */
+	for (i = 1000; i; i--) {
+		if (!(readl(zclk->kick_reg) & CPG_FRQCRB_KICK))
+			return 0;
+
+		cpu_relax();
+	}
+
+	return -ETIMEDOUT;
+}
+
+static const struct clk_ops cpg_zg_pll0_clk_ops = {
+	.recalc_rate = cpg_zg_pll0_clk_recalc_rate,
+	.round_rate = cpg_zg_pll0_clk_round_rate,
+	.set_rate = cpg_zg_pll0_clk_set_rate,
+};
+
+static struct clk * __init cpg_zg_pll0_clk_register(const char *name,
+						    const char *parent_name,
+						    void __iomem *reg,
+						    unsigned int div)
+{
+	struct clk_init_data init;
+	struct cpg_z_clk *zclk;
+	struct clk *clk;
+
+	zclk = kzalloc(sizeof(*zclk), GFP_KERNEL);
+	if (!zclk)
+		return ERR_PTR(-ENOMEM);
+
+	init.name = name;
+	init.ops = &cpg_zg_pll0_clk_ops;
+	init.flags = 0;
+	init.parent_names = &parent_name;
+	init.num_parents = 1;
+
+	zclk->reg = reg + CPG_FRQCRB;
+	zclk->kick_reg = reg + CPG_FRQCRB;
+	zclk->hw.init = &init;
+	zclk->mask = CPG_FRQCRB_ZGFC_MASK;
+	zclk->fixed_div = div; /* PLLVCO x 1/div x 3DGE divider */
+
+	clk = clk_register(NULL, &zclk->hw);
+	if (IS_ERR(clk))
+		kfree(zclk);
+
+	return clk;
+}
+
 static const struct clk_div_table cpg_rpcsrc_div_table[] = {
 	{ 2, 5 }, { 3, 6 }, { 0, 0 },
 };
@@ -308,15 +485,35 @@ static const struct clk_div_table cpg_rpcsrc_div_table[] = {
 static const struct rcar_gen3_cpg_pll_config *cpg_pll_config __initdata;
 static unsigned int cpg_clk_extalr __initdata;
 static u32 cpg_mode __initdata;
-static u32 cpg_quirks __initdata;
 
+#define PLL_ERRATA	BIT(0)		/* Missing PLL0/2/4 post-divider */
 #define RCKCR_CKSEL	BIT(1)		/* Manual RCLK parent selection */
-
+#define ZG_PARENT_PLL0	BIT(3)		/* Use PLL0 as ZG clock parent */
 
 static const struct soc_device_attribute cpg_quirks_match[] __initconst = {
 	{
-		.soc_id = "r8a7796", .revision = "ES1.0",
+		.soc_id = "r8a7795", .revision = "ES1.0",
+		.data = (void *)(PLL_ERRATA | RCKCR_CKSEL),
+	},
+	{
+		.soc_id = "r8a7795", .revision = "ES1.*",
 		.data = (void *)(RCKCR_CKSEL),
+	},
+	{
+		.soc_id = "r8a7796", .revision = "ES1.*",
+		.data = (void *)(RCKCR_CKSEL),
+	},
+	{
+		.soc_id = "r8a77990",
+		.data = (void *)ZG_PARENT_PLL0,
+	},
+	{
+		.soc_id = "r8a77970",
+		.data = (void *)(Z2_SYSCPU_1),
+	},
+	{
+		.soc_id = "r8a77980",
+		.data = (void *)(Z2_SYSCPU_2),
 	},
 	{ /* sentinel */ }
 };
@@ -346,8 +543,9 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 		 * multiplier when cpufreq changes between normal and boost
 		 * modes.
 		 */
+		mult = (cpg_quirks & PLL_ERRATA) ? 4 : 2;
 		return cpg_pll_clk_register(core->name, __clk_get_name(parent),
-					    base, 2, CPG_PLL0CR, 0);
+					    base, mult, CPG_PLL0CR, 0);
 
 	case CLK_TYPE_GEN3_PLL1:
 		mult = cpg_pll_config->pll1_mult;
@@ -360,8 +558,9 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 		 * multiplier when cpufreq changes between normal and boost
 		 * modes.
 		 */
+		mult = (cpg_quirks & PLL_ERRATA) ? 4 : 2;
 		return cpg_pll_clk_register(core->name, __clk_get_name(parent),
-					    base, 2, CPG_PLL2CR, 2);
+					    base, mult, CPG_PLL2CR, 2);
 
 	case CLK_TYPE_GEN3_PLL3:
 		mult = cpg_pll_config->pll3_mult;
@@ -377,6 +576,8 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 		 */
 		value = readl(base + CPG_PLL4CR);
 		mult = (((value >> 24) & 0x7f) + 1) * 2;
+		if (cpg_quirks & PLL_ERRATA)
+			mult *= 2;
 		break;
 
 	case CLK_TYPE_GEN3_SDH:
@@ -459,6 +660,14 @@ struct clk * __init rcar_gen3_cpg_clk_register(struct device *dev,
 			div = core->div >> 16;
 		}
 		break;
+
+	case CLK_TYPE_GEN3_ZG:
+		if (cpg_quirks & ZG_PARENT_PLL0)
+			return cpg_zg_pll0_clk_register(core->name,
+							__clk_get_name(parent),
+							base, core->div);
+		return cpg_zg_clk_register(core->name, __clk_get_name(parent),
+					   base, core->div, core->offset);
 
 	case CLK_TYPE_GEN3_RPCSRC:
 		return clk_register_divider_table(NULL, core->name,
