@@ -22,15 +22,28 @@
 	PORT_GP_CFG_18(0, fn, sfx, CFG_FLAGS), \
 	PORT_GP_CFG_23(1, fn, sfx, CFG_FLAGS), \
 	PORT_GP_CFG_26(2, fn, sfx, CFG_FLAGS), \
-	PORT_GP_CFG_12(3, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE | SH_PFC_PIN_CFG_DRIVE_STRENGTH), \
+	PORT_GP_CFG_6(3, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE | SH_PFC_PIN_CFG_DRIVE_STRENGTH), \
+	PORT_GP_CFG_1(3,  6, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE | SH_PFC_PIN_CFG_DRIVE_STRENGTH), \
+	PORT_GP_CFG_1(3,  7, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE), \
+	PORT_GP_CFG_1(3,  8, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE), \
+	PORT_GP_CFG_1(3,  9, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE), \
+	PORT_GP_CFG_1(3, 10, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE | SH_PFC_PIN_CFG_DRIVE_STRENGTH), \
+	PORT_GP_CFG_1(3, 11, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE | SH_PFC_PIN_CFG_DRIVE_STRENGTH), \
 	PORT_GP_CFG_1(3, 12, fn, sfx, CFG_FLAGS), \
 	PORT_GP_CFG_1(3, 13, fn, sfx, CFG_FLAGS), \
 	PORT_GP_CFG_1(3, 14, fn, sfx, CFG_FLAGS), \
 	PORT_GP_CFG_1(3, 15, fn, sfx, CFG_FLAGS), \
-	PORT_GP_CFG_11(4, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE | SH_PFC_PIN_CFG_DRIVE_STRENGTH), \
+	PORT_GP_CFG_4(4, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE | SH_PFC_PIN_CFG_DRIVE_STRENGTH), \
+	PORT_GP_CFG_1(4,  4, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE | SH_PFC_PIN_CFG_DRIVE_STRENGTH), \
+	PORT_GP_CFG_1(4,  5, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE), \
+	PORT_GP_CFG_1(4,  6, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE), \
+	PORT_GP_CFG_1(4,  7, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE), \
+	PORT_GP_CFG_1(4,  8, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE | SH_PFC_PIN_CFG_DRIVE_STRENGTH), \
+	PORT_GP_CFG_1(4,  9, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE | SH_PFC_PIN_CFG_DRIVE_STRENGTH), \
+	PORT_GP_CFG_1(4, 10, fn, sfx, CFG_FLAGS | SH_PFC_PIN_CFG_IO_VOLTAGE | SH_PFC_PIN_CFG_DRIVE_STRENGTH), \
 	PORT_GP_CFG_20(5, fn, sfx, CFG_FLAGS), \
 	PORT_GP_CFG_9(6, fn, sfx, CFG_FLAGS), \
-	PORT_GP_CFG_1(6, 9, fn, sfx, SH_PFC_PIN_CFG_PULL_UP), \
+	PORT_GP_1(6, 9, fn, sfx), \
 	PORT_GP_CFG_1(6, 10, fn, sfx, CFG_FLAGS), \
 	PORT_GP_CFG_1(6, 11, fn, sfx, CFG_FLAGS), \
 	PORT_GP_CFG_1(6, 12, fn, sfx, CFG_FLAGS), \
@@ -5016,9 +5029,6 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 		{ RCAR_GP_PIN(3,  6),  0, 2 },	/* SD1_CLK */
 	} },
 	{ PINMUX_DRIVE_REG("DRVCTRL9", 0xe6060324) {
-		{ RCAR_GP_PIN(3,  7), 29, 2 },	/* SD1_CMD */
-		{ RCAR_GP_PIN(3,  8), 26, 2 },	/* SD1_DAT0 */
-		{ RCAR_GP_PIN(3,  9), 23, 2 },	/* SD1_DAT1 */
 		{ RCAR_GP_PIN(3, 10), 20, 2 },	/* SD1_DAT2 */
 		{ RCAR_GP_PIN(3, 11), 17, 2 },	/* SD1_DAT3 */
 		{ RCAR_GP_PIN(4,  0), 14, 2 },	/* SD3_CLK */
@@ -5028,9 +5038,6 @@ static const struct pinmux_drive_reg pinmux_drive_regs[] = {
 		{ RCAR_GP_PIN(4,  4),  2, 2 },	/* SD3_DAT2 */
 	} },
 	{ PINMUX_DRIVE_REG("DRVCTRL10", 0xe6060328) {
-		{ RCAR_GP_PIN(4,  5), 29, 2 },	/* SD3_DAT3 */
-		{ RCAR_GP_PIN(4,  6), 26, 2 },	/* SD3_DAT4 */
-		{ RCAR_GP_PIN(4,  7), 23, 2 },	/* SD3_DAT5 */
 		{ RCAR_GP_PIN(4,  8), 20, 2 },	/* SD3_DAT6 */
 		{ RCAR_GP_PIN(4,  9), 17, 2 },	/* SD3_DAT7 */
 		{ RCAR_GP_PIN(4, 10), 14, 2 },	/* SD3_DS */
@@ -5266,8 +5273,8 @@ static const struct pinmux_bias_reg pinmux_bias_regs[] = {
 		[27] = SH_PFC_PIN_NONE,
 		[28] = SH_PFC_PIN_NONE,
 		[29] = SH_PFC_PIN_NONE,
-		[30] = RCAR_GP_PIN(6,  9),	/* USB30_OVC */
-		[31] = RCAR_GP_PIN(6, 17),	/* USB30_PWEN */
+		[30] = SH_PFC_PIN_NONE,
+		[31] = RCAR_GP_PIN(6, 17),	/* PUEN_USB30_PWEN */
 	} },
 	{ /* sentinel */ },
 };
