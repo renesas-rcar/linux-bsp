@@ -10,6 +10,7 @@
 #include <linux/clk.h>
 #include <linux/mutex.h>
 #include <linux/platform_device.h>
+#include <linux/sys_soc.h>
 
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
@@ -30,9 +31,64 @@
 #include "rcar_lvds.h"
 #include "rcar_mipi_dsi.h"
 
+static bool rcar_du_register_access_check(struct rcar_du_crtc *rcrtc, u32 reg)
+{
+	struct rcar_du_device *rcdu = rcrtc->dev;
+	struct rcar_du_group *rgrp = rcrtc->group;
+	u32 escr13 = ESCR13 + DU1_REG_OFFSET;
+	u32 otar13 = OTAR13 + DU1_REG_OFFSET;
+
+	/* ESCR register access check */
+	if (reg == ESCR02 || reg == escr13) {
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7795_REGS) ||
+		    rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77965_REGS)) {
+			if (rgrp->index == 0 && reg == escr13)
+				return false;
+			else if (rgrp->index == 1 && reg == ESCR02)
+				return false;
+			else
+				return true;
+		}
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7796_REGS)) {
+			if (rgrp->index == 0 && reg == escr13)
+				return false;
+			else
+				return true;
+		}
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS))
+			return false;
+	}
+
+	/* OTAR register access check */
+	if (reg == OTAR02 || reg == otar13) {
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7795_REGS) ||
+		    rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A77965_REGS)) {
+			if (rgrp->index == 1 && reg == otar13)
+				return true;
+			else
+				return false;
+		}
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A7796_REGS)) {
+			if (rgrp->index == 1 && reg == OTAR02)
+				return true;
+			else
+				return false;
+		}
+		if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS))
+			return false;
+	}
+
+	return true;
+}
+
 static u32 rcar_du_crtc_read(struct rcar_du_crtc *rcrtc, u32 reg)
 {
 	struct rcar_du_device *rcdu = rcrtc->dev;
+
+	if (!rcar_du_register_access_check(rcrtc, reg)) {
+		dev_warn(rcdu->dev, "reserved register was read\n");
+		return 0;
+	}
 
 	return rcar_du_read(rcdu, rcrtc->mmio_offset + reg);
 }
@@ -40,6 +96,9 @@ static u32 rcar_du_crtc_read(struct rcar_du_crtc *rcrtc, u32 reg)
 static void rcar_du_crtc_write(struct rcar_du_crtc *rcrtc, u32 reg, u32 data)
 {
 	struct rcar_du_device *rcdu = rcrtc->dev;
+
+	if (!rcar_du_register_access_check(rcrtc, reg))
+		return;
 
 	rcar_du_write(rcdu, rcrtc->mmio_offset + reg, data);
 }
@@ -89,6 +148,10 @@ static void rcar_du_dpll_divider(struct rcar_du_crtc *rcrtc,
 	unsigned int fdpll;
 	unsigned int m;
 	unsigned int n;
+	bool clk_high = false;
+
+	if (target > 148500000)
+		clk_high = true;
 
 	/*
 	 *   fin                                 fvco        fout       fclkout
@@ -139,6 +202,9 @@ static void rcar_du_dpll_divider(struct rcar_du_crtc *rcrtc,
 
 				output = fout / (fdpll + 1);
 				if (output >= 400 * 1000 * 1000)
+					continue;
+
+				if (clk_high && output < target)
 					continue;
 
 				diff = abs((long)output - (long)target);
@@ -203,6 +269,11 @@ static void rcar_du_escr_divider(struct clk *clk, unsigned long target,
 	}
 }
 
+static const struct soc_device_attribute rcar_du_r8a7795_es1[] = {
+	{ .soc_id = "r8a7795", .revision = "ES1.*" },
+	{ /* sentinel */ }
+};
+
 static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 {
 	const struct drm_display_mode *mode = &rcrtc->crtc.state->adjusted_mode;
@@ -223,6 +294,20 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 		 * DU channels that have a display PLL can't use the internal
 		 * system clock, and have no internal clock divider.
 		 */
+
+		/*
+		 * The H3 ES1.x exhibits dot clock duty cycle stability issues.
+		 * We can work around them by configuring the DPLL to twice the
+		 * desired frequency, coupled with a /2 post-divider. Restrict
+		 * the workaround to H3 ES1.x as ES2.0 and all other SoCs have
+		 * no post-divider when a display PLL is present (as shown by
+		 * the workaround breaking HDMI output on M3-W during testing).
+		 */
+		if (soc_device_match(rcar_du_r8a7795_es1)) {
+			target *= 2;
+			div = 1;
+		}
+
 		extclk = clk_get_rate(rcrtc->extclock);
 		rcar_du_dpll_divider(rcrtc, &dpll, extclk, target);
 
@@ -231,12 +316,15 @@ static void rcar_du_crtc_set_display_timing(struct rcar_du_crtc *rcrtc)
 		       | DPLLCR_N(dpll.n) | DPLLCR_M(dpll.m)
 		       | DPLLCR_STBY;
 
-		if (rcrtc->index == 1)
+		if (rcrtc->index == 1) {
 			dpllcr |= DPLLCR_PLCS1
 			       |  DPLLCR_INCS_DOTCLKIN1;
-		else
+		} else {
 			dpllcr |= DPLLCR_PLCS0
 			       |  DPLLCR_INCS_DOTCLKIN0;
+			if (soc_device_match(rcar_du_r8a7795_es1))
+				dpllcr |= DPLLCR_PLCS0_H3ES1X_WA;
+		}
 
 		rcar_du_group_write(rcrtc->group, DPLLCR, dpllcr);
 
@@ -740,6 +828,15 @@ static void rcar_du_crtc_atomic_enable(struct drm_crtc *crtc,
 		rcar_mipi_dsi_pclk_enable(bridge, state);
 	}
 
+	/*
+	 * On V3U the dot clock is provided by the MIPI DSI encoder which is attached
+	 * to DU. So, the MIPI DSI module should be enable before starting DU.
+	 */
+	if (rcdu->info->mipi_dsi_clk_mask & BIT(rcrtc->index)) {
+		struct drm_bridge *bridge = rcdu->mipi_dsi[rcrtc->index];
+		rcar_mipi_dsi_pclk_enable(bridge, state);
+	}
+
 	rcar_du_crtc_start(rcrtc);
 
 	/*
@@ -763,6 +860,7 @@ static void rcar_du_crtc_atomic_disable(struct drm_crtc *crtc,
 	rcar_du_crtc_put(rcrtc);
 
 	if (rcdu->info->lvds_clk_mask & BIT(rcrtc->index) &&
+		rcar_lvds_dual_link(rcdu->lvds[rcrtc->index]) == false &&
 	    rstate->outputs == BIT(RCAR_DU_OUTPUT_DPAD0)) {
 		struct drm_bridge *bridge = rcdu->lvds[rcrtc->index];
 
@@ -783,6 +881,15 @@ static void rcar_du_crtc_atomic_disable(struct drm_crtc *crtc,
 		 * rcar_du_crtc_atomic_enable().
 		 */
 
+		rcar_mipi_dsi_pclk_disable(bridge);
+	}
+
+	if (rcdu->info->mipi_dsi_clk_mask & BIT(rcrtc->index)) {
+		struct drm_bridge *bridge = rcdu->mipi_dsi[rcrtc->index];
+
+		/*
+		 * Disable the MIPI DSI clock output
+		 */
 		rcar_mipi_dsi_pclk_disable(bridge);
 	}
 
@@ -1267,13 +1374,23 @@ int rcar_du_crtc_create(struct rcar_du_group *rgrp, unsigned int swindex,
 	rcrtc->index = hwindex;
 	rcrtc->dsysr = rcrtc->index % 2 ? 0 : DSYSR_DRES;
 
+	/* In V3U, the bit TVM and SCM are always set to 0 */
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_R8A779A0_REGS))
+		rcrtc->dsysr = rcrtc->dsysr &
+				~(DSYSR_SCM_MASK | DSYSR_TVM_MASK);
+
 	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_TVM_SYNC))
 		rcrtc->dsysr |= DSYSR_TVM_TVSYNC;
 
-	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE))
+	if (rcar_du_has(rcdu, RCAR_DU_FEATURE_VSP1_SOURCE)) {
+		/* If the BRS number of VSPDL is 0, skip CRTC initialization */
+		if (rcdu->vspdl_fix && rcrtc->vsp_pipe == 1 &&
+		    rcdu->brs_num == 0)
+			return 0;
 		primary = &rcrtc->vsp->planes[rcrtc->vsp_pipe].plane;
-	else
+	} else {
 		primary = &rgrp->planes[swindex % 2].plane;
+	}
 
 	ret = drm_crtc_init_with_planes(&rcdu->ddev, crtc, primary, NULL,
 					rcdu->info->gen <= 2 ?

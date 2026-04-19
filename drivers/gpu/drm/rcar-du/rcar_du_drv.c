@@ -2,7 +2,7 @@
 /*
  * R-Car Display Unit DRM driver
  *
- * Copyright (C) 2013-2015 Renesas Electronics Corporation
+ * Copyright (C) 2013-2018 Renesas Electronics Corporation
  *
  * Contact: Laurent Pinchart (laurent.pinchart@ideasonboard.com)
  */
@@ -18,12 +18,15 @@
 #include <linux/slab.h>
 #include <linux/wait.h>
 
+#include <drm/bridge/dw_hdmi.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_drv.h>
+#include "rcar_du_encoder.h"
 #include <drm/drm_fb_helper.h>
 #include <drm/drm_gem_dma_helper.h>
 #include <drm/drm_managed.h>
 #include <drm/drm_probe_helper.h>
+#include <drm/rcar_du_drm.h>
 
 #include "rcar_du_drv.h"
 #include "rcar_du_kms.h"
@@ -357,7 +360,8 @@ static const struct rcar_du_device_info rcar_du_r8a7795_info = {
 		  | RCAR_DU_FEATURE_CRTC_CLOCK
 		  | RCAR_DU_FEATURE_VSP1_SOURCE
 		  | RCAR_DU_FEATURE_INTERLACED
-		  | RCAR_DU_FEATURE_TVM_SYNC,
+		  | RCAR_DU_FEATURE_TVM_SYNC
+		  | RCAR_DU_FEATURE_R8A7795_REGS,
 	.channels_mask = BIT(3) | BIT(2) | BIT(1) | BIT(0),
 	.routes = {
 		/*
@@ -392,7 +396,8 @@ static const struct rcar_du_device_info rcar_du_r8a7796_info = {
 		  | RCAR_DU_FEATURE_CRTC_CLOCK
 		  | RCAR_DU_FEATURE_VSP1_SOURCE
 		  | RCAR_DU_FEATURE_INTERLACED
-		  | RCAR_DU_FEATURE_TVM_SYNC,
+		  | RCAR_DU_FEATURE_TVM_SYNC
+		  | RCAR_DU_FEATURE_R8A7796_REGS,
 	.channels_mask = BIT(2) | BIT(1) | BIT(0),
 	.routes = {
 		/*
@@ -423,7 +428,8 @@ static const struct rcar_du_device_info rcar_du_r8a77965_info = {
 		  | RCAR_DU_FEATURE_CRTC_CLOCK
 		  | RCAR_DU_FEATURE_VSP1_SOURCE
 		  | RCAR_DU_FEATURE_INTERLACED
-		  | RCAR_DU_FEATURE_TVM_SYNC,
+		  | RCAR_DU_FEATURE_TVM_SYNC
+		  | RCAR_DU_FEATURE_R8A77965_REGS,
 	.channels_mask = BIT(3) | BIT(1) | BIT(0),
 	.routes = {
 		/*
@@ -507,21 +513,23 @@ static const struct rcar_du_device_info rcar_du_r8a779a0_info = {
 	.gen = 3,
 	.features = RCAR_DU_FEATURE_CRTC_IRQ
 		  | RCAR_DU_FEATURE_VSP1_SOURCE
-		  | RCAR_DU_FEATURE_NO_BLENDING,
+		  | RCAR_DU_FEATURE_R8A779A0_REGS,
 	.channels_mask = BIT(1) | BIT(0),
 	.routes = {
-		/* R8A779A0 has two MIPI DSI outputs. */
-		[RCAR_DU_OUTPUT_DSI0] = {
+		/*
+		 * R8A779A0 has two MIPI DSI output.
+		 */
+		[RCAR_DU_OUTPUT_MIPI_DSI0] = {
 			.possible_crtcs = BIT(0),
 			.port = 0,
 		},
-		[RCAR_DU_OUTPUT_DSI1] = {
+		[RCAR_DU_OUTPUT_MIPI_DSI1] = {
 			.possible_crtcs = BIT(1),
 			.port = 1,
 		},
 	},
-	.num_rpf = 5,
-	.dsi_clk_mask =  BIT(1) | BIT(0),
+	.num_mipi_dsi = 2,
+	.mipi_dsi_clk_mask = BIT(1) | BIT(0),
 };
 
 static const struct of_device_id rcar_du_of_table[] = {
@@ -578,6 +586,13 @@ const char *rcar_du_output_name(enum rcar_du_output output)
  * DRM operations
  */
 
+static const struct drm_ioctl_desc rcar_du_ioctls[] = {
+	DRM_IOCTL_DEF_DRV(RCAR_DU_SET_VMUTE, rcar_du_set_vmute,
+			  DRM_UNLOCKED),
+	DRM_IOCTL_DEF_DRV(RCAR_DU_SCRSHOT, rcar_du_vsp_write_back,
+			  DRM_UNLOCKED),
+};
+
 DEFINE_DRM_GEM_DMA_FOPS(rcar_du_fops);
 
 static const struct drm_driver rcar_du_driver = {
@@ -593,6 +608,8 @@ static const struct drm_driver rcar_du_driver = {
 	.date			= "20130110",
 	.major			= 1,
 	.minor			= 0,
+	.ioctls			= rcar_du_ioctls,
+	.num_ioctls		= ARRAY_SIZE(rcar_du_ioctls),
 };
 
 /* -----------------------------------------------------------------------------
@@ -603,14 +620,44 @@ static const struct drm_driver rcar_du_driver = {
 static int rcar_du_pm_suspend(struct device *dev)
 {
 	struct rcar_du_device *rcdu = dev_get_drvdata(dev);
+#if IS_ENABLED(CONFIG_DRM_RCAR_DW_HDMI)
+	struct drm_encoder *encoder;
+#endif
 
+#if IS_ENABLED(CONFIG_DRM_RCAR_DW_HDMI)
+	list_for_each_entry(encoder,
+			    &rcdu->ddev.mode_config.encoder_list,
+			    head) {
+		struct rcar_du_encoder *renc = to_rcar_encoder(encoder);
+
+		if (renc->bridge && (renc->output == RCAR_DU_OUTPUT_HDMI0 ||
+		    renc->output == RCAR_DU_OUTPUT_HDMI1))
+			dw_hdmi_s2r_ctrl(renc->bridge, false);
+	}
+#endif
 	return drm_mode_config_helper_suspend(&rcdu->ddev);
 }
 
 static int rcar_du_pm_resume(struct device *dev)
 {
 	struct rcar_du_device *rcdu = dev_get_drvdata(dev);
+#if IS_ENABLED(CONFIG_DRM_RCAR_DW_HDMI)
+	struct drm_encoder *encoder;
 
+	list_for_each_entry(encoder,
+			    &rcdu->ddev.mode_config.encoder_list,
+			    head) {
+		struct rcar_du_encoder *renc = to_rcar_encoder(encoder);
+
+		if (renc->bridge && (renc->output == RCAR_DU_OUTPUT_HDMI0 ||
+		    renc->output == RCAR_DU_OUTPUT_HDMI1))
+			dw_hdmi_s2r_ctrl(renc->bridge, true);
+	}
+#endif
+
+#if IS_ENABLED(CONFIG_DRM_I2C_ADV7511)
+	drm_helper_hpd_irq_event(&rcdu->ddev);
+#endif
 	return drm_mode_config_helper_resume(&rcdu->ddev);
 }
 #endif
@@ -628,6 +675,9 @@ static int rcar_du_remove(struct platform_device *pdev)
 	struct rcar_du_device *rcdu = platform_get_drvdata(pdev);
 	struct drm_device *ddev = &rcdu->ddev;
 
+	if (rcdu->mode_config_initialized)
+		drm_atomic_helper_shutdown(ddev);
+
 	drm_dev_unregister(ddev);
 	drm_atomic_helper_shutdown(ddev);
 
@@ -639,7 +689,9 @@ static int rcar_du_remove(struct platform_device *pdev)
 static void rcar_du_shutdown(struct platform_device *pdev)
 {
 	struct rcar_du_device *rcdu = platform_get_drvdata(pdev);
-
+#ifdef CONFIG_PM_SLEEP
+	rcar_du_pm_suspend(&pdev->dev);
+#endif
 	drm_atomic_helper_shutdown(&rcdu->ddev);
 }
 
@@ -699,6 +751,7 @@ static int rcar_du_probe(struct platform_device *pdev)
 	DRM_INFO("Device %s probed\n", dev_name(&pdev->dev));
 
 	drm_fbdev_generic_setup(&rcdu->ddev, 32);
+	rcdu->mode_config_initialized = true;
 
 	return 0;
 

@@ -53,6 +53,8 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 
 	for (i = 0; i < vsp1->info->wpf_count; ++i) {
 		struct vsp1_rwpf *wpf = vsp1->wpf[i];
+		bool disp_access = false;
+		u32 disp_st = 0;
 
 		if (wpf == NULL)
 			continue;
@@ -60,9 +62,37 @@ static irqreturn_t vsp1_irq_handler(int irq, void *data)
 		status = vsp1_read(vsp1, VI6_WPF_IRQ_STA(i));
 		vsp1_write(vsp1, VI6_WPF_IRQ_STA(i), ~status & mask);
 
+		if ((status & VI6_WPF_IRQ_STA_UND) && wpf->entity.pipe) {
+			wpf->entity.pipe->underrun_count++;
+
+			dev_warn_ratelimited(vsp1->dev,
+				"Underrun occurred at WPF%u (total underruns %u)\n",
+				i, wpf->entity.pipe->underrun_count);
+		}
+
+		if (vsp1->info->lif_count == 2 && (i == 0 || i == 1))
+			disp_access = true;
+		else if (vsp1->info->lif_count == 1 && i == 0)
+			disp_access = true;
+
+		if (disp_access) {
+			disp_st = vsp1_read(vsp1, VI6_DISP_IRQ_STA(i));
+			vsp1_write(vsp1, VI6_DISP_IRQ_STA(i),
+				   ~disp_st & VI6_DISP_IRQ_STA_DST);
+		}
+
 		if (status & VI6_WPF_IRQ_STA_DFE) {
 			vsp1_pipeline_frame_end(wpf->entity.pipe);
 			ret = IRQ_HANDLED;
+		}
+
+		if (disp_st & VI6_DISP_IRQ_STA_DST) {
+			vsp1_drm_display_start(vsp1, i, wpf->entity.pipe);
+			ret = IRQ_HANDLED;
+			if (wpf->entity.pipe->dst_cnt) {
+				if (--wpf->entity.pipe->dst_cnt == 0)
+					wake_up(&wpf->entity.pipe->dst_wait);
+			}
 		}
 	}
 
@@ -821,7 +851,7 @@ static const struct vsp1_device_info vsp1_device_infos[] = {
 		.version = VI6_IP_VERSION_MODEL_VSPD_V3U,
 		.model = "VSP2-D",
 		.gen = 3,
-		.features = VSP1_HAS_BRU | VSP1_HAS_EXT_DL,
+		.features = VSP1_HAS_BRU | VSP1_HAS_WPF_VFLIP | VSP1_HAS_EXT_DL,
 		.lif_count = 1,
 		.rpf_count = 5,
 		.uif_count = 2,
