@@ -112,6 +112,34 @@ void tmio_mmc_disable_mmc_irqs(struct tmio_mmc_host *host, u32 i)
 }
 EXPORT_SYMBOL_GPL(tmio_mmc_disable_mmc_irqs);
 
+void tmio_mmc_set_transtate(struct tmio_mmc_host *host, unsigned int state)
+{
+	unsigned long flags = 0;
+
+	spin_lock_irqsave(&host->trans_lock, flags);
+	host->trans_state |= state;
+
+	if (host->trans_state == (TMIO_TRANSTATE_DEND | TMIO_TRANSTATE_AEND)) {
+		spin_unlock_irqrestore(&host->trans_lock, flags);
+		tmio_mmc_dataend_dma(host);
+	} else {
+		spin_unlock_irqrestore(&host->trans_lock, flags);
+	}
+}
+EXPORT_SYMBOL_GPL(tmio_mmc_set_transtate);
+
+void tmio_mmc_clear_transtate(struct tmio_mmc_host *host)
+{
+	unsigned long flags = 0;
+
+	spin_lock_irqsave(&host->trans_lock, flags);
+
+	host->trans_state = 0;
+
+	spin_unlock_irqrestore(&host->trans_lock, flags);
+}
+EXPORT_SYMBOL_GPL(tmio_mmc_clear_transtate);
+
 static void tmio_mmc_ack_mmc_irqs(struct tmio_mmc_host *host, u32 i)
 {
 	sd_ctrl_write32_as_16_and_16(host, CTL_STATUS, ~i);
@@ -192,14 +220,20 @@ static void tmio_mmc_reset(struct tmio_mmc_host *host, bool preserve)
 
 	/* FIXME - should we set stop clock reg here */
 	sd_ctrl_write16(host, CTL_RESET_SD, 0x0000);
-	usleep_range(10000, 11000);
+	if (in_interrupt())
+		mdelay(11);
+	else
+		usleep_range(10000, 11000);
 	sd_ctrl_write16(host, CTL_RESET_SD, 0x0001);
-	usleep_range(10000, 11000);
+	if (in_interrupt())
+		mdelay(11);
+	else
+		usleep_range(10000, 11000);
 
 	tmio_mmc_abort_dma(host);
 
-	if (host->reset)
-		host->reset(host, preserve);
+	if (host->ops.card_hw_reset)
+		host->ops.card_hw_reset(host->mmc, preserve);
 
 	sd_ctrl_write32_as_16_and_16(host, CTL_IRQ_MASK, host->sdcard_irq_mask_all);
 	host->sdcard_irq_mask = host->sdcard_irq_mask_all;
@@ -549,11 +583,18 @@ static void tmio_mmc_data_irq(struct tmio_mmc_host *host, unsigned int stat)
 
 		if (done) {
 			tmio_mmc_disable_mmc_irqs(host, TMIO_STAT_DATAEND);
-			tmio_mmc_dataend_dma(host);
+			if (!data->error)
+				tmio_mmc_set_transtate(host,
+						       TMIO_TRANSTATE_AEND);
+			else
+				tmio_mmc_dataend_dma(host);
 		}
 	} else if (host->dma_on && (data->flags & MMC_DATA_READ)) {
 		tmio_mmc_disable_mmc_irqs(host, TMIO_STAT_DATAEND);
-		tmio_mmc_dataend_dma(host);
+		if (!data->error)
+			tmio_mmc_set_transtate(host, TMIO_TRANSTATE_AEND);
+		else
+			tmio_mmc_dataend_dma(host);
 	} else {
 		tmio_mmc_do_data_irq(host);
 		tmio_mmc_disable_mmc_irqs(host, TMIO_MASK_READOP | TMIO_MASK_WRITEOP);
@@ -606,18 +647,34 @@ static void tmio_mmc_cmd_irq(struct tmio_mmc_host *host, unsigned int stat)
 		if (host->data->flags & MMC_DATA_READ) {
 			if (!host->dma_on) {
 				tmio_mmc_enable_mmc_irqs(host, TMIO_MASK_READOP);
-			} else {
+			} else if (!cmd->error) {
 				tmio_mmc_disable_mmc_irqs(host,
 							  TMIO_MASK_READOP);
 				tasklet_schedule(&host->dma_issue);
+			} else {
+				tmio_mmc_disable_mmc_irqs(host,
+							  TMIO_MASK_READOP);
+				/* When error, DMA does not start */
+				tmio_mmc_set_transtate(host,
+						       TMIO_TRANSTATE_DEND);
+				tmio_mmc_enable_mmc_irqs(host,
+							 TMIO_STAT_DATAEND);
 			}
 		} else {
 			if (!host->dma_on) {
 				tmio_mmc_enable_mmc_irqs(host, TMIO_MASK_WRITEOP);
-			} else {
+			} else if (!cmd->error) {
 				tmio_mmc_disable_mmc_irqs(host,
 							  TMIO_MASK_WRITEOP);
 				tasklet_schedule(&host->dma_issue);
+			} else {
+				tmio_mmc_disable_mmc_irqs(host,
+							  TMIO_MASK_WRITEOP);
+				/* When error, DMA does not start */
+				tmio_mmc_set_transtate(host,
+						       TMIO_TRANSTATE_DEND);
+				tmio_mmc_enable_mmc_irqs(host,
+							 TMIO_STAT_DATAEND);
 			}
 		}
 	} else {
@@ -694,8 +751,11 @@ static bool __tmio_mmc_sdio_irq(struct tmio_mmc_host *host)
 
 	sd_ctrl_write16(host, CTL_SDIO_STATUS, sdio_status);
 
-	if (mmc->caps & MMC_CAP_SDIO_IRQ && ireg & TMIO_SDIO_STAT_IOIRQ)
+	if (mmc->caps & MMC_CAP_SDIO_IRQ && ireg & TMIO_SDIO_STAT_IOIRQ) {
+		if (host->sdio_irq)
+			host->sdio_irq(host);
 		mmc_signal_sdio_irq(mmc);
+	}
 
 	return ireg;
 }
@@ -715,6 +775,9 @@ irqreturn_t tmio_mmc_irq(int irq, void *devid)
 		return IRQ_HANDLED;
 	if (__tmio_mmc_sdcard_irq(host, ireg, status))
 		return IRQ_HANDLED;
+	if (host->dma_ops)
+		if (host->dma_ops->dma_irq(host))
+			return IRQ_HANDLED;
 
 	if (__tmio_mmc_sdio_irq(host))
 		return IRQ_HANDLED;
@@ -844,6 +907,14 @@ static void tmio_mmc_finish_request(struct tmio_mmc_host *host)
 	spin_unlock_irqrestore(&host->lock, flags);
 
 	if (mrq->cmd->error || (mrq->data && mrq->data->error)) {
+		/*
+		 * Set clock if mmc_request data is error. This is one of
+		 * additional steps to be executed if an error is detected
+		 * in the renesas_sdhi_internal_dmac_complete() function.
+		 */
+		if (mrq->data)
+			host->set_clock(host, host->mmc->ios.clock);
+
 		tmio_mmc_ack_mmc_irqs(host, TMIO_MASK_IRQ); /* Clear all */
 		tmio_mmc_abort_dma(host);
 	}
@@ -1207,10 +1278,14 @@ int tmio_mmc_host_probe(struct tmio_mmc_host *_host)
 		_host->sdcard_irq_mask_all = TMIO_MASK_ALL;
 
 	_host->set_clock(_host, 0);
+	_host->reset = tmio_mmc_reset;
 	tmio_mmc_reset(_host, false);
 
 	spin_lock_init(&_host->lock);
 	mutex_init(&_host->ios_lock);
+
+	spin_lock_init(&_host->trans_lock);
+	_host->trans_state = 0;
 
 	/* Init delayed work for request timeouts */
 	INIT_DELAYED_WORK(&_host->delayed_reset_work, tmio_mmc_reset_work);

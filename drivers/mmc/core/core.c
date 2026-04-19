@@ -2007,7 +2007,7 @@ static void mmc_hw_reset_for_init(struct mmc_host *host)
 
 	if (!(host->caps & MMC_CAP_HW_RESET) || !host->ops->card_hw_reset)
 		return;
-	host->ops->card_hw_reset(host);
+	host->ops->card_hw_reset(host, false);
 }
 
 /**

@@ -2397,7 +2397,7 @@ fail:
 	return -EIO;
 }
 
-static void msdc_hw_reset(struct mmc_host *mmc)
+static void msdc_hw_reset(struct mmc_host *mmc, bool preserve)
 {
 	struct msdc_host *host = mmc_priv(mmc);
 

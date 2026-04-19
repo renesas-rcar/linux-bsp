@@ -47,6 +47,7 @@ struct renesas_sdhi_quirks {
 	bool old_info1_layout;
 	u32 hs400_bad_taps;
 	const u8 (*hs400_calib_table)[SDHI_CALIB_TABLE_MAX];
+	bool hs400_calib_reg;
 };
 
 struct renesas_sdhi_of_data_with_quirks {
@@ -76,6 +77,7 @@ struct renesas_sdhi {
 	u32 scc_tappos_hs400;
 	const u8 *adjust_hs400_calib_table;
 	bool needs_adjust_hs400;
+	bool card_is_sdio;
 
 	/* Tuning values: 1 for success, 0 for failure */
 	DECLARE_BITMAP(taps, BITS_PER_LONG);

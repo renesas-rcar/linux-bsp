@@ -49,8 +49,8 @@
 /* DM_CM_INFO1 and DM_CM_INFO1_MASK */
 #define INFO1_CLEAR		0
 #define INFO1_MASK_CLEAR	GENMASK_ULL(31, 0)
-#define INFO1_DTRANEND1		BIT(20)
-#define INFO1_DTRANEND1_OLD	BIT(17)
+#define INFO1_DTRANEND1_BIT20	BIT(20)
+#define INFO1_DTRANEND1_BIT17	BIT(17)
 #define INFO1_DTRANEND0		BIT(16)
 
 /* DM_CM_INFO2 and DM_CM_INFO2_MASK */
@@ -110,7 +110,8 @@ static const struct renesas_sdhi_of_data of_data_rcar_gen3 = {
 			  TMIO_MMC_HAVE_CBSY | TMIO_MMC_MIN_RCAR2,
 	.capabilities	= MMC_CAP_SD_HIGHSPEED | MMC_CAP_SDIO_IRQ |
 			  MMC_CAP_CMD23 | MMC_CAP_WAIT_WHILE_BUSY,
-	.capabilities2	= MMC_CAP2_NO_WRITE_PROTECT | MMC_CAP2_MERGE_CAPABLE,
+	.capabilities2	= MMC_CAP2_NO_WRITE_PROTECT | MMC_CAP2_MERGE_CAPABLE |
+			  MMC_CAP2_STOP_TUNE_SD,
 	.bus_shift	= 2,
 	.scc_offset	= 0x1000,
 	.taps		= rcar_gen3_scc_taps,
@@ -173,6 +174,7 @@ static const struct renesas_sdhi_quirks sdhi_quirks_4tap = {
 	.hs400_4taps = true,
 	.hs400_bad_taps = BIT(2) | BIT(3) | BIT(6) | BIT(7),
 	.manual_tap_correction = true,
+	.hs400_calib_reg = true,
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_nohs400 = {
@@ -186,11 +188,13 @@ static const struct renesas_sdhi_quirks sdhi_quirks_fixed_addr = {
 static const struct renesas_sdhi_quirks sdhi_quirks_bad_taps1357 = {
 	.hs400_bad_taps = BIT(1) | BIT(3) | BIT(5) | BIT(7),
 	.manual_tap_correction = true,
+	.hs400_calib_reg = true,
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_bad_taps2367 = {
 	.hs400_bad_taps = BIT(2) | BIT(3) | BIT(6) | BIT(7),
 	.manual_tap_correction = true,
+	.hs400_calib_reg = true,
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a7796_es13 = {
@@ -198,17 +202,20 @@ static const struct renesas_sdhi_quirks sdhi_quirks_r8a7796_es13 = {
 	.hs400_bad_taps = BIT(2) | BIT(3) | BIT(6) | BIT(7),
 	.hs400_calib_table = r8a7796_es13_calib_table,
 	.manual_tap_correction = true,
+	.hs400_calib_reg = true,
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a77965 = {
 	.hs400_bad_taps = BIT(2) | BIT(3) | BIT(6) | BIT(7),
 	.hs400_calib_table = r8a77965_calib_table,
 	.manual_tap_correction = true,
+	.hs400_calib_reg = true,
 };
 
 static const struct renesas_sdhi_quirks sdhi_quirks_r8a77990 = {
 	.hs400_calib_table = r8a77990_calib_table,
 	.manual_tap_correction = true,
+	.hs400_calib_reg = true,
 };
 
 /*
@@ -288,10 +295,22 @@ renesas_sdhi_internal_dmac_dm_write(struct tmio_mmc_host *host,
 	writeq(val, host->ctl + addr);
 }
 
+static u32
+renesas_sdhi_internal_dmac_dm_read(struct tmio_mmc_host *host, int addr)
+{
+	return readl(host->ctl + addr);
+}
+
 static void
 renesas_sdhi_internal_dmac_enable_dma(struct tmio_mmc_host *host, bool enable)
 {
 	struct renesas_sdhi *priv = host_to_priv(host);
+	u32 dma_dtranend1;
+
+	if (priv->quirks && priv->quirks->old_info1_layout)
+		dma_dtranend1 = INFO1_DTRANEND1_BIT17;
+	else
+		dma_dtranend1 = INFO1_DTRANEND1_BIT20;
 
 	if (!host->chan_tx || !host->chan_rx)
 		return;
@@ -300,8 +319,12 @@ renesas_sdhi_internal_dmac_enable_dma(struct tmio_mmc_host *host, bool enable)
 		renesas_sdhi_internal_dmac_dm_write(host, DM_CM_INFO1,
 						    INFO1_CLEAR);
 
-	if (priv->dma_priv.enable)
+	if (priv->dma_priv.enable) {
+		host->dma_irq_mask = ~(dma_dtranend1 | INFO1_DTRANEND0);
 		priv->dma_priv.enable(host, enable);
+		renesas_sdhi_internal_dmac_dm_write(host, DM_CM_INFO1_MASK,
+						    host->dma_irq_mask);
+	}
 }
 
 static void
@@ -396,6 +419,7 @@ renesas_sdhi_internal_dmac_start_dma(struct tmio_mmc_host *host,
 		dtran_mode |= DTRAN_MODE_CH_NUM_CH0;
 	}
 
+	tmio_mmc_clear_transtate(host);
 	renesas_sdhi_internal_dmac_enable_dma(host, true);
 
 	/* set dma parameters */
@@ -442,6 +466,22 @@ static bool renesas_sdhi_internal_dmac_complete(struct tmio_mmc_host *host)
 		dir = DMA_TO_DEVICE;
 
 	renesas_sdhi_internal_dmac_enable_dma(host, false);
+	/*
+	 * As updated in the H/W Errata for R-Car Series 3rd Generation,
+	 * before unmapping, if error occurs, execute the following steps:
+	 * - Reset SDHI controller
+	 * - Abort DMA
+	 * There are also additional steps to be executed but not required
+	 * before unmapping:
+	 * - Set bus width
+	 * - Set clock
+	 * Because setting clock requires mutex locking which is not
+	 * allowed in a tasklet. So this step will be called in the
+	 * tmio_mmc_finish_request() function.
+	 */
+	if (host->data && host->data->error)
+		host->reset(host, false);
+
 	renesas_sdhi_internal_dmac_unmap(host, host->data, COOKIE_MAPPED);
 
 	if (dir == DMA_FROM_DEVICE)
@@ -469,6 +509,37 @@ static void renesas_sdhi_internal_dmac_end_dma(struct tmio_mmc_host *host)
 {
 	if (host->data)
 		renesas_sdhi_internal_dmac_complete(host);
+}
+
+static bool renesas_sdhi_internal_dmac_dma_irq(struct tmio_mmc_host *host)
+{
+	struct renesas_sdhi *priv = host_to_priv(host);
+	unsigned int ireg, status;
+	u32 dma_dtranend1;
+
+	if (priv->quirks && priv->quirks->old_info1_layout)
+		dma_dtranend1 = INFO1_DTRANEND1_BIT17;
+	else
+		dma_dtranend1 = INFO1_DTRANEND1_BIT20;
+
+
+	status = renesas_sdhi_internal_dmac_dm_read(host, DM_CM_INFO1);
+	ireg = status & ~host->dma_irq_mask;
+
+	if (ireg & INFO1_DTRANEND0) {
+		renesas_sdhi_internal_dmac_dm_write(host, DM_CM_INFO1, ireg &
+						    ~INFO1_DTRANEND0);
+		tmio_mmc_set_transtate(host, TMIO_TRANSTATE_DEND);
+		return true;
+	}
+
+	if (ireg & dma_dtranend1) {
+		renesas_sdhi_internal_dmac_dm_write(host, DM_CM_INFO1, ireg &
+						    ~dma_dtranend1);
+		tmio_mmc_set_transtate(host, TMIO_TRANSTATE_DEND);
+		return true;
+	}
+	return false;
 }
 
 static void renesas_sdhi_internal_dmac_post_req(struct mmc_host *mmc,
@@ -539,6 +610,7 @@ static const struct tmio_mmc_dma_ops renesas_sdhi_internal_dmac_dma_ops = {
 	.abort = renesas_sdhi_internal_dmac_abort_dma,
 	.dataend = renesas_sdhi_internal_dmac_dataend_dma,
 	.end = renesas_sdhi_internal_dmac_end_dma,
+	.dma_irq = renesas_sdhi_internal_dmac_dma_irq,
 };
 
 static int renesas_sdhi_internal_dmac_probe(struct platform_device *pdev)
@@ -557,9 +629,12 @@ static int renesas_sdhi_internal_dmac_probe(struct platform_device *pdev)
 
 	/* value is max of SD_SECCNT. Confirmed by HW engineers */
 	dma_set_max_seg_size(dev, 0xffffffff);
-
+#ifndef CONFIG_MMC_SDHI_PIO
 	return renesas_sdhi_probe(pdev, &renesas_sdhi_internal_dmac_dma_ops,
 				  of_data_quirks->of_data, quirks);
+#else
+	return renesas_sdhi_probe(pdev, NULL, NULL, NULL);
+#endif
 }
 
 static const struct dev_pm_ops renesas_sdhi_internal_dmac_dev_pm_ops = {
@@ -573,7 +648,6 @@ static const struct dev_pm_ops renesas_sdhi_internal_dmac_dev_pm_ops = {
 static struct platform_driver renesas_internal_dmac_sdhi_driver = {
 	.driver		= {
 		.name	= "renesas_sdhi_internal_dmac",
-		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 		.pm	= &renesas_sdhi_internal_dmac_dev_pm_ops,
 		.of_match_table = renesas_sdhi_internal_dmac_of_match,
 	},

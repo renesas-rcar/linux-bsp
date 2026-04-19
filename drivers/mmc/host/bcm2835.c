@@ -268,7 +268,7 @@ static void bcm2835_reset_internal(struct bcm2835_host *host)
 	writel(host->cdiv, host->ioaddr + SDCDIV);
 }
 
-static void bcm2835_reset(struct mmc_host *mmc)
+static void bcm2835_reset(struct mmc_host *mmc, bool preserve)
 {
 	struct bcm2835_host *host = mmc_priv(mmc);
 
@@ -837,7 +837,7 @@ static void bcm2835_timeout(struct work_struct *work)
 		dev_err(dev, "timeout waiting for hardware interrupt.\n");
 		bcm2835_dumpregs(host);
 
-		bcm2835_reset(mmc_from_priv(host));
+		bcm2835_reset(mmc_from_priv(host), false);
 
 		if (host->data) {
 			host->data->error = -ETIMEDOUT;
@@ -1473,7 +1473,6 @@ static struct platform_driver bcm2835_driver = {
 	.remove     = bcm2835_remove,
 	.driver     = {
 		.name		= "sdhost-bcm2835",
-		.probe_type	= PROBE_PREFER_ASYNCHRONOUS,
 		.of_match_table	= bcm2835_match,
 	},
 };

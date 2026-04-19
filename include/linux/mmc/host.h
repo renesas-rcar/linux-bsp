@@ -200,7 +200,7 @@ struct mmc_host_ops {
 					 unsigned int max_dtr, int host_drv,
 					 int card_drv, int *drv_type);
 	/* Reset the eMMC card via RST_n */
-	void	(*card_hw_reset)(struct mmc_host *host);
+	void	(*card_hw_reset)(struct mmc_host *host, bool preserve);
 	void	(*card_event)(struct mmc_host *host);
 
 	/*
@@ -415,6 +415,7 @@ struct mmc_host {
 #define MMC_CAP2_CQE_DCMD	(1 << 24)	/* CQE can issue a direct command */
 #define MMC_CAP2_AVOID_3_3V	(1 << 25)	/* Host must negotiate down from 3.3V */
 #define MMC_CAP2_MERGE_CAPABLE	(1 << 26)	/* Host can merge a segment over the segment size */
+#define MMC_CAP2_STOP_TUNE_SD	(1 << 27)	/* Host need to send stop command during tuning in SD */
 #ifdef CONFIG_MMC_CRYPTO
 #define MMC_CAP2_CRYPTO		(1 << 27)	/* Host supports inline encryption */
 #else

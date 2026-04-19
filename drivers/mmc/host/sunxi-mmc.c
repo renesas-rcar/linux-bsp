@@ -997,7 +997,7 @@ static void sunxi_mmc_enable_sdio_irq(struct mmc_host *mmc, int enable)
 		pm_runtime_put_noidle(host->mmc->parent);
 }
 
-static void sunxi_mmc_hw_reset(struct mmc_host *mmc)
+static void sunxi_mmc_hw_reset(struct mmc_host *mmc, bool preserve)
 {
 	struct sunxi_mmc_host *host = mmc_priv(mmc);
 	mmc_writel(host, REG_HWRST, 0);

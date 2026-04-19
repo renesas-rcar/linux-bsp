@@ -190,6 +190,7 @@ static void renesas_sdhi_set_clock(struct tmio_mmc_host *host,
 				   unsigned int new_clock)
 {
 	unsigned int clk_margin;
+	struct renesas_sdhi *priv = host_to_priv(host);
 	u32 clk = 0, clock;
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, ~CLK_CTL_SCLKEN &
@@ -214,10 +215,12 @@ static void renesas_sdhi_set_clock(struct tmio_mmc_host *host,
 
 	/* 1/1 clock is option */
 	if ((host->pdata->flags & TMIO_MMC_CLK_ACTUAL) && ((clk >> 22) & 0x1)) {
-		if (!(host->mmc->ios.timing == MMC_TIMING_MMC_HS400))
+		if (!(host->mmc->ios.timing == MMC_TIMING_MMC_HS400)) {
 			clk |= 0xff;
-		else
+		} else {
+			clk_set_phase(priv->clk, 1);	/* HS400 */
 			clk &= ~0xff;
+		}
 	}
 
 	clock = clk & CLK_CTL_DIV_MASK;
@@ -357,6 +360,10 @@ static unsigned int renesas_sdhi_init_tuning(struct tmio_mmc_host *host)
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, ~CLK_CTL_SCLKEN &
 			sd_ctrl_read16(host, CTL_SD_CARD_CLK_CTL));
+
+	/* set CDnCKCR */
+	if (host->mmc->ios.timing == MMC_TIMING_MMC_HS200)
+		clk_set_phase(priv->clk, 0);	/* HS200 */
 
 	/* set sampling clock selection range */
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_DTCNTL,
@@ -550,7 +557,8 @@ static void renesas_sdhi_reset_hs400_mode(struct tmio_mmc_host *host,
 			 SH_MOBILE_SDHI_SCC_TMPPORT2_HS400OSEL) &
 			sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_TMPPORT2));
 
-	if (priv->quirks && (priv->quirks->hs400_calib_table || priv->quirks->hs400_bad_taps))
+	if (priv->quirks && (priv->quirks->hs400_calib_table || priv->quirks->hs400_bad_taps ||
+			     priv->quirks->hs400_calib_reg))
 		renesas_sdhi_adjust_hs400_mode_disable(host);
 
 	sd_ctrl_write16(host, CTL_SD_CARD_CLK_CTL, CLK_CTL_SCLKEN |
@@ -577,8 +585,9 @@ static void renesas_sdhi_scc_reset(struct tmio_mmc_host *host, struct renesas_sd
 }
 
 /* only populated for TMIO_MMC_MIN_RCAR2 */
-static void renesas_sdhi_reset(struct tmio_mmc_host *host, bool preserve)
+static void renesas_sdhi_reset(struct mmc_host *mmc, bool preserve)
 {
+	struct tmio_mmc_host *host = mmc_priv(mmc);
 	struct renesas_sdhi *priv = host_to_priv(host);
 	int ret;
 	u16 val;
@@ -673,9 +682,8 @@ static int renesas_sdhi_select_tuning(struct tmio_mmc_host *host)
 	/* Set SCC */
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_TAPSET, priv->tap_set);
 
-	/* Enable auto re-tuning */
 	sd_scc_write32(host, priv, SH_MOBILE_SDHI_SCC_RVSCNTL,
-		       SH_MOBILE_SDHI_SCC_RVSCNTL_RVSEN |
+		       (priv->card_is_sdio ? 0 : SH_MOBILE_SDHI_SCC_RVSCNTL_RVSEN) |
 		       sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_RVSCNTL));
 
 	return 0;
@@ -765,6 +773,14 @@ static bool renesas_sdhi_manual_correction(struct tmio_mmc_host *host, bool use_
 		if (bad_taps & BIT(new_tap % priv->tap_num))
 			return test_bit(error_tap % priv->tap_num, priv->smpcmp);
 	} else {
+		if (!priv->card_is_sdio &&
+		    !(val & SH_MOBILE_SDHI_SCC_RVSREQ_RVSERR)) {
+			u32 smpcmp = sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_SMPCMP);
+
+			/* DAT1 is unmatched because of an SDIO irq */
+			if (smpcmp & (BIT(17) | BIT(1)))
+				return false;
+		}
 		if (val & SH_MOBILE_SDHI_SCC_RVSREQ_RVSERR)
 			return true;    /* need retune */
 		else if (val & SH_MOBILE_SDHI_SCC_RVSREQ_REQTAPUP)
@@ -815,11 +831,14 @@ static bool renesas_sdhi_check_scc_error(struct tmio_mmc_host *host,
 	if (mmc_doing_tune(host->mmc))
 		return false;
 
-	if (((mrq->cmd->error == -ETIMEDOUT) ||
-	     (mrq->data && mrq->data->error == -ETIMEDOUT)) &&
-	    ((host->mmc->caps & MMC_CAP_NONREMOVABLE) ||
-	     (host->ops.get_cd && host->ops.get_cd(host->mmc))))
-		ret |= true;
+	/* mrq can be NULL to check SCC error on SDIO irq without any request */
+	if (mrq) {
+		if (((mrq->cmd->error == -ETIMEDOUT) ||
+		     (mrq->data && mrq->data->error == -ETIMEDOUT)) &&
+		    ((host->mmc->caps & MMC_CAP_NONREMOVABLE) ||
+		     (host->ops.get_cd && host->ops.get_cd(host->mmc))))
+			ret |= true;
+	}
 
 	if (sd_scc_read32(host, priv, SH_MOBILE_SDHI_SCC_RVSCNTL) &
 	    SH_MOBILE_SDHI_SCC_RVSCNTL_RVSEN)
@@ -828,6 +847,28 @@ static bool renesas_sdhi_check_scc_error(struct tmio_mmc_host *host,
 		ret |= renesas_sdhi_manual_correction(host, use_4tap);
 
 	return ret;
+}
+
+static void renesas_sdhi_init_card(struct mmc_host *mmc, struct mmc_card *card)
+{
+	struct tmio_mmc_host *host = mmc_priv(mmc);
+	struct renesas_sdhi *priv = host_to_priv(host);
+
+	/*
+	 * This controller cannot do auto-retune with SDIO irqs, so we
+	 * then need to enforce manual correction. However, when tuning,
+	 * mmc->card is not populated yet, so we don't know if the card
+	 * is SDIO. init_card provides this information earlier, so we
+	 * keep a copy of it.
+	 */
+	priv->card_is_sdio = mmc_card_sdio(card);
+}
+
+static void renesas_sdhi_sdio_irq(struct tmio_mmc_host *host)
+{
+	/* This controller requires retune when an SDIO irq occurs */
+	if (renesas_sdhi_check_scc_error(host, NULL))
+		mmc_retune_needed(host->mmc);
 }
 
 static int renesas_sdhi_wait_idle(struct tmio_mmc_host *host, u32 bit)
@@ -1009,7 +1050,7 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 			renesas_sdhi_start_signal_voltage_switch;
 		host->sdcard_irq_setbit_mask = TMIO_STAT_ALWAYS_SET_27;
 		host->sdcard_irq_mask_all = TMIO_MASK_ALL_RCAR2;
-		host->reset = renesas_sdhi_reset;
+		host->ops.card_hw_reset = renesas_sdhi_reset;
 	} else {
 		host->sdcard_irq_mask_all = TMIO_MASK_ALL;
 	}
@@ -1074,6 +1115,10 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 	if (ver >= SDHI_VER_GEN3_SD)
 		host->get_timeout_cycles = renesas_sdhi_gen3_get_cycles;
 
+	/* Gen3+ have SCC on all channels */
+	if (of_data && of_data->scc_offset && ver >= SDHI_VER_GEN3_SD)
+		priv->scc_ctl = host->ctl + of_data->scc_offset;
+
 	/* Check for SCC so we can reset it if needed */
 	if (of_data && of_data->scc_offset && ver >= SDHI_VER_GEN2_SDR104)
 		priv->scc_ctl = host->ctl + of_data->scc_offset;
@@ -1102,6 +1147,8 @@ int renesas_sdhi_probe(struct platform_device *pdev,
 			dev_warn(&host->pdev->dev, "Unknown clock rate for tuning\n");
 
 		host->check_retune = renesas_sdhi_check_scc_error;
+		host->sdio_irq = renesas_sdhi_sdio_irq;
+		host->ops.init_card = renesas_sdhi_init_card;
 		host->ops.execute_tuning = renesas_sdhi_execute_tuning;
 		host->ops.prepare_hs400_tuning = renesas_sdhi_prepare_hs400_tuning;
 		host->ops.hs400_downgrade = renesas_sdhi_disable_scc;

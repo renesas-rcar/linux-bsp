@@ -2584,7 +2584,7 @@ static int sdhci_get_ro(struct mmc_host *mmc)
 	return 0;
 }
 
-static void sdhci_hw_reset(struct mmc_host *mmc)
+static void sdhci_hw_reset(struct mmc_host *mmc, bool preserve)
 {
 	struct sdhci_host *host = mmc_priv(mmc);
 
