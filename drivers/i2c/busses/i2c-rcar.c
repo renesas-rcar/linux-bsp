@@ -143,6 +143,7 @@ struct rcar_i2c_priv {
 
 	struct reset_control *rstc;
 	int irq;
+	int suspended;
 
 	struct i2c_client *host_notify_client;
 	u8 slave_flags;
@@ -215,10 +216,12 @@ static struct i2c_bus_recovery_info rcar_i2c_bri = {
 };
 static void rcar_i2c_init(struct rcar_i2c_priv *priv)
 {
-	/* reset master mode */
-	rcar_i2c_write(priv, ICMIER, 0);
-	rcar_i2c_write(priv, ICMCR, MDBS);
-	rcar_i2c_write(priv, ICMSR, 0);
+	if (!priv->suspended) {
+		/* reset master mode */
+		rcar_i2c_write(priv, ICMIER, 0);
+		rcar_i2c_write(priv, ICMCR, MDBS);
+		rcar_i2c_write(priv, ICMSR, 0);
+	}
 	/* start clock */
 	rcar_i2c_write(priv, ICCCR, priv->icccr);
 
@@ -857,6 +860,9 @@ static int rcar_i2c_master_xfer(struct i2c_adapter *adap,
 
 	priv->flags |= ID_P_NOT_ATOMIC;
 
+	if (priv->suspended)
+		return -EBUSY;
+
 	pm_runtime_get_sync(dev);
 
 	/* Check bus state before init otherwise bus busy info will be lost */
@@ -1047,6 +1053,7 @@ static const struct of_device_id rcar_i2c_dt_ids[] = {
 	{ .compatible = "renesas,i2c-r8a7794", .data = (void *)I2C_RCAR_GEN2 },
 	{ .compatible = "renesas,i2c-r8a7795", .data = (void *)I2C_RCAR_GEN3 },
 	{ .compatible = "renesas,i2c-r8a7796", .data = (void *)I2C_RCAR_GEN3 },
+	{ .compatible = "renesas,i2c-r8a77961", .data = (void *)I2C_RCAR_GEN3 },
 	{ .compatible = "renesas,rcar-gen1-i2c", .data = (void *)I2C_RCAR_GEN1 },
 	{ .compatible = "renesas,rcar-gen2-i2c", .data = (void *)I2C_RCAR_GEN2 },
 	{ .compatible = "renesas,rcar-gen3-i2c", .data = (void *)I2C_RCAR_GEN3 },
@@ -1191,6 +1198,7 @@ static int rcar_i2c_remove(struct platform_device *pdev)
 		i2c_free_slave_host_notify_device(priv->host_notify_client);
 	i2c_del_adapter(&priv->adap);
 	rcar_i2c_release_dma(priv);
+	rcar_i2c_write(priv, ICMIER, 0);
 	if (priv->flags & ID_P_PM_BLOCKED)
 		pm_runtime_put(dev);
 	pm_runtime_disable(dev);
@@ -1203,16 +1211,29 @@ static int rcar_i2c_suspend(struct device *dev)
 {
 	struct rcar_i2c_priv *priv = dev_get_drvdata(dev);
 
+	priv->suspended = 1;
 	i2c_mark_adapter_suspended(&priv->adap);
 	return 0;
 }
 
 static int rcar_i2c_resume(struct device *dev)
 {
+	int ret = 0;
 	struct rcar_i2c_priv *priv = dev_get_drvdata(dev);
 
+	pm_runtime_get_sync(dev);
+	ret = rcar_i2c_clock_calculate(priv);
+	if (ret < 0)
+		dev_err(dev, "Could not calculate clock\n");
+
+	rcar_i2c_init(priv);
+	pm_runtime_put(dev);
+
+	priv->suspended = 0;
+
 	i2c_mark_adapter_resumed(&priv->adap);
-	return 0;
+
+	return ret;
 }
 
 static const struct dev_pm_ops rcar_i2c_pm_ops = {
