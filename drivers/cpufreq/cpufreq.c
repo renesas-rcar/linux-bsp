@@ -2549,10 +2549,12 @@ EXPORT_SYMBOL(cpufreq_get_policy);
  * @new_gov: Policy governor pointer.
  * @new_pol: Policy value (for drivers with built-in governors).
  *
- * Invoke the cpufreq driver's ->verify() callback to sanity-check the frequency
+ * Run the installed policy notifiers with the CPUFREQ_ADJUST value and invoke
+ * the cpufreq driver's ->verify() callback to sanity-check the frequency
  * limits to be set for the policy, update @policy with the verified limits
- * values and either invoke the driver's ->setpolicy() callback (if present) or
- * carry out a governor update for @policy.  That is, run the current governor's
+ * values and run the notifiers for it again with the CPUFREQ_NOTIFY value,
+ * and either invoke the driver's ->setpolicy() callback (if present) or
+ * carry out a governor update for @policy. That is, run the current governor's
  * ->limits() callback (if @new_gov points to the same object as the one in
  * @policy) or replace the governor for @policy with @new_gov.
  *
@@ -2579,6 +2581,18 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 	pr_debug("setting new policy for CPU %u: %u - %u kHz\n",
 		 new_data.cpu, new_data.min, new_data.max);
 
+	/* expose QoS limits to notifier */
+	WRITE_ONCE(policy->min, new_data.min);
+	WRITE_ONCE(policy->max, new_data.max);
+
+	/* adjust if necessary - all reasons */
+	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
+					CPUFREQ_ADJUST, policy);
+
+	/* Sync back to new_data after adjustment */
+	new_data.min = policy->min;
+	new_data.max = policy->max;
+
 	/*
 	 * Verify that the CPU speed can be set within these limits and make sure
 	 * that min <= max.
@@ -2604,6 +2618,9 @@ static int cpufreq_set_policy(struct cpufreq_policy *policy,
 	WRITE_ONCE(policy->min, new_data.min > policy->max ? policy->max : new_data.min);
 
 	trace_cpu_frequency_limits(policy);
+	/* notification of the new policy */
+	blocking_notifier_call_chain(&cpufreq_policy_notifier_list,
+					CPUFREQ_NOTIFY, policy);
 
 	policy->cached_target_freq = UINT_MAX;
 
