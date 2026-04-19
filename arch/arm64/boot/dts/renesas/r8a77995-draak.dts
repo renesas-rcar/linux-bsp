@@ -14,3 +14,7 @@
 	model = "Renesas Draak board based on r8a77995";
 	compatible = "renesas,draak", "renesas,r8a77995";
 };
+
+&vspbs {
+	status = "okay";
+};

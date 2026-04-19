@@ -13,3 +13,15 @@
 	compatible = "shimafuji,kingfisher", "renesas,m3ulcb",
 		     "renesas,r8a77961";
 };
+
+&lvds0 {
+	status = "okay";
+
+	ports {
+		port@1 {
+			lvds0_out: endpoint {
+				remote-endpoint = <&lvds_in>;
+			};
+		};
+	};
+};

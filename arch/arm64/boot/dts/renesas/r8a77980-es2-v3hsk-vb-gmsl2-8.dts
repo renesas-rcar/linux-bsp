@@ -1,0 +1,17 @@
+/*
+ * Device Tree Source for the Renesas V3HSK 8ch GMSL2 Videobox based on r8a7798 ES2.0
+ *
+ * Copyright (C) 2020 Renesas Electronics Corp.
+ * Copyright (C) 2020 Cogent Embedded, Inc.
+ *
+ * This file is licensed under the terms of the GNU General Public License
+ * version 2.  This program is licensed "as is" without any warranty of any
+ * kind, whether express or implied.
+ */
+
+#include "r8a77980-v3hsk-vb-gmsl2-8.dts"
+#include "r8a77980-es2.dtsi"
+
+/ {
+	model = "Renesas V3HSK 8ch GMSL2 Videobox board based on r8a7798 ES2.0";
+};

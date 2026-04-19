@@ -33,6 +33,10 @@
 		ethernet0 = &avb;
 		mmc0 = &sdhi2;
 		mmc1 = &sdhi0;
+		spi0 = &msiof0;
+		spi1 = &msiof1;
+		spi2 = &msiof2;
+		spi3 = &msiof3;
 	};
 
 	chosen {
@@ -48,6 +52,17 @@
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <12288000>;
+	};
+
+	avb-mch {
+		compatible = "renesas,avb-mch-gen3";
+		reg = <0 0xec5a0100 0 0x100>; /* ADG_AVB */
+		reg-name = "adg_avb";
+
+		clocks = <&cpg CPG_MOD 922>;
+		clock-names = "adg";
+		resets = <&cpg 922>;
+		reset-names = "adg";
 	};
 
 	hdmi0-out {
@@ -104,7 +119,7 @@
 
 	sound_card: sound {
 		compatible = "audio-graph-card2";
-		label = "rcar-sound";
+		label = "ak4613";
 
 		links = <&rsnd_port0	/* ak4613 */
 			 &rsnd_port1	/* HDMI0  */
@@ -171,6 +186,10 @@
 		interrupts = <11 IRQ_TYPE_LEVEL_LOW>;
 		reset-gpios = <&gpio2 10 GPIO_ACTIVE_LOW>;
 	};
+};
+
+&a57_0 {
+	cpu-supply = <&dvfs>;
 };
 
 &du {
@@ -434,55 +453,6 @@
 	};
 };
 
-&rpc {
-	/* Left disabled.  To be enabled by firmware when unlocked. */
-
-	flash@0 {
-		compatible = "cypress,hyperflash", "cfi-flash";
-		reg = <0>;
-
-		partitions {
-			compatible = "fixed-partitions";
-			#address-cells = <1>;
-			#size-cells = <1>;
-
-			bootparam@0 {
-				reg = <0x00000000 0x040000>;
-				read-only;
-			};
-			bl2@40000 {
-				reg = <0x00040000 0x140000>;
-				read-only;
-			};
-			cert_header_sa6@180000 {
-				reg = <0x00180000 0x040000>;
-				read-only;
-			};
-			bl31@1c0000 {
-				reg = <0x001c0000 0x040000>;
-				read-only;
-			};
-			tee@200000 {
-				reg = <0x00200000 0x440000>;
-				read-only;
-			};
-			uboot@640000 {
-				reg = <0x00640000 0x100000>;
-				read-only;
-			};
-			dtb@740000 {
-				reg = <0x00740000 0x080000>;
-			};
-			kernel@7c0000 {
-				reg = <0x007c0000 0x1400000>;
-			};
-			user@1bc0000 {
-				reg = <0x01bc0000 0x2440000>;
-			};
-		};
-	};
-};
-
 &rwdt {
 	timeout-sec = <60>;
 	status = "okay";
@@ -518,6 +488,8 @@
 	pinctrl-0 = <&sdhi2_pins>;
 	pinctrl-1 = <&sdhi2_pins>;
 	pinctrl-names = "default", "state_uhs";
+
+	iommus = <&ipmmu_ds1 34>;
 
 	vmmc-supply = <&reg_3p3v>;
 	vqmmc-supply = <&reg_1p8v>;

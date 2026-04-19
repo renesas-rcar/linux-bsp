@@ -44,6 +44,118 @@
 		stdout-path = "serial0:115200n8";
 	};
 
+	avb-mch@ec5a0100 {
+		compatible = "renesas,avb-mch-gen3";
+		reg =	<0 0xec5a0100 0 0x100>;  /* ADG_AVB */
+		reg-name = "adg_avb";
+
+		clocks = <&cpg CPG_MOD 922>;
+		clock-names = "adg";
+		resets = <&cpg 922>;
+	};
+
+	lvds0-decoder {
+		compatible = "thine,thc63lvd1024";
+		vcc-supply = <&reg_3p3v>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				thc63lvd1024_in0: endpoint {
+					remote-endpoint = <&lvds0_out>;
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				thc63lvd1024_out0: endpoint {
+					remote-endpoint = <&adv7511_in>;
+				};
+			};
+		};
+	};
+
+	lvds1-decoder {
+		compatible = "thine,thc63lvd1024";
+		vcc-supply = <&reg_3p3v>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				thc63lvd1024_in1: endpoint {
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				thc63lvd1024_out1: endpoint {
+				};
+			};
+		};
+	};
+
+	lvds0 {
+		compatible = "panel-lvds";
+
+		width-mm = <210>;
+		height-mm = <158>;
+
+		data-mapping = "jeida-24";
+		enable-gpios = <&gpio2 31 GPIO_ACTIVE_HIGH>;
+
+		panel-timing {
+			/* 1024x768 @60Hz */
+			clock-frequency = <65000000>;
+			hactive = <1024>;
+			vactive = <768>;
+			hsync-len = <136>;
+			hfront-porch = <20>;
+			hback-porch = <160>;
+			vfront-porch = <3>;
+			vback-porch = <29>;
+			vsync-len = <6>;
+		};
+
+		port {
+			lvds0_panel_in: endpoint {
+			};
+		};
+	};
+
+	lvds1 {
+		compatible = "panel-lvds";
+
+		width-mm = <210>;
+		height-mm = <158>;
+
+		data-mapping = "jeida-24";
+		enable-gpios = <&gpio4 0 GPIO_ACTIVE_HIGH>;
+
+		panel-timing {
+			/* 1024x768 @60Hz */
+			clock-frequency = <65000000>;
+			hactive = <1024>;
+			vactive = <768>;
+			hsync-len = <136>;
+			hfront-porch = <20>;
+			hback-porch = <160>;
+			vfront-porch = <3>;
+			vback-porch = <29>;
+			vsync-len = <6>;
+		};
+
+		port {
+			lvds1_panel_in: endpoint {
+			};
+		};
+	};
+
 	composite-in {
 		compatible = "composite-video-connector";
 
@@ -57,6 +169,10 @@
 	hdmi-in {
 		compatible = "hdmi-connector";
 		type = "a";
+
+		width = <800>;
+		height = <600>;
+		max-pixelclock = <50000>;
 
 		port {
 			hdmi_con_in: endpoint {
@@ -112,34 +228,24 @@
 		};
 	};
 
-	lvds-decoder {
-		compatible = "thine,thc63lvd1024";
-		vcc-supply = <&reg_3p3v>;
-
-		ports {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			port@0 {
-				reg = <0>;
-				thc63lvd1024_in: endpoint {
-					remote-endpoint = <&lvds0_out>;
-				};
-			};
-
-			port@2 {
-				reg = <2>;
-				thc63lvd1024_out: endpoint {
-					remote-endpoint = <&adv7511_in>;
-				};
-			};
-		};
-	};
-
 	memory@48000000 {
 		device_type = "memory";
 		/* first 128MB is reserved for secure area. */
 		reg = <0x0 0x48000000 0x0 0x18000000>;
+	};
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x00000000 0x58000000 0x0 0x8000000>;
+			linux,cma-default;
+		};
 	};
 
 	reg_1p8v: regulator-1p8v {
@@ -179,6 +285,7 @@
 
 	vga {
 		compatible = "vga-connector";
+		no-use-ddc;
 
 		port {
 			vga_in: endpoint {
@@ -360,7 +467,6 @@
 				 * VIN4 here.
 				 */
 				adv7180_out: endpoint {
-					remote-endpoint = <&vin4_in>;
 				};
 			};
 		};
@@ -385,7 +491,7 @@
 			port@0 {
 				reg = <0>;
 				adv7511_in: endpoint {
-					remote-endpoint = <&thc63lvd1024_out>;
+					remote-endpoint = <&thc63lvd1024_out0>;
 				};
 			};
 
@@ -427,9 +533,7 @@
 				 * not connected here.
 				 */
 				adv7612_out: endpoint {
-					pclk-sample = <0>;
-					hsync-active = <0>;
-					vsync-active = <0>;
+					remote-endpoint = <&vin4_in>;
 				};
 			};
 		};
@@ -470,7 +574,7 @@
 	ports {
 		port@1 {
 			lvds0_out: endpoint {
-				remote-endpoint = <&thc63lvd1024_in>;
+				remote-endpoint = <&thc63lvd1024_in0>;
 			};
 		};
 	};
@@ -485,9 +589,14 @@
 	status = "okay";
 
 	clocks = <&cpg CPG_MOD 727>,
-		 <&x12_clk>,
 		 <&extal_clk>;
-	clock-names = "fck", "dclkin.0", "extal";
+	clock-names = "fck", "extal";
+	ports {
+		port@1 {
+			lvds1_out: endpoint {
+			};
+		};
+	};
 };
 
 &ohci0 {
@@ -706,6 +815,8 @@
 	pinctrl-1 = <&sdhi2_pins_uhs>;
 	pinctrl-names = "default", "state_uhs";
 
+	iommus = <&ipmmu_ds1 34>;
+
 	vmmc-supply = <&reg_3p3v>;
 	vqmmc-supply = <&reg_1p8v>;
 	bus-width = <8>;
@@ -737,7 +848,10 @@
 	ports {
 		port {
 			vin4_in: endpoint {
-				remote-endpoint = <&adv7180_out>;
+				pclk-sample = <0>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				remote-endpoint = <&adv7612_out>;
 			};
 		};
 	};
