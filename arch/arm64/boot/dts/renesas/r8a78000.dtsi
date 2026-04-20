@@ -3638,7 +3638,7 @@
             reg = <0 0xcb000000 0 0x200000>;
             interrupts = <GIC_SPI 482 IRQ_TYPE_LEVEL_HIGH>;
             clocks = <&dummy_clk>;
-            clock-names = <&dummy_clk>;
+            clock-names = "dummy_clk";
             assigned-clocks = <&dummy_clk>;
             assigned-clock-rates = <1000000000>;
             #status = "disabled";
