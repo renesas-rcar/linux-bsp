@@ -249,3 +249,163 @@
 &isp3 {
 	status = "disabled";
 };
+
+/* Remove power-domains properties inherited from r8a78000-uio.dtsi */
+
+/* IMS/IMR nodes */
+&imrlx7_ims00 { /delete-property/ power-domains; };
+&imrlx7_ims01 { /delete-property/ power-domains; };
+&imrlx7_ims02 { /delete-property/ power-domains; };
+&imrlx7_ims03 { /delete-property/ power-domains; };
+&imrlx7_imr00 { /delete-property/ power-domains; };
+&imrlx7_imr01 { /delete-property/ power-domains; };
+&imrlx7_ims10 { /delete-property/ power-domains; };
+&imrlx7_ims11 { /delete-property/ power-domains; };
+&imrlx7_ims12 { /delete-property/ power-domains; };
+&imrlx7_ims13 { /delete-property/ power-domains; };
+&imrlx7_imr10 { /delete-property/ power-domains; };
+&imrlx7_imr11 { /delete-property/ power-domains; };
+
+/* CISP/TISP nodes */
+&cisp0 { /delete-property/ power-domains; };
+&cisp1 { /delete-property/ power-domains; };
+&cisp2 { /delete-property/ power-domains; };
+&cisp3 { /delete-property/ power-domains; };
+&tisp0 { /delete-property/ power-domains; };
+&tisp1 { /delete-property/ power-domains; };
+&tisp2 { /delete-property/ power-domains; };
+&tisp3 { /delete-property/ power-domains; };
+
+/* VSPX/FCPVX nodes */
+&vspx0 { /delete-property/ power-domains; };
+&vspx1 { /delete-property/ power-domains; };
+&vspx2 { /delete-property/ power-domains; };
+&vspx3 { /delete-property/ power-domains; };
+&fcpvx0 { /delete-property/ power-domains; };
+&fcpvx1 { /delete-property/ power-domains; };
+&fcpvx2 { /delete-property/ power-domains; };
+&fcpvx3 { /delete-property/ power-domains; };
+
+/* VCP5/FCPC nodes */
+&vcp5_0 { /delete-property/ power-domains; };
+&{/soc/vcp5_00_01} { /delete-property/ power-domains; };
+&vcp5_1 { /delete-property/ power-domains; };
+&{/soc/vcp5_01_01} { /delete-property/ power-domains; };
+&vcp5_2 { /delete-property/ power-domains; };
+&{/soc/vcp5_02_01} { /delete-property/ power-domains; };
+&vcp5_3 { /delete-property/ power-domains; };
+&{/soc/vcp5_03_01} { /delete-property/ power-domains; };
+&fcpc0 { /delete-property/ power-domains; };
+&fcpc1 { /delete-property/ power-domains; };
+&fcpc2 { /delete-property/ power-domains; };
+&fcpc3 { /delete-property/ power-domains; };
+
+/* VIN nodes (VIO0 group) */
+&vin_00 { /delete-property/ power-domains; };
+&vin_01 { /delete-property/ power-domains; };
+&vin_02 { /delete-property/ power-domains; };
+&vin_03 { /delete-property/ power-domains; };
+&vin_04 { /delete-property/ power-domains; };
+&vin_05 { /delete-property/ power-domains; };
+&vin_06 { /delete-property/ power-domains; };
+&vin_07 { /delete-property/ power-domains; };
+&vin_10 { /delete-property/ power-domains; };
+&vin_11 { /delete-property/ power-domains; };
+&vin_12 { /delete-property/ power-domains; };
+&vin_13 { /delete-property/ power-domains; };
+&vin_14 { /delete-property/ power-domains; };
+&vin_15 { /delete-property/ power-domains; };
+&vin_16 { /delete-property/ power-domains; };
+&vin_17 { /delete-property/ power-domains; };
+&vin_20 { /delete-property/ power-domains; };
+&vin_21 { /delete-property/ power-domains; };
+&vin_22 { /delete-property/ power-domains; };
+&vin_23 { /delete-property/ power-domains; };
+&vin_24 { /delete-property/ power-domains; };
+&vin_25 { /delete-property/ power-domains; };
+&vin_26 { /delete-property/ power-domains; };
+&vin_27 { /delete-property/ power-domains; };
+
+/* VIN nodes (VIO1 group) */
+&vin_30 { /delete-property/ power-domains; };
+&vin_31 { /delete-property/ power-domains; };
+&vin_32 { /delete-property/ power-domains; };
+&vin_33 { /delete-property/ power-domains; };
+&vin_34 { /delete-property/ power-domains; };
+&vin_35 { /delete-property/ power-domains; };
+&vin_36 { /delete-property/ power-domains; };
+&vin_37 { /delete-property/ power-domains; };
+&vin_40 { /delete-property/ power-domains; };
+&vin_41 { /delete-property/ power-domains; };
+&vin_42 { /delete-property/ power-domains; };
+&vin_43 { /delete-property/ power-domains; };
+&vin_44 { /delete-property/ power-domains; };
+&vin_45 { /delete-property/ power-domains; };
+&vin_46 { /delete-property/ power-domains; };
+&vin_47 { /delete-property/ power-domains; };
+
+/* VIN nodes (VIO2 group) */
+&vin_50 { /delete-property/ power-domains; };
+&vin_51 { /delete-property/ power-domains; };
+&vin_52 { /delete-property/ power-domains; };
+&vin_53 { /delete-property/ power-domains; };
+&vin_54 { /delete-property/ power-domains; };
+&vin_55 { /delete-property/ power-domains; };
+&vin_56 { /delete-property/ power-domains; };
+&vin_57 { /delete-property/ power-domains; };
+&vin_60 { /delete-property/ power-domains; };
+&vin_61 { /delete-property/ power-domains; };
+&vin_62 { /delete-property/ power-domains; };
+&vin_63 { /delete-property/ power-domains; };
+&vin_64 { /delete-property/ power-domains; };
+&vin_65 { /delete-property/ power-domains; };
+&vin_66 { /delete-property/ power-domains; };
+&vin_67 { /delete-property/ power-domains; };
+&vin_70 { /delete-property/ power-domains; };
+&vin_71 { /delete-property/ power-domains; };
+&vin_72 { /delete-property/ power-domains; };
+&vin_73 { /delete-property/ power-domains; };
+&vin_74 { /delete-property/ power-domains; };
+&vin_75 { /delete-property/ power-domains; };
+&vin_76 { /delete-property/ power-domains; };
+&vin_77 { /delete-property/ power-domains; };
+&vin_80 { /delete-property/ power-domains; };
+&vin_81 { /delete-property/ power-domains; };
+&vin_82 { /delete-property/ power-domains; };
+&vin_83 { /delete-property/ power-domains; };
+&vin_84 { /delete-property/ power-domains; };
+&vin_85 { /delete-property/ power-domains; };
+&vin_86 { /delete-property/ power-domains; };
+&vin_87 { /delete-property/ power-domains; };
+
+/* VIN nodes (VIO3 group) */
+&vin_90 { /delete-property/ power-domains; };
+&vin_91 { /delete-property/ power-domains; };
+&vin_92 { /delete-property/ power-domains; };
+&vin_93 { /delete-property/ power-domains; };
+&vin_94 { /delete-property/ power-domains; };
+&vin_95 { /delete-property/ power-domains; };
+&vin_96 { /delete-property/ power-domains; };
+&vin_97 { /delete-property/ power-domains; };
+&vin_100 { /delete-property/ power-domains; };
+&vin_101 { /delete-property/ power-domains; };
+&vin_102 { /delete-property/ power-domains; };
+&vin_103 { /delete-property/ power-domains; };
+&vin_104 { /delete-property/ power-domains; };
+&vin_105 { /delete-property/ power-domains; };
+&vin_106 { /delete-property/ power-domains; };
+&vin_107 { /delete-property/ power-domains; };
+&vin_110 { /delete-property/ power-domains; };
+&vin_111 { /delete-property/ power-domains; };
+&vin_112 { /delete-property/ power-domains; };
+&vin_113 { /delete-property/ power-domains; };
+&vin_114 { /delete-property/ power-domains; };
+&vin_115 { /delete-property/ power-domains; };
+&vin_116 { /delete-property/ power-domains; };
+&vin_117 { /delete-property/ power-domains; };
+
+/* CSI nodes */
+&csi0 { /delete-property/ power-domains; };
+&csi1 { /delete-property/ power-domains; };
+&csi2 { /delete-property/ power-domains; };
+&csi3 { /delete-property/ power-domains; };
