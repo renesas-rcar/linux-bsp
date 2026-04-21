@@ -16,12 +16,10 @@
 #include "pcie6-rcar-gen5.h"
 #include "pcie6-designware.h"
 
-#include "pcie6-rcar-phy-fw-iccm.h"
-#include "pcie6-rcar-phy-fw-dccm.h"
 
 static void rcar_gen5_pcie6_fwupdate(struct rcar_pcie6 *rcar_pcie6, int num_lanes, u32 channel)
 {
-	u32 i;
+	u32 i, val;
 	void __iomem *sram_addr;
 
 	struct dw_pcie6 *pci = rcar_pcie6->pci;
@@ -29,30 +27,34 @@ static void rcar_gen5_pcie6_fwupdate(struct rcar_pcie6 *rcar_pcie6, int num_lane
 	if (channel == 0) {
 		// Write ICCM firmware
 		sram_addr = rcar_pcie6->phy_base + ICCM_OFFSET;
-		for (i = 0; FW_DATA_iccm[i] != END_TABLE_ICCM; i++) {
-			writel(FW_DATA_iccm[i], sram_addr);
+		for (i = 0; i < rcar_pcie6->fw_iccm->size; i += 4) {
+			val = get_unaligned_le32(rcar_pcie6->fw_iccm->data + i);
+			writel(val, sram_addr);
 			sram_addr += 4;
 		}
 
 		// Write DCCM firmware
 		sram_addr = rcar_pcie6->phy_base + DCCM_OFFSET;
-		for (i = 0; FW_DATA_dccm[i] != END_TABLE_DCCM; i++) {
-			writel(FW_DATA_dccm[i], sram_addr);
+		for (i = 0; i < rcar_pcie6->fw_dccm->size; i += 4) {
+			val = get_unaligned_le32(rcar_pcie6->fw_dccm->data + i);
+			writel(val, sram_addr);
 			sram_addr += 4;
 		}
 
 		if (num_lanes == 8) {
 			// Write ICCM firmware for 8 lanes
 			sram_addr = rcar_pcie6->phy_shared + ICCM_OFFSET;
-			for (i = 0; FW_DATA_iccm[i] != END_TABLE_ICCM; i++) {
-				writel(FW_DATA_iccm[i], sram_addr);
+			for (i = 0; i < rcar_pcie6->fw_iccm->size; i += 4) {
+				val = get_unaligned_le32(rcar_pcie6->fw_iccm->data + i);
+				writel(val, sram_addr);
 				sram_addr += 4;
 			}
 
 			// Write DCCM firmware for 8 lanes
 			sram_addr = rcar_pcie6->phy_shared + DCCM_OFFSET;
-			for (i = 0; FW_DATA_dccm[i] != END_TABLE_DCCM; i++) {
-				writel(FW_DATA_dccm[i], sram_addr);
+			for (i = 0; i < rcar_pcie6->fw_dccm->size; i += 4) {
+				val = get_unaligned_le32(rcar_pcie6->fw_dccm->data + i);
+				writel(val, sram_addr);
 				sram_addr += 4;
 			}
 		}
@@ -687,6 +689,18 @@ int rcar_gen5_pcie6_get_resources(struct rcar_pcie6 *rcar_pcie6,
 				rcar_pcie6->clks);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to get clocks: %d\n", ret);
+		return ret;
+	}
+
+	ret = request_firmware(&rcar_pcie6->fw_dccm, PCIE6_FW_DATA_DCCM_NAME, &pdev->dev);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Failed to request firmware dccm: %d\n", ret);
+		return ret;
+	}
+
+	ret = request_firmware(&rcar_pcie6->fw_iccm, PCIE6_FW_DATA_ICCM_NAME, &pdev->dev);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Failed to request firmware iccm: %d\n", ret);
 		return ret;
 	}
 
