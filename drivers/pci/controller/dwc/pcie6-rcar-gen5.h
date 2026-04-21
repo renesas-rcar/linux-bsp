@@ -10,6 +10,8 @@
 #include <linux/reset.h>
 #include <linux/clk.h>
 #include <linux/gpio/consumer.h>
+#include <linux/firmware.h>
+#include <asm/unaligned.h>
 
 #include "pcie6-designware.h"
 
@@ -119,6 +121,12 @@
 #define PCIEG6_FLIT_INJECT_CAP_HDR_REG	0x5B8
 #define PCIEG6_LINK_CONTROL2_LINK_STATUS2_REG	0xA0
 
+#define	ICCM_OFFSET	0x10000
+#define	DCCM_OFFSET	0x20000
+
+#define PCIE6_FW_DATA_ICCM_NAME		"rcar_gen5_pcie6_iccm.bin"
+#define PCIE6_FW_DATA_DCCM_NAME		"rcar_gen5_pcie6_dccm.bin"
+
 #define PCIE6_RCAR_NUM_CLKS			13
 
 static const char * const rcar_pcie6_clk_ids[PCIE6_RCAR_NUM_CLKS] = {
@@ -138,6 +146,8 @@ struct rcar_pcie6 {
 	u32			ch;
 	struct reset_control	*perst;
 	struct reset_control	*rst;
+	const struct firmware	*fw_iccm;
+	const struct firmware	*fw_dccm;
 };
 
 #define to_rcar_gen5_pcie6(x)	dev_get_drvdata((x)->dev)

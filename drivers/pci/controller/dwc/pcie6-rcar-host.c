@@ -274,6 +274,16 @@ static int rcar_gen5_pcie6_suspend_noirq(struct device *dev)
 	for (int i = 0; i < PCIE6_RCAR_NUM_CLKS; i++)
 		clk_disable_unprepare(rcar_pcie6->clks[i].clk);
 
+	if (rcar_pcie6->fw_dccm) {
+		release_firmware(rcar_pcie6->fw_dccm);
+		rcar_pcie6->fw_dccm = NULL;
+	}
+
+	if (rcar_pcie6->fw_iccm) {
+		release_firmware(rcar_pcie6->fw_iccm);
+		rcar_pcie6->fw_iccm = NULL;
+	}
+
 	dev_info(dev, "Renesas PCIe6 glue layer suspended.\n");
 
 	return 0;
@@ -293,6 +303,18 @@ static int rcar_gen5_pcie6_resume_noirq(struct device *dev)
 				rcar_pcie6->clks[i].id, ret);
 			return ret;
 		}
+	}
+
+	ret = request_firmware(&rcar_pcie6->fw_dccm, PCIE6_FW_DATA_DCCM_NAME, dev);
+	if (ret < 0) {
+		dev_err(dev, "Failed to request firmware dccm: %d\n", ret);
+		return ret;
+	}
+
+	ret = request_firmware(&rcar_pcie6->fw_iccm, PCIE6_FW_DATA_ICCM_NAME, dev);
+	if (ret < 0) {
+		dev_err(dev, "Failed to request firmware iccm: %d\n", ret);
+		return ret;
 	}
 
 	/* Re-initialize Root Complex */
