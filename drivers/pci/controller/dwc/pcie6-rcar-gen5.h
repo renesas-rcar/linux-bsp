@@ -127,13 +127,15 @@
 #define PCIE6_FW_DATA_ICCM_NAME		"rcar_gen5_pcie6_iccm.bin"
 #define PCIE6_FW_DATA_DCCM_NAME		"rcar_gen5_pcie6_dccm.bin"
 
-#define PCIE6_RCAR_NUM_CLKS			13
+#define PCIE6_RCAR_NUM_CLKS			6
+#define PCIE6_RCAR_NUM_RSTS			4
 
 static const char * const rcar_pcie6_clk_ids[PCIE6_RCAR_NUM_CLKS] = {
-	"pci601", "pci611", "pci602", "pci612", "pci60bg0", "pci60bg1",
-	"pcick_hscs_oth", "sgd1_hscs_pci", "sgd2_hscs_pci",
-	"sgd4_hscs_pci", "sgd8_hscs_pci", "sgd16_hscs_pci",
-	"pcick_hscs_pc"
+	"pci601", "pci611", "pci602", "pci612", "pci60bg0", "pci60bg1"
+};
+
+static const char * const rcar_pcie6_reset_ids[PCIE6_RCAR_NUM_RSTS] = {
+	"rst01", "rst02", "rst11", "rst12"
 };
 
 struct rcar_pcie6 {
@@ -145,7 +147,7 @@ struct rcar_pcie6 {
 	struct clk_bulk_data	clks[PCIE6_RCAR_NUM_CLKS];
 	u32			ch;
 	struct reset_control	*perst;
-	struct reset_control	*rst;
+	struct reset_control_bulk_data	rsts[PCIE6_RCAR_NUM_RSTS];
 	const struct firmware	*fw_iccm;
 	const struct firmware	*fw_dccm;
 };
@@ -155,8 +157,6 @@ struct rcar_pcie6 {
 void rcar_gen5_pcie6_set_device_type(struct rcar_pcie6 *rcar_pcie6, bool rc);
 void rcar_gen5_pcie6_channel_aggregation(struct rcar_pcie6 *rcar_pcie6, int num_lanes);
 int rcar_gen5_pcie6_get_resources(struct rcar_pcie6 *rcar_pcie6, struct platform_device *pdev);
-void rcar_gen5_pcie6_module_reset(struct dw_pcie6 *pci);
-void rcar_gen5_pcie6_module_run(struct dw_pcie6 *pci);
 int rcar_gen5_pcie6_get_link_speed(struct device_node *node);
 void rcar_gen5_pcie6_set_max_link_width(struct rcar_pcie6 *rcar_pcie6, int num_lanes);
 void rcar_gen5_pcie6_refclk_phy1(struct rcar_pcie6 *rcar_pcie6, int channel);
