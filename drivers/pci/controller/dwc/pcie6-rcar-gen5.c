@@ -656,11 +656,15 @@ int rcar_gen5_pcie6_get_resources(struct rcar_pcie6 *rcar_pcie6,
 		}
 	}
 
-	rcar_pcie6->rst = devm_reset_control_get(&pdev->dev, "rst");
-	if (IS_ERR(rcar_pcie6->rst)) {
-		if (PTR_ERR(rcar_pcie6->rst) != -EPROBE_DEFER)
-			dev_err(&pdev->dev, "Failed to get PCIe6 RESET\n");
-		return PTR_ERR(rcar_pcie6->rst);
+	for (int i = 0; i < PCIE6_RCAR_NUM_RSTS; i++)
+		rcar_pcie6->rsts[i].id = rcar_pcie6_reset_ids[i];
+
+	ret = devm_reset_control_bulk_get_exclusive(&pdev->dev,
+							PCIE6_RCAR_NUM_RSTS,
+							rcar_pcie6->rsts);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to get PCIe6 RESETS: %d\n", ret);
+		return ret;
 	}
 
 	/* Renesas-specific registers */

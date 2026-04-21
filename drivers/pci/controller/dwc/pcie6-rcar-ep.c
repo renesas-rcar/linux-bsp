@@ -27,15 +27,14 @@ static void rcar_gen5_pcie6_ep_pre_init(struct dw_pcie6_ep *ep)
 	u32 val;
 	int ret;
 
-	ret = reset_control_deassert(rcar_pcie6->rst);
-	if (ret) {
-		dev_err(pci->dev, "Failed to reset PCIe6 module: %d\n", ret);
-		return;
+	for (int i = 0; i < PCIE6_RCAR_NUM_RSTS; i++) {
+		ret = reset_control_deassert(rcar_pcie6->rsts[i].rstc);
+		if (ret) {
+			dev_err(pci->dev, "Failed to reset PCIe6 module %s: %d\n",
+				rcar_pcie6->rsts[i].id, ret);
+			return;
+		}
 	}
-
-	/* 1. Module Reset State */
-	rcar_gen5_pcie6_module_reset(pci);
-	rcar_gen5_pcie6_module_run(pci);
 
 	/* 2. Set device type - Endpoint */
 	rcar_gen5_pcie6_set_device_type(rcar_pcie6, false);
