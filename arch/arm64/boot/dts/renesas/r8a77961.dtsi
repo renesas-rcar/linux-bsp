@@ -1067,9 +1067,7 @@
 				     <GIC_SPI 3 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 18 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&cpg CPG_MOD 407>;
 			power-domains = <&sysc R8A77961_PD_ALWAYS_ON>;
-			resets = <&cpg 407>;
 		};
 
 		tmu0: timer@e61e0000 {
