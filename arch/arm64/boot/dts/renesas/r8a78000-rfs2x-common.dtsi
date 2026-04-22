@@ -1085,3 +1085,77 @@
 
 	status = "okay";
 };
+
+&canfd0 {
+       status = "okay";
+
+
+       channel0 {
+                       status = "okay";
+       };
+
+       channel1 {
+                       status = "okay";
+       };
+
+       channel2 {
+                       status = "okay";
+       };
+
+       channel3 {
+                       status = "okay";
+       };
+
+       channel4 {
+                       status = "okay";
+       };
+
+       channel5 {
+                       status = "okay";
+       };
+
+       channel6 {
+                       status = "okay";
+       };
+
+       channel7 {
+                       status = "okay";
+       };
+};
+
+&canfd1 {
+       status = "okay";
+
+
+       channel0 {
+                       status = "okay";
+       };
+
+       channel1 {
+                       status = "okay";
+       };
+
+       channel2 {
+                       status = "okay";
+       };
+
+       channel3 {
+                       status = "okay";
+       };
+
+       channel4 {
+                       status = "okay";
+       };
+
+       channel5 {
+                       status = "okay";
+       };
+
+       channel6 {
+                       status = "okay";
+       };
+
+       channel7 {
+                       status = "okay";
+       };
+};
