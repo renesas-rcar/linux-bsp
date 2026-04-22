@@ -4100,6 +4100,48 @@
 			dma-channels = <16>;
 		};
 
+		smmu_pere: iommu@fd000000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xfd000000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_perw: iommu@fd800000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xfd800000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_mp: iommu@fe000000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xfe000000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_rt: iommu@fb000000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xfb000000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_scp: iommu@fa800000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xfa800000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
+		smmu_hcn: iommu@f8800000 {
+			compatible = "arm,smmu-v3";
+			reg = <0x0 0xf8800000 0x0 0x20000>;
+			#iommu-cells = <1>;
+			status = "disabled";
+		};
+
 		rcar_sound: sound@ec500000 {
 			/*
 			 * #sound-dai-cells is required
@@ -4485,32 +4527,6 @@
 			compatible = "generic-uio";
 			reg = <0x0 0xed530000 0x0 0x1000>;
 			linux,uio-name = "adg_01";
-		};
-
-		/* IPMMU devices */
-		ipmmu_vc: iommu@eedc0000 {
-			compatible = "renesas,ipmmu-r8a779a0";
-			reg = <0x0 0xeedc0000 0x0 0x20000>;
-			renesas,ipmmu-main = <&ipmmu_mm 12>;
-			#iommu-cells = <1>;
-			status = "disabled";
-		};
-
-		ipmmu_vi0: iommu@eed80000 {
-			compatible = "renesas,ipmmu-r8a779g0";
-			reg = <0x0 0xeed80000 0x0 0x200000>;
-			renesas,ipmmu-main = <&ipmmu_mm 3>;
-			#iommu-cells = <1>;
-			status = "disabled";
-		};
-
-		ipmmu_mm: iommu@f8000000 {
-			compatible = "renesas,ipmmu-r8a779g0";
-			reg = <0x0 0xf8000000 0x0 0x200000>;
-			interrupts = <GIC_SPI 210 IRQ_TYPE_LEVEL_HIGH>,
-				     <GIC_SPI 211 IRQ_TYPE_LEVEL_HIGH>;
-			#iommu-cells = <1>;
-			status = "disabled";
 		};
 
 		/* Dummy and stub devices */
