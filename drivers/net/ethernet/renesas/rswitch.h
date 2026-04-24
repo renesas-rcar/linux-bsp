@@ -199,6 +199,7 @@ struct rswitch_etha {
 	 */
 	bool operated;
 	bool connect_to_xpcs;
+	bool fixed_link;
 };
 
 /* The datasheet said descriptor "chain" and/or "queue". For consistency of

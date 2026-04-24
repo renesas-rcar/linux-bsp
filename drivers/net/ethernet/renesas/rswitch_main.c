@@ -1540,6 +1540,9 @@ static void rswitch3_rmac_setting(struct rswitch_etha *etha, const u8 *mac)
 			       __func__, etha->index);
 		}
 	}
+
+	rswitch_modify(etha->addr, MPIC, PLSPP, etha->fixed_link ? PLSPP : 0);
+	rswitch_modify(etha->addr, MIOC, BIT(5), etha->fixed_link ? BIT(5) : 0);
 }
 
 static void rswitch2_etha_enable_mii(struct rswitch_etha *etha)
@@ -1892,8 +1895,10 @@ static int rswitch_phy_device_init(struct rswitch_device *rdev)
 		if (err && err != -EEXIST)
 			return err;
 		phy = rdev->np_port;
+		rdev->etha->fixed_link = true;
 	} else {
 		phy = of_parse_phandle(rdev->np_port, "phy-handle", 0);
+		rdev->etha->fixed_link = false;
 		if (!phy)
 			return -ENODEV;
 	}
