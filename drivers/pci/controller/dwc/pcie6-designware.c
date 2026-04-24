@@ -17,11 +17,17 @@
 #include <linux/platform_device.h>
 #include <linux/align.h>
 #include <linux/bitops.h>
+#include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/dma/edma.h>
+#include <linux/gpio/consumer.h>
+#include <linux/ioport.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/sizes.h>
 #include <linux/types.h>
+#include <linux/iopoll.h>
+#include <linux/bitfield.h>
 
 #include "../../pci.h"
 #include "pcie6-designware.h"
@@ -29,7 +35,163 @@
 #include <linux/pci-epc.h>
 #include <linux/pci-epf.h>
 
-/*** PCIe Designware ***/
+/* PCIe6 Designware */
+
+static const char * const dw_pcie6_app_clks[DW_PCIE_NUM_APP_CLKS] = {
+	[DW_PCIE_DBI_CLK] = "dbi",
+	[DW_PCIE_MSTR_CLK] = "mstr",
+	[DW_PCIE_SLV_CLK] = "slv",
+};
+
+static const char * const dw_pcie6_core_clks[DW_PCIE_NUM_CORE_CLKS] = {
+	[DW_PCIE_PIPE_CLK] = "pipe",
+	[DW_PCIE_CORE_CLK] = "core",
+	[DW_PCIE_AUX_CLK] = "aux",
+	[DW_PCIE_REF_CLK] = "ref",
+};
+
+static const char * const dw_pcie6_app_rsts[DW_PCIE_NUM_APP_RSTS] = {
+	[DW_PCIE_DBI_RST] = "dbi",
+	[DW_PCIE_MSTR_RST] = "mstr",
+	[DW_PCIE_SLV_RST] = "slv",
+};
+
+static const char * const dw_pcie6_core_rsts[DW_PCIE_NUM_CORE_RSTS] = {
+	[DW_PCIE_NON_STICKY_RST] = "non-sticky",
+	[DW_PCIE_STICKY_RST] = "sticky",
+	[DW_PCIE_CORE_RST] = "core",
+	[DW_PCIE_PIPE_RST] = "pipe",
+	[DW_PCIE_PHY_RST] = "phy",
+	[DW_PCIE_HOT_RST] = "hot",
+	[DW_PCIE_PWR_RST] = "pwr",
+};
+
+static int dw_pcie6_get_clocks(struct dw_pcie6 *pci)
+{
+	int i, ret;
+
+	for (i = 0; i < DW_PCIE_NUM_APP_CLKS; i++)
+		pci->app_clks[i].id = dw_pcie6_app_clks[i];
+
+	for (i = 0; i < DW_PCIE_NUM_CORE_CLKS; i++)
+		pci->core_clks[i].id = dw_pcie6_core_clks[i];
+
+	ret = devm_clk_bulk_get_optional(pci->dev, DW_PCIE_NUM_APP_CLKS,
+					 pci->app_clks);
+	if (ret)
+		return ret;
+
+	return devm_clk_bulk_get_optional(pci->dev, DW_PCIE_NUM_CORE_CLKS,
+					  pci->core_clks);
+}
+
+static int dw_pcie6_get_resets(struct dw_pcie6 *pci)
+{
+	int i, ret;
+
+	for (i = 0; i < DW_PCIE_NUM_APP_RSTS; i++)
+		pci->app_rsts[i].id = dw_pcie6_app_rsts[i];
+
+	for (i = 0; i < DW_PCIE_NUM_CORE_RSTS; i++)
+		pci->core_rsts[i].id = dw_pcie6_core_rsts[i];
+
+	ret = devm_reset_control_bulk_get_optional_shared(pci->dev,
+							  DW_PCIE_NUM_APP_RSTS,
+							  pci->app_rsts);
+	if (ret)
+		return ret;
+
+	ret = devm_reset_control_bulk_get_optional_exclusive(pci->dev,
+							     DW_PCIE_NUM_CORE_RSTS,
+							     pci->core_rsts);
+	if (ret)
+		return ret;
+
+	pci->pe_rst = devm_gpiod_get_optional(pci->dev, "reset", GPIOD_OUT_HIGH);
+	if (IS_ERR(pci->pe_rst))
+		return PTR_ERR(pci->pe_rst);
+
+	return 0;
+}
+
+int dw_pcie6_get_resources(struct dw_pcie6 *pci)
+{
+	struct platform_device *pdev = to_platform_device(pci->dev);
+	struct device_node *np = dev_of_node(pci->dev);
+	struct resource *res;
+	int ret;
+
+	if (!pci->dbi_base) {
+		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "dbi");
+		pci->dbi_base = devm_pci_remap_cfg_resource(pci->dev, res);
+		if (IS_ERR(pci->dbi_base))
+			return PTR_ERR(pci->dbi_base);
+		pci->dbi_phys_addr = res->start;
+	}
+
+	/* DBI2 is mainly useful for the endpoint controller */
+	if (!pci->dbi_base2) {
+		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "dbi2");
+		if (res) {
+			pci->dbi_base2 = devm_pci_remap_cfg_resource(pci->dev, res);
+			if (IS_ERR(pci->dbi_base2))
+				return PTR_ERR(pci->dbi_base2);
+		} else {
+			pci->dbi_base2 = pci->dbi_base + SZ_4K;
+		}
+	}
+
+	/* For non-unrolled iATU/eDMA platforms this range will be ignored */
+	if (!pci->atu_base) {
+		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "atu");
+		if (res) {
+			pci->atu_size = resource_size(res);
+			pci->atu_base = devm_ioremap_resource(pci->dev, res);
+			if (IS_ERR(pci->atu_base))
+				return PTR_ERR(pci->atu_base);
+			pci->atu_phys_addr = res->start;
+		} else {
+			pci->atu_base = pci->dbi_base + DEFAULT_DBI_ATU_OFFSET;
+		}
+	}
+
+	/* Set a default value suitable for at most 8 in and 8 out windows */
+	if (!pci->atu_size)
+		pci->atu_size = SZ_4K;
+
+	/* eDMA region can be mapped to a custom base address */
+	if (!pci->edma.reg_base) {
+		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "dma");
+		if (res) {
+			pci->edma.reg_base = devm_ioremap_resource(pci->dev, res);
+			if (IS_ERR(pci->edma.reg_base))
+				return PTR_ERR(pci->edma.reg_base);
+		} else if (pci->atu_size >= 2 * DEFAULT_DBI_DMA_OFFSET) {
+			pci->edma.reg_base = pci->atu_base + DEFAULT_DBI_DMA_OFFSET;
+		}
+	}
+
+	/* LLDD is supposed to manually switch the clocks and resets state */
+	if (dw_pcie6_cap_is(pci, REQ_RES)) {
+		ret = dw_pcie6_get_clocks(pci);
+		if (ret)
+			return ret;
+
+		ret = dw_pcie6_get_resets(pci);
+		if (ret)
+			return ret;
+	}
+
+	if (pci->max_link_speed < 1)
+		pci->max_link_speed = of_pci_get_max_link_speed(np);
+
+	of_property_read_u32(np, "num-lanes", &pci->num_lanes);
+
+	if (of_property_read_bool(np, "snps,enable-cdm-check"))
+		dw_pcie6_cap_set(pci, CDM_CHECK);
+
+	return 0;
+}
 
 void dw_pcie6_version_detect(struct dw_pcie6 *pci)
 {
@@ -219,11 +381,12 @@ void dw_pcie6_write_dbi2(struct dw_pcie6 *pci, u32 reg, size_t size, u32 val)
 	if (ret)
 		dev_err(pci->dev, "write DBI address failed\n");
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_write_dbi2);
 
 static inline void __iomem *dw_pcie6_select_atu(struct dw_pcie6 *pci, u32 dir,
 					       u32 index)
 {
-	if (pci->iatu_unroll_enabled)
+	if (dw_pcie6_cap_is(pci, IATU_UNROLL))
 		return pci->atu_base + PCIE_ATU_UNROLL_BASE(dir, index);
 
 	dw_pcie6_writel_dbi(pci, PCIE_ATU_VIEWPORT, dir | index);
@@ -318,56 +481,61 @@ static inline u32 dw_pcie6_enable_ecrc(u32 val)
 	return val | PCIE_ATU_TD;
 }
 
-static int __dw_pcie6_prog_outbound_atu(struct dw_pcie6 *pci, u8 func_no,
-				       int index, int type, u64 cpu_addr,
-				       u64 pci_addr, u64 size)
+int dw_pcie6_prog_outbound_atu(struct dw_pcie6 *pci,
+			      const struct dw_pcie6_ob_atu_cfg *atu)
 {
+	u64 cpu_addr = atu->cpu_addr;
 	u32 retries, val;
 	u64 limit_addr;
 
 	if (pci->ops && pci->ops->cpu_addr_fixup)
 		cpu_addr = pci->ops->cpu_addr_fixup(pci, cpu_addr);
 
-	limit_addr = cpu_addr + size - 1;
+	limit_addr = cpu_addr + atu->size - 1;
 
 	if ((limit_addr & ~pci->region_limit) != (cpu_addr & ~pci->region_limit) ||
 	    !IS_ALIGNED(cpu_addr, pci->region_align) ||
-	    !IS_ALIGNED(pci_addr, pci->region_align) || !size) {
+	    !IS_ALIGNED(atu->pci_addr, pci->region_align) || !atu->size) {
 		return -EINVAL;
 	}
 
-	dw_pcie6_writel_atu_ob(pci, index, PCIE_ATU_LOWER_BASE,
+	dw_pcie6_writel_atu_ob(pci, atu->index, PCIE_ATU_LOWER_BASE,
 			      lower_32_bits(cpu_addr));
-	dw_pcie6_writel_atu_ob(pci, index, PCIE_ATU_UPPER_BASE,
+	dw_pcie6_writel_atu_ob(pci, atu->index, PCIE_ATU_UPPER_BASE,
 			      upper_32_bits(cpu_addr));
 
-	dw_pcie6_writel_atu_ob(pci, index, PCIE_ATU_LIMIT,
+	dw_pcie6_writel_atu_ob(pci, atu->index, PCIE_ATU_LIMIT,
 			      lower_32_bits(limit_addr));
 	if (dw_pcie6_ver_is_ge(pci, 460A))
-		dw_pcie6_writel_atu_ob(pci, index, PCIE_ATU_UPPER_LIMIT,
+		dw_pcie6_writel_atu_ob(pci, atu->index, PCIE_ATU_UPPER_LIMIT,
 				      upper_32_bits(limit_addr));
 
-	dw_pcie6_writel_atu_ob(pci, index, PCIE_ATU_LOWER_TARGET,
-			      lower_32_bits(pci_addr));
-	dw_pcie6_writel_atu_ob(pci, index, PCIE_ATU_UPPER_TARGET,
-			      upper_32_bits(pci_addr));
+	dw_pcie6_writel_atu_ob(pci, atu->index, PCIE_ATU_LOWER_TARGET,
+			      lower_32_bits(atu->pci_addr));
+	dw_pcie6_writel_atu_ob(pci, atu->index, PCIE_ATU_UPPER_TARGET,
+			      upper_32_bits(atu->pci_addr));
 
-	val = type | PCIE_ATU_FUNC_NUM(func_no);
+	val = atu->type | atu->routing | PCIE_ATU_FUNC_NUM(atu->func_no);
 	if (upper_32_bits(limit_addr) > upper_32_bits(cpu_addr) &&
 	    dw_pcie6_ver_is_ge(pci, 460A))
 		val |= PCIE_ATU_INCREASE_REGION_SIZE;
 	if (dw_pcie6_ver_is(pci, 490A))
 		val = dw_pcie6_enable_ecrc(val);
-	dw_pcie6_writel_atu_ob(pci, index, PCIE_ATU_REGION_CTRL1, val);
+	dw_pcie6_writel_atu_ob(pci, atu->index, PCIE_ATU_REGION_CTRL1, val);
 
-	dw_pcie6_writel_atu_ob(pci, index, PCIE_ATU_REGION_CTRL2, PCIE_ATU_ENABLE);
+	val = PCIE_ATU_ENABLE;
+	if (atu->type == PCIE_ATU_TYPE_MSG) {
+		/* The data-less messages only for now */
+		val |= PCIE_ATU_INHIBIT_PAYLOAD | atu->code;
+	}
+	dw_pcie6_writel_atu_ob(pci, atu->index, PCIE_ATU_REGION_CTRL2, val);
 
 	/*
 	 * Make sure ATU enable takes effect before any subsequent config
 	 * and I/O accesses.
 	 */
 	for (retries = 0; retries < LINK_WAIT_MAX_IATU_RETRIES; retries++) {
-		val = dw_pcie6_readl_atu_ob(pci, index, PCIE_ATU_REGION_CTRL2);
+		val = dw_pcie6_readl_atu_ob(pci, atu->index, PCIE_ATU_REGION_CTRL2);
 		if (val & PCIE_ATU_ENABLE)
 			return 0;
 
@@ -377,21 +545,6 @@ static int __dw_pcie6_prog_outbound_atu(struct dw_pcie6 *pci, u8 func_no,
 	dev_err(pci->dev, "Outbound iATU is not being enabled\n");
 
 	return -ETIMEDOUT;
-}
-
-int dw_pcie6_prog_outbound_atu(struct dw_pcie6 *pci, int index, int type,
-			      u64 cpu_addr, u64 pci_addr, u64 size)
-{
-	return __dw_pcie6_prog_outbound_atu(pci, 0, index, type,
-					   cpu_addr, pci_addr, size);
-}
-
-int dw_pcie6_prog_ep_outbound_atu(struct dw_pcie6 *pci, u8 func_no, int index,
-				 int type, u64 cpu_addr, u64 pci_addr,
-				 u64 size)
-{
-	return __dw_pcie6_prog_outbound_atu(pci, func_no, index, type,
-					   cpu_addr, pci_addr, size);
 }
 
 static inline u32 dw_pcie6_readl_atu_ib(struct dw_pcie6 *pci, u32 index, u32 reg)
@@ -405,8 +558,60 @@ static inline void dw_pcie6_writel_atu_ib(struct dw_pcie6 *pci, u32 index, u32 r
 	dw_pcie6_writel_atu(pci, PCIE_ATU_REGION_DIR_IB, index, reg, val);
 }
 
-int dw_pcie6_prog_inbound_atu(struct dw_pcie6 *pci, u8 func_no, int index,
-			     int type, u64 cpu_addr, u8 bar)
+int dw_pcie6_prog_inbound_atu(struct dw_pcie6 *pci, int index, int type,
+			     u64 cpu_addr, u64 pci_addr, u64 size)
+{
+	u64 limit_addr = pci_addr + size - 1;
+	u32 retries, val;
+
+	if ((limit_addr & ~pci->region_limit) != (pci_addr & ~pci->region_limit) ||
+	    !IS_ALIGNED(cpu_addr, pci->region_align) ||
+	    !IS_ALIGNED(pci_addr, pci->region_align) || !size) {
+		return -EINVAL;
+	}
+
+	dw_pcie6_writel_atu_ib(pci, index, PCIE_ATU_LOWER_BASE,
+			      lower_32_bits(pci_addr));
+	dw_pcie6_writel_atu_ib(pci, index, PCIE_ATU_UPPER_BASE,
+			      upper_32_bits(pci_addr));
+
+	dw_pcie6_writel_atu_ib(pci, index, PCIE_ATU_LIMIT,
+			      lower_32_bits(limit_addr));
+	if (dw_pcie6_ver_is_ge(pci, 460A))
+		dw_pcie6_writel_atu_ib(pci, index, PCIE_ATU_UPPER_LIMIT,
+				      upper_32_bits(limit_addr));
+
+	dw_pcie6_writel_atu_ib(pci, index, PCIE_ATU_LOWER_TARGET,
+			      lower_32_bits(cpu_addr));
+	dw_pcie6_writel_atu_ib(pci, index, PCIE_ATU_UPPER_TARGET,
+			      upper_32_bits(cpu_addr));
+
+	val = type;
+	if (upper_32_bits(limit_addr) > upper_32_bits(pci_addr) &&
+	    dw_pcie6_ver_is_ge(pci, 460A))
+		val |= PCIE_ATU_INCREASE_REGION_SIZE;
+	dw_pcie6_writel_atu_ib(pci, index, PCIE_ATU_REGION_CTRL1, val);
+	dw_pcie6_writel_atu_ib(pci, index, PCIE_ATU_REGION_CTRL2, PCIE_ATU_ENABLE);
+
+	/*
+	 * Make sure ATU enable takes effect before any subsequent config
+	 * and I/O accesses.
+	 */
+	for (retries = 0; retries < LINK_WAIT_MAX_IATU_RETRIES; retries++) {
+		val = dw_pcie6_readl_atu_ib(pci, index, PCIE_ATU_REGION_CTRL2);
+		if (val & PCIE_ATU_ENABLE)
+			return 0;
+
+		mdelay(LINK_WAIT_IATU);
+	}
+
+	dev_err(pci->dev, "Inbound iATU is not being enabled\n");
+
+	return -ETIMEDOUT;
+}
+
+int dw_pcie6_prog_ep_inbound_atu(struct dw_pcie6 *pci, u8 func_no, int index,
+				int type, u64 cpu_addr, u8 bar)
 {
 	u32 retries, val;
 
@@ -456,13 +661,21 @@ int dw_pcie6_wait_for_link(struct dw_pcie6 *pci)
 		if (dw_pcie6_link_up(pci))
 			break;
 
-		usleep_range(LINK_WAIT_USLEEP_MIN, LINK_WAIT_USLEEP_MAX);
+		msleep(LINK_WAIT_SLEEP_MS);
 	}
 
 	if (retries >= LINK_WAIT_MAX_RETRIES) {
-		dev_err(pci->dev, "Phy link never came up\n");
+		dev_info(pci->dev, "Phy link never came up\n");
 		return -ETIMEDOUT;
 	}
+
+	/*
+	 * As per PCIe r6.0, sec 6.6.1, a Downstream Port that supports Link
+	 * speeds greater than 5.0 GT/s, software must wait a minimum of 100 ms
+	 * after Link training completes before sending a Configuration Request.
+	 */
+	if (pci->max_link_speed > 2)
+		msleep(PCIE_RESET_CONFIG_WAIT_MS);
 
 	offset = dw_pcie6_find_capability(pci, PCI_CAP_ID_EXP);
 	val = dw_pcie6_readw_dbi(pci, offset + PCI_EXP_LNKSTA);
@@ -498,16 +711,27 @@ void dw_pcie6_upconfig_setup(struct dw_pcie6 *pci)
 }
 EXPORT_SYMBOL_GPL(dw_pcie6_upconfig_setup);
 
-static void dw_pcie6_link_set_max_speed(struct dw_pcie6 *pci, u32 link_gen)
+static void dw_pcie6_link_set_max_speed(struct dw_pcie6 *pci)
 {
 	u32 cap, ctrl2, link_speed;
 	u8 offset = dw_pcie6_find_capability(pci, PCI_CAP_ID_EXP);
 
 	cap = dw_pcie6_readl_dbi(pci, offset + PCI_EXP_LNKCAP);
+
+	/*
+	 * Even if the platform doesn't want to limit the maximum link speed,
+	 * just cache the hardware default value so that the vendor drivers can
+	 * use it to do any link specific configuration.
+	 */
+	if (pci->max_link_speed < 1) {
+		pci->max_link_speed = FIELD_GET(PCI_EXP_LNKCAP_SLS, cap);
+		return;
+	}
+
 	ctrl2 = dw_pcie6_readl_dbi(pci, offset + PCI_EXP_LNKCTL2);
 	ctrl2 &= ~PCI_EXP_LNKCTL2_TLS;
 
-	switch (pcie_link_speed[link_gen]) {
+	switch (pcie_link_speed[pci->max_link_speed]) {
 	case PCIE_SPEED_2_5GT:
 		link_speed = PCI_EXP_LNKCTL2_TLS_2_5GT;
 		break;
@@ -519,12 +743,6 @@ static void dw_pcie6_link_set_max_speed(struct dw_pcie6 *pci, u32 link_gen)
 		break;
 	case PCIE_SPEED_16_0GT:
 		link_speed = PCI_EXP_LNKCTL2_TLS_16_0GT;
-		break;
-	case PCIE_SPEED_32_0GT:
-		link_speed = PCI_EXP_LNKCTL2_TLS_32_0GT;
-		break;
-	case PCIE_SPEED_64_0GT:
-		link_speed = PCI_EXP_LNKCTL2_TLS_64_0GT;
 		break;
 	default:
 		/* Use hardware capability */
@@ -540,26 +758,65 @@ static void dw_pcie6_link_set_max_speed(struct dw_pcie6 *pci, u32 link_gen)
 
 }
 
-static bool dw_pcie6_iatu_unroll_enabled(struct dw_pcie6 *pci)
+static void dw_pcie6_link_set_max_link_width(struct dw_pcie6 *pci, u32 num_lanes)
 {
-	u32 val;
+	u32 lnkcap, lwsc, plc;
+	u8 cap;
 
-	val = dw_pcie6_readl_dbi(pci, PCIE_ATU_VIEWPORT);
-	if (val == 0xffffffff)
-		return true;
+	if (!num_lanes)
+		return;
 
-	return false;
+	/* Set the number of lanes */
+	plc = dw_pcie6_readl_dbi(pci, PCIE_PORT_LINK_CONTROL);
+	plc &= ~PORT_LINK_FAST_LINK_MODE;
+	plc &= ~PORT_LINK_MODE_MASK;
+
+	/* Set link width speed control register */
+	lwsc = dw_pcie6_readl_dbi(pci, PCIE_LINK_WIDTH_SPEED_CONTROL);
+	lwsc &= ~PORT_LOGIC_LINK_WIDTH_MASK;
+	lwsc |= PORT_LOGIC_LINK_WIDTH_1_LANES;
+	switch (num_lanes) {
+	case 1:
+		plc |= PORT_LINK_MODE_1_LANES;
+		break;
+	case 2:
+		plc |= PORT_LINK_MODE_2_LANES;
+		break;
+	case 4:
+		plc |= PORT_LINK_MODE_4_LANES;
+		break;
+	case 8:
+		plc |= PORT_LINK_MODE_8_LANES;
+		break;
+	default:
+		dev_err(pci->dev, "num-lanes %u: invalid value\n", num_lanes);
+		return;
+	}
+	dw_pcie6_writel_dbi(pci, PCIE_PORT_LINK_CONTROL, plc);
+	dw_pcie6_writel_dbi(pci, PCIE_LINK_WIDTH_SPEED_CONTROL, lwsc);
+
+	cap = dw_pcie6_find_capability(pci, PCI_CAP_ID_EXP);
+	lnkcap = dw_pcie6_readl_dbi(pci, cap + PCI_EXP_LNKCAP);
+	lnkcap &= ~PCI_EXP_LNKCAP_MLW;
+	lnkcap |= FIELD_PREP(PCI_EXP_LNKCAP_MLW, num_lanes);
+	dw_pcie6_writel_dbi(pci, cap + PCI_EXP_LNKCAP, lnkcap);
 }
 
-static void dw_pcie6_iatu_detect_regions(struct dw_pcie6 *pci)
+void dw_pcie6_iatu_detect(struct dw_pcie6 *pci)
 {
 	int max_region, ob, ib;
 	u32 val, min, dir;
 	u64 max;
 
-	if (pci->iatu_unroll_enabled) {
+	val = dw_pcie6_readl_dbi(pci, PCIE_ATU_VIEWPORT);
+	if (val == 0xFFFFFFFF) {
+		dw_pcie6_cap_set(pci, IATU_UNROLL);
+
 		max_region = min((int)pci->atu_size / 512, 256);
 	} else {
+		pci->atu_base = pci->dbi_base + PCIE_ATU_VIEWPORT_BASE;
+		pci->atu_size = PCIE_ATU_VIEWPORT_SIZE;
+
 		dw_pcie6_writel_dbi(pci, PCIE_ATU_VIEWPORT, 0xFF);
 		max_region = dw_pcie6_readl_dbi(pci, PCIE_ATU_VIEWPORT) + 1;
 	}
@@ -601,50 +858,237 @@ static void dw_pcie6_iatu_detect_regions(struct dw_pcie6 *pci)
 	pci->num_ib_windows = ib;
 	pci->region_align = 1 << fls(min);
 	pci->region_limit = (max << 32) | (SZ_4G - 1);
-}
 
-void dw_pcie6_iatu_detect(struct dw_pcie6 *pci)
-{
-	struct platform_device *pdev = to_platform_device(pci->dev);
-
-	pci->iatu_unroll_enabled = dw_pcie6_iatu_unroll_enabled(pci);
-	if (pci->iatu_unroll_enabled) {
-		if (!pci->atu_base) {
-			struct resource *res =
-				platform_get_resource_byname(pdev, IORESOURCE_MEM, "atu");
-			if (res) {
-				pci->atu_size = resource_size(res);
-				pci->atu_base = devm_ioremap_resource(pci->dev, res);
-			}
-			if (!pci->atu_base || IS_ERR(pci->atu_base))
-				pci->atu_base = pci->dbi_base + DEFAULT_DBI_ATU_OFFSET;
-		}
-
-		if (!pci->atu_size)
-			/* Pick a minimal default, enough for 8 in and 8 out windows */
-			pci->atu_size = SZ_4K;
-	} else {
-		pci->atu_base = pci->dbi_base + PCIE_ATU_VIEWPORT_BASE;
-		pci->atu_size = PCIE_ATU_VIEWPORT_SIZE;
-	}
-
-	dw_pcie6_iatu_detect_regions(pci);
-
-	dev_info(pci->dev, "iATU unroll: %s\n", pci->iatu_unroll_enabled ?
-		"enabled" : "disabled");
-
-	dev_info(pci->dev, "iATU regions: %u ob, %u ib, align %uK, limit %lluG\n",
+	dev_info(pci->dev, "iATU: unroll %s, %u ob, %u ib, align %uK, limit %lluG\n",
+		 dw_pcie6_cap_is(pci, IATU_UNROLL) ? "T" : "F",
 		 pci->num_ob_windows, pci->num_ib_windows,
 		 pci->region_align / SZ_1K, (pci->region_limit + 1) / SZ_1G);
 }
 
-void dw_pcie6_setup(struct dw_pcie6 *pci)
+static u32 dw_pcie6_readl_dma(struct dw_pcie6 *pci, u32 reg)
 {
-	struct device_node *np = pci->dev->of_node;
+	u32 val = 0;
+	int ret;
+
+	if (pci->ops && pci->ops->read_dbi)
+		return pci->ops->read_dbi(pci, pci->edma.reg_base, reg, 4);
+
+	ret = dw_pcie6_read(pci->edma.reg_base + reg, 4, &val);
+	if (ret)
+		dev_err(pci->dev, "Read DMA address failed\n");
+
+	return val;
+}
+
+static int dw_pcie6_edma_irq_vector(struct device *dev, unsigned int nr)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	char name[6];
+	int ret;
+
+	if (nr >= EDMA_MAX_WR_CH + EDMA_MAX_RD_CH)
+		return -EINVAL;
+
+	ret = platform_get_irq_byname_optional(pdev, "dma");
+	if (ret > 0)
+		return ret;
+
+	snprintf(name, sizeof(name), "dma%u", nr);
+
+	return platform_get_irq_byname_optional(pdev, name);
+}
+
+static struct dw_edma_plat_ops dw_pcie6_edma_ops = {
+	.irq_vector = dw_pcie6_edma_irq_vector,
+};
+
+static void dw_pcie6_edma_init_data(struct dw_pcie6 *pci)
+{
+	pci->edma.dev = pci->dev;
+
+	if (!pci->edma.ops)
+		pci->edma.ops = &dw_pcie6_edma_ops;
+
+	pci->edma.flags |= DW_EDMA_CHIP_LOCAL;
+}
+
+static int dw_pcie6_edma_find_mf(struct dw_pcie6 *pci)
+{
 	u32 val;
 
-	if (pci->link_gen > 0)
-		dw_pcie6_link_set_max_speed(pci, pci->link_gen);
+	/*
+	 * Bail out finding the mapping format if it is already set by the glue
+	 * driver. Also ensure that the edma.reg_base is pointing to a valid
+	 * memory region.
+	 */
+	if (pci->edma.mf != EDMA_MF_EDMA_LEGACY)
+		return pci->edma.reg_base ? 0 : -ENODEV;
+
+	/*
+	 * Indirect eDMA CSRs access has been completely removed since v5.40a
+	 * thus no space is now reserved for the eDMA channels viewport and
+	 * former DMA CTRL register is no longer fixed to FFs.
+	 */
+	if (dw_pcie6_ver_is_ge(pci, 540A))
+		val = 0xFFFFFFFF;
+	else
+		val = dw_pcie6_readl_dbi(pci, PCIE_DMA_VIEWPORT_BASE + PCIE_DMA_CTRL);
+
+	if (val == 0xFFFFFFFF && pci->edma.reg_base) {
+		pci->edma.mf = EDMA_MF_EDMA_UNROLL;
+	} else if (val != 0xFFFFFFFF) {
+		pci->edma.mf = EDMA_MF_EDMA_LEGACY;
+
+		pci->edma.reg_base = pci->dbi_base + PCIE_DMA_VIEWPORT_BASE;
+	} else {
+		return -ENODEV;
+	}
+
+	return 0;
+}
+
+static int dw_pcie6_edma_find_channels(struct dw_pcie6 *pci)
+{
+	u32 val;
+
+	/*
+	 * Autodetect the read/write channels count only for non-HDMA platforms.
+	 * HDMA platforms with native CSR mapping doesn't support autodetect,
+	 * so the glue drivers should've passed the valid count already. If not,
+	 * the below sanity check will catch it.
+	 */
+	if (pci->edma.mf != EDMA_MF_HDMA_NATIVE) {
+		val = dw_pcie6_readl_dma(pci, PCIE_DMA_CTRL);
+
+		pci->edma.ll_wr_cnt = FIELD_GET(PCIE_DMA_NUM_WR_CHAN, val);
+		pci->edma.ll_rd_cnt = FIELD_GET(PCIE_DMA_NUM_RD_CHAN, val);
+	}
+
+	/* Sanity check the channels count if the mapping was incorrect */
+	if (!pci->edma.ll_wr_cnt || pci->edma.ll_wr_cnt > EDMA_MAX_WR_CH ||
+	    !pci->edma.ll_rd_cnt || pci->edma.ll_rd_cnt > EDMA_MAX_RD_CH)
+		return -EINVAL;
+
+	return 0;
+}
+
+static int dw_pcie6_edma_find_chip(struct dw_pcie6 *pci)
+{
+	int ret;
+
+	dw_pcie6_edma_init_data(pci);
+
+	ret = dw_pcie6_edma_find_mf(pci);
+	if (ret)
+		return ret;
+
+	return dw_pcie6_edma_find_channels(pci);
+}
+
+static int dw_pcie6_edma_irq_verify(struct dw_pcie6 *pci)
+{
+	struct platform_device *pdev = to_platform_device(pci->dev);
+	u16 ch_cnt = pci->edma.ll_wr_cnt + pci->edma.ll_rd_cnt;
+	char name[6];
+	int ret;
+
+	if (pci->edma.nr_irqs > 1)
+		return pci->edma.nr_irqs != ch_cnt ? -EINVAL : 0;
+
+	ret = platform_get_irq_byname_optional(pdev, "dma");
+	if (ret > 0) {
+		pci->edma.nr_irqs = 1;
+		return 0;
+	}
+
+	for (; pci->edma.nr_irqs < ch_cnt; pci->edma.nr_irqs++) {
+		snprintf(name, sizeof(name), "dma%d", pci->edma.nr_irqs);
+
+		ret = platform_get_irq_byname_optional(pdev, name);
+		if (ret <= 0)
+			return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int dw_pcie6_edma_ll_alloc(struct dw_pcie6 *pci)
+{
+	struct dw_edma_region *ll;
+	dma_addr_t paddr;
+	int i;
+
+	for (i = 0; i < pci->edma.ll_wr_cnt; i++) {
+		ll = &pci->edma.ll_region_wr[i];
+		ll->sz = DMA_LLP_MEM_SIZE;
+		ll->vaddr.mem = dmam_alloc_coherent(pci->dev, ll->sz,
+						    &paddr, GFP_KERNEL);
+		if (!ll->vaddr.mem)
+			return -ENOMEM;
+
+		ll->paddr = paddr;
+	}
+
+	for (i = 0; i < pci->edma.ll_rd_cnt; i++) {
+		ll = &pci->edma.ll_region_rd[i];
+		ll->sz = DMA_LLP_MEM_SIZE;
+		ll->vaddr.mem = dmam_alloc_coherent(pci->dev, ll->sz,
+						    &paddr, GFP_KERNEL);
+		if (!ll->vaddr.mem)
+			return -ENOMEM;
+
+		ll->paddr = paddr;
+	}
+
+	return 0;
+}
+
+int dw_pcie6_edma_detect(struct dw_pcie6 *pci)
+{
+	int ret;
+
+	/* Don't fail if no eDMA was found (for the backward compatibility) */
+	ret = dw_pcie6_edma_find_chip(pci);
+	if (ret)
+		return 0;
+
+	/* Don't fail on the IRQs verification (for the backward compatibility) */
+	ret = dw_pcie6_edma_irq_verify(pci);
+	if (ret) {
+		dev_err(pci->dev, "Invalid eDMA IRQs found\n");
+		return 0;
+	}
+
+	ret = dw_pcie6_edma_ll_alloc(pci);
+	if (ret) {
+		dev_err(pci->dev, "Couldn't allocate LLP memory\n");
+		return ret;
+	}
+
+	/* Don't fail if the DW eDMA driver can't find the device */
+	ret = dw_edma_probe(&pci->edma);
+	if (ret && ret != -ENODEV) {
+		dev_err(pci->dev, "Couldn't register eDMA device\n");
+		return ret;
+	}
+
+	dev_info(pci->dev, "eDMA: unroll %s, %hu wr, %hu rd\n",
+		 pci->edma.mf == EDMA_MF_EDMA_UNROLL ? "T" : "F",
+		 pci->edma.ll_wr_cnt, pci->edma.ll_rd_cnt);
+
+	return 0;
+}
+
+void dw_pcie6_edma_remove(struct dw_pcie6 *pci)
+{
+	dw_edma_remove(&pci->edma);
+}
+
+void dw_pcie6_setup(struct dw_pcie6 *pci)
+{
+	u32 val;
+
+	dw_pcie6_link_set_max_speed(pci);
 
 	/* Configure Gen1 N_FTS */
 	if (pci->n_fts[0]) {
@@ -663,7 +1107,7 @@ void dw_pcie6_setup(struct dw_pcie6 *pci)
 		dw_pcie6_writel_dbi(pci, PCIE_LINK_WIDTH_SPEED_CONTROL, val);
 	}
 
-	if (of_property_read_bool(np, "snps,enable-cdm-check")) {
+	if (dw_pcie6_cap_is(pci, CDM_CHECK)) {
 		val = dw_pcie6_readl_dbi(pci, PCIE_PL_CHK_REG_CONTROL_STATUS);
 		val |= PCIE_PL_CHK_REG_CHK_REG_CONTINUOUS |
 		       PCIE_PL_CHK_REG_CHK_REG_START;
@@ -675,55 +1119,10 @@ void dw_pcie6_setup(struct dw_pcie6 *pci)
 	val |= PORT_LINK_DLL_LINK_EN;
 	dw_pcie6_writel_dbi(pci, PCIE_PORT_LINK_CONTROL, val);
 
-	of_property_read_u32(np, "num-lanes", &pci->num_lanes);
-	if (!pci->num_lanes) {
-		dev_dbg(pci->dev, "Using h/w default number of lanes\n");
-		return;
-	}
-
-	/* Set the number of lanes */
-	val &= ~PORT_LINK_FAST_LINK_MODE;
-	val &= ~PORT_LINK_MODE_MASK;
-	switch (pci->num_lanes) {
-	case 1:
-		val |= PORT_LINK_MODE_1_LANES;
-		break;
-	case 2:
-		val |= PORT_LINK_MODE_2_LANES;
-		break;
-	case 4:
-		val |= PORT_LINK_MODE_4_LANES;
-		break;
-	case 8:
-		val |= PORT_LINK_MODE_8_LANES;
-		break;
-	default:
-		dev_err(pci->dev, "num-lanes %u: invalid value\n", pci->num_lanes);
-		return;
-	}
-	dw_pcie6_writel_dbi(pci, PCIE_PORT_LINK_CONTROL, val);
-
-	/* Set link width speed control register */
-	val = dw_pcie6_readl_dbi(pci, PCIE_LINK_WIDTH_SPEED_CONTROL);
-	val &= ~PORT_LOGIC_LINK_WIDTH_MASK;
-	switch (pci->num_lanes) {
-	case 1:
-		val |= PORT_LOGIC_LINK_WIDTH_1_LANES;
-		break;
-	case 2:
-		val |= PORT_LOGIC_LINK_WIDTH_2_LANES;
-		break;
-	case 4:
-		val |= PORT_LOGIC_LINK_WIDTH_4_LANES;
-		break;
-	case 8:
-		val |= PORT_LOGIC_LINK_WIDTH_8_LANES;
-		break;
-	}
-	dw_pcie6_writel_dbi(pci, PCIE_LINK_WIDTH_SPEED_CONTROL, val);
+	dw_pcie6_link_set_max_link_width(pci, pci->num_lanes);
 }
 
-/*** PCIe Designware Host ***/
+/* PCIe6 Designware Host */
 
 static struct pci_ops dw_pcie6_ops;
 static struct pci_ops dw_child_pcie_ops;
@@ -753,8 +1152,9 @@ static struct irq_chip dw_pcie6_msi_irq_chip = {
 };
 
 static struct msi_domain_info dw_pcie6_msi_domain_info = {
-	.flags	= (MSI_FLAG_USE_DEF_DOM_OPS | MSI_FLAG_USE_DEF_CHIP_OPS |
-		   MSI_FLAG_PCI_MSIX | MSI_FLAG_MULTI_PCI_MSI),
+	.flags	= MSI_FLAG_USE_DEF_DOM_OPS | MSI_FLAG_USE_DEF_CHIP_OPS |
+		  MSI_FLAG_NO_AFFINITY | MSI_FLAG_PCI_MSIX |
+		  MSI_FLAG_MULTI_PCI_MSI,
 	.chip	= &dw_pcie6_msi_irq_chip,
 };
 
@@ -791,7 +1191,7 @@ irqreturn_t dw_pcie6_handle_msi_irq(struct dw_pcie6_rp *pp)
 }
 
 /* Chained MSI interrupt service routine */
-static void dw_chained_pcie6_msi_isr(struct irq_desc *desc)
+static void dw_chained_msi_isr(struct irq_desc *desc)
 {
 	struct irq_chip *chip = irq_desc_get_chip(desc);
 	struct dw_pcie6_rp *pp;
@@ -819,12 +1219,6 @@ static void dw_pcie6_setup_msi_msg(struct irq_data *d, struct msi_msg *msg)
 
 	dev_dbg(pci->dev, "msi#%d address_hi %#x address_lo %#x\n",
 		(int)d->hwirq, msg->address_hi, msg->address_lo);
-}
-
-static int dw_pcie6_msi_set_affinity(struct irq_data *d,
-				   const struct cpumask *mask, bool force)
-{
-	return -EINVAL;
 }
 
 static void dw_pcie6_bottom_mask(struct irq_data *d)
@@ -865,7 +1259,7 @@ static void dw_pcie6_bottom_unmask(struct irq_data *d)
 	raw_spin_unlock_irqrestore(&pp->lock, flags);
 }
 
-static void dw_pcie6_bottom_ack(struct irq_data *d)
+static void dw_pci_bottom_ack(struct irq_data *d)
 {
 	struct dw_pcie6_rp *pp  = irq_data_get_irq_chip_data(d);
 	struct dw_pcie6 *pci = to_dw_pcie6_from_pp(pp);
@@ -878,11 +1272,10 @@ static void dw_pcie6_bottom_ack(struct irq_data *d)
 	dw_pcie6_writel_dbi(pci, PCIE_MSI_INTR0_STATUS + res, BIT(bit));
 }
 
-static struct irq_chip dw_pcie6_msi_bottom_irq_chip = {
-	.name = "RCAR-GEN5-DWPCI-MSI",
-	.irq_ack = dw_pcie6_bottom_ack,
+static struct irq_chip dw_pci_msi_bottom_irq_chip = {
+	.name = "DWPCI-MSI",
+	.irq_ack = dw_pci_bottom_ack,
 	.irq_compose_msi_msg = dw_pcie6_setup_msi_msg,
-	.irq_set_affinity = dw_pcie6_msi_set_affinity,
 	.irq_mask = dw_pcie6_bottom_mask,
 	.irq_unmask = dw_pcie6_bottom_unmask,
 };
@@ -1033,7 +1426,7 @@ static int dw_pcie6_msi_host_init(struct dw_pcie6_rp *pp)
 	struct dw_pcie6 *pci = to_dw_pcie6_from_pp(pp);
 	struct device *dev = pci->dev;
 	struct platform_device *pdev = to_platform_device(dev);
-	u64 *msi_vaddr;
+	u64 *msi_vaddr = NULL;
 	int ret;
 	u32 ctrl, num_ctrls;
 
@@ -1061,7 +1454,7 @@ static int dw_pcie6_msi_host_init(struct dw_pcie6_rp *pp)
 
 	dev_dbg(dev, "Using %d MSI vectors\n", pp->num_vectors);
 
-	pp->msi_irq_chip = &dw_pcie6_msi_bottom_irq_chip;
+	pp->msi_irq_chip = &dw_pci_msi_bottom_irq_chip;
 
 	ret = dw_pcie6_allocate_domains(pp);
 	if (ret)
@@ -1070,22 +1463,63 @@ static int dw_pcie6_msi_host_init(struct dw_pcie6_rp *pp)
 	for (ctrl = 0; ctrl < num_ctrls; ctrl++) {
 		if (pp->msi_irq[ctrl] > 0)
 			irq_set_chained_handler_and_data(pp->msi_irq[ctrl],
-						    dw_chained_pcie6_msi_isr, pp);
+						    dw_chained_msi_isr, pp);
 	}
 
-	ret = dma_set_mask_and_coherent(dev, DMA_BIT_MASK(32));
-	if (ret)
-		dev_warn(dev, "Failed to set DMA mask to 32-bit. Devices with only 32-bit MSI support may not work properly\n");
+	/*
+	 * Even though the iMSI-RX Module supports 64-bit addresses some
+	 * peripheral PCIe devices may lack 64-bit message support. In
+	 * order not to miss MSI TLPs from those devices the MSI target
+	 * address has to be within the lowest 4GB.
+	 *
+	 * Note until there is a better alternative found the reservation is
+	 * done by allocating from the artificially limited DMA-coherent
+	 * memory.
+	 */
+	ret = dma_set_coherent_mask(dev, DMA_BIT_MASK(32));
+	if (!ret)
+		msi_vaddr = dmam_alloc_coherent(dev, sizeof(u64), &pp->msi_data,
+						GFP_KERNEL);
 
-	msi_vaddr = dmam_alloc_coherent(dev, sizeof(u64), &pp->msi_data,
-					GFP_KERNEL);
 	if (!msi_vaddr) {
-		dev_err(dev, "Failed to alloc and map MSI data\n");
-		dw_pcie6_free_msi(pp);
-		return -ENOMEM;
+		dev_warn(dev, "Failed to allocate 32-bit MSI address\n");
+		dma_set_coherent_mask(dev, DMA_BIT_MASK(64));
+		msi_vaddr = dmam_alloc_coherent(dev, sizeof(u64), &pp->msi_data,
+						GFP_KERNEL);
+		if (!msi_vaddr) {
+			dev_err(dev, "Failed to allocate MSI address\n");
+			dw_pcie6_free_msi(pp);
+			return -ENOMEM;
+		}
 	}
 
 	return 0;
+}
+
+static void dw_pcie6_host_request_msg_tlp_res(struct dw_pcie6_rp *pp)
+{
+	struct dw_pcie6 *pci = to_dw_pcie6_from_pp(pp);
+	struct resource_entry *win;
+	struct resource *res;
+
+	win = resource_list_first_type(&pp->bridge->windows, IORESOURCE_MEM);
+	if (win) {
+		res = devm_kzalloc(pci->dev, sizeof(*res), GFP_KERNEL);
+		if (!res)
+			return;
+
+		/*
+		 * Allocate MSG TLP region of size 'region_align' at the end of
+		 * the host bridge window.
+		 */
+		res->start = win->res->end - pci->region_align + 1;
+		res->end = win->res->end;
+		res->name = "msg";
+		res->flags = win->res->flags | IORESOURCE_BUSY;
+
+		if (!devm_request_resource(pci->dev, win->res, res))
+			pp->msg_res = res;
+	}
 }
 
 int dw_pcie6_host_init(struct dw_pcie6_rp *pp)
@@ -1101,6 +1535,10 @@ int dw_pcie6_host_init(struct dw_pcie6_rp *pp)
 
 	raw_spin_lock_init(&pp->lock);
 
+	ret = dw_pcie6_get_resources(pci);
+	if (ret)
+		return ret;
+
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "config");
 	if (res) {
 		pp->cfg0_size = resource_size(res);
@@ -1112,13 +1550,6 @@ int dw_pcie6_host_init(struct dw_pcie6_rp *pp)
 	} else {
 		dev_err(dev, "Missing *config* reg space\n");
 		return -ENODEV;
-	}
-
-	if (!pci->dbi_base) {
-		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "dbi");
-		pci->dbi_base = devm_pci_remap_cfg_resource(dev, res);
-		if (IS_ERR(pci->dbi_base))
-			return PTR_ERR(pci->dbi_base);
 	}
 
 	bridge = devm_pci_alloc_host_bridge(dev, 0);
@@ -1135,21 +1566,18 @@ int dw_pcie6_host_init(struct dw_pcie6_rp *pp)
 		pp->io_base = pci_pio_to_address(win->res->start);
 	}
 
-	if (pci->link_gen < 1)
-		pci->link_gen = of_pci_get_max_link_speed(np);
-
 	/* Set default bus ops */
 	bridge->ops = &dw_pcie6_ops;
 	bridge->child_ops = &dw_child_pcie_ops;
 
-	if (pp->ops->host_init) {
-		ret = pp->ops->host_init(pp);
+	if (pp->ops->init) {
+		ret = pp->ops->init(pp);
 		if (ret)
 			return ret;
 	}
 
 	if (pci_msi_enabled()) {
-		pp->has_msi_ctrl = !(pp->ops->msi_host_init ||
+		pp->has_msi_ctrl = !(pp->ops->msi_init ||
 				     of_property_read_bool(np, "msi-parent") ||
 				     of_property_read_bool(np, "msi-map"));
 
@@ -1165,8 +1593,8 @@ int dw_pcie6_host_init(struct dw_pcie6_rp *pp)
 			goto err_deinit_host;
 		}
 
-		if (pp->ops->msi_host_init) {
-			ret = pp->ops->msi_host_init(pp);
+		if (pp->ops->msi_init) {
+			ret = pp->ops->msi_init(pp);
 			if (ret < 0)
 				goto err_deinit_host;
 		} else if (pp->has_msi_ctrl) {
@@ -1180,14 +1608,30 @@ int dw_pcie6_host_init(struct dw_pcie6_rp *pp)
 
 	dw_pcie6_iatu_detect(pci);
 
-	ret = dw_pcie6_setup_rc(pp);
+	/*
+	 * Allocate the resource for MSG TLP before programming the iATU
+	 * outbound window in dw_pcie6_setup_rc(). Since the allocation depends
+	 * on the value of 'region_align', this has to be done after
+	 * dw_pcie6_iatu_detect().
+	 *
+	 * Glue drivers need to set 'use_atu_msg' before dw_pcie6_host_init() to
+	 * make use of the generic MSG TLP implementation.
+	 */
+	if (pp->use_atu_msg)
+		dw_pcie6_host_request_msg_tlp_res(pp);
+
+	ret = dw_pcie6_edma_detect(pci);
 	if (ret)
 		goto err_free_msi;
+
+	ret = dw_pcie6_setup_rc(pp);
+	if (ret)
+		goto err_remove_edma;
 
 	if (!dw_pcie6_link_up(pci)) {
 		ret = dw_pcie6_start_link(pci);
 		if (ret)
-			goto err_free_msi;
+			goto err_remove_edma;
 	}
 
 	/* Ignore errors, the link may come up later */
@@ -1199,18 +1643,24 @@ int dw_pcie6_host_init(struct dw_pcie6_rp *pp)
 	if (ret)
 		goto err_stop_link;
 
+	if (pp->ops->post_init)
+		pp->ops->post_init(pp);
+
 	return 0;
 
 err_stop_link:
 	dw_pcie6_stop_link(pci);
+
+err_remove_edma:
+	dw_pcie6_edma_remove(pci);
 
 err_free_msi:
 	if (pp->has_msi_ctrl)
 		dw_pcie6_free_msi(pp);
 
 err_deinit_host:
-	if (pp->ops->host_deinit)
-		pp->ops->host_deinit(pp);
+	if (pp->ops->deinit)
+		pp->ops->deinit(pp);
 
 	return ret;
 }
@@ -1225,11 +1675,13 @@ void dw_pcie6_host_deinit(struct dw_pcie6_rp *pp)
 
 	dw_pcie6_stop_link(pci);
 
+	dw_pcie6_edma_remove(pci);
+
 	if (pp->has_msi_ctrl)
 		dw_pcie6_free_msi(pp);
 
-	if (pp->ops->host_deinit)
-		pp->ops->host_deinit(pp);
+	if (pp->ops->deinit)
+		pp->ops->deinit(pp);
 }
 EXPORT_SYMBOL_GPL(dw_pcie6_host_deinit);
 
@@ -1238,6 +1690,7 @@ static void __iomem *dw_pcie6_other_conf_map_bus(struct pci_bus *bus,
 {
 	struct dw_pcie6_rp *pp = bus->sysdata;
 	struct dw_pcie6 *pci = to_dw_pcie6_from_pp(pp);
+	struct dw_pcie6_ob_atu_cfg atu = { 0 };
 	int type, ret;
 	u32 busdev;
 
@@ -1260,8 +1713,12 @@ static void __iomem *dw_pcie6_other_conf_map_bus(struct pci_bus *bus,
 	else
 		type = PCIE_ATU_TYPE_CFG1;
 
-	ret = dw_pcie6_prog_outbound_atu(pci, 0, type, pp->cfg0_base, busdev,
-					pp->cfg0_size);
+	atu.type = type;
+	atu.cpu_addr = pp->cfg0_base;
+	atu.pci_addr = busdev;
+	atu.size = pp->cfg0_size;
+
+	ret = dw_pcie6_prog_outbound_atu(pci, &atu);
 	if (ret)
 		return NULL;
 
@@ -1273,6 +1730,7 @@ static int dw_pcie6_rd_other_conf(struct pci_bus *bus, unsigned int devfn,
 {
 	struct dw_pcie6_rp *pp = bus->sysdata;
 	struct dw_pcie6 *pci = to_dw_pcie6_from_pp(pp);
+	struct dw_pcie6_ob_atu_cfg atu = { 0 };
 	int ret;
 
 	ret = pci_generic_config_read(bus, devfn, where, size, val);
@@ -1280,9 +1738,12 @@ static int dw_pcie6_rd_other_conf(struct pci_bus *bus, unsigned int devfn,
 		return ret;
 
 	if (pp->cfg0_io_shared) {
-		ret = dw_pcie6_prog_outbound_atu(pci, 0, PCIE_ATU_TYPE_IO,
-						pp->io_base, pp->io_bus_addr,
-						pp->io_size);
+		atu.type = PCIE_ATU_TYPE_IO;
+		atu.cpu_addr = pp->io_base;
+		atu.pci_addr = pp->io_bus_addr;
+		atu.size = pp->io_size;
+
+		ret = dw_pcie6_prog_outbound_atu(pci, &atu);
 		if (ret)
 			return PCIBIOS_SET_FAILED;
 	}
@@ -1295,6 +1756,7 @@ static int dw_pcie6_wr_other_conf(struct pci_bus *bus, unsigned int devfn,
 {
 	struct dw_pcie6_rp *pp = bus->sysdata;
 	struct dw_pcie6 *pci = to_dw_pcie6_from_pp(pp);
+	struct dw_pcie6_ob_atu_cfg atu = { 0 };
 	int ret;
 
 	ret = pci_generic_config_write(bus, devfn, where, size, val);
@@ -1302,9 +1764,12 @@ static int dw_pcie6_wr_other_conf(struct pci_bus *bus, unsigned int devfn,
 		return ret;
 
 	if (pp->cfg0_io_shared) {
-		ret = dw_pcie6_prog_outbound_atu(pci, 0, PCIE_ATU_TYPE_IO,
-						pp->io_base, pp->io_bus_addr,
-						pp->io_size);
+		atu.type = PCIE_ATU_TYPE_IO;
+		atu.cpu_addr = pp->io_base;
+		atu.pci_addr = pp->io_bus_addr;
+		atu.size = pp->io_size;
+
+		ret = dw_pcie6_prog_outbound_atu(pci, &atu);
 		if (ret)
 			return PCIBIOS_SET_FAILED;
 	}
@@ -1339,6 +1804,7 @@ static struct pci_ops dw_pcie6_ops = {
 static int dw_pcie6_iatu_setup(struct dw_pcie6_rp *pp)
 {
 	struct dw_pcie6 *pci = to_dw_pcie6_from_pp(pp);
+	struct dw_pcie6_ob_atu_cfg atu = { 0 };
 	struct resource_entry *entry;
 	int i, ret;
 
@@ -1349,11 +1815,14 @@ static int dw_pcie6_iatu_setup(struct dw_pcie6_rp *pp)
 	}
 
 	/*
-	 * Ensure all outbound windows are disabled before proceeding with
-	 * the MEM/IO ranges setups.
+	 * Ensure all out/inbound windows are disabled before proceeding with
+	 * the MEM/IO (dma-)ranges setups.
 	 */
 	for (i = 0; i < pci->num_ob_windows; i++)
 		dw_pcie6_disable_atu(pci, PCIE_ATU_REGION_DIR_OB, i);
+
+	for (i = 0; i < pci->num_ib_windows; i++)
+		dw_pcie6_disable_atu(pci, PCIE_ATU_REGION_DIR_IB, i);
 
 	i = 0;
 	resource_list_for_each_entry(entry, &pp->bridge->windows) {
@@ -1363,10 +1832,19 @@ static int dw_pcie6_iatu_setup(struct dw_pcie6_rp *pp)
 		if (pci->num_ob_windows <= ++i)
 			break;
 
-		ret = dw_pcie6_prog_outbound_atu(pci, i, PCIE_ATU_TYPE_MEM,
-						entry->res->start,
-						entry->res->start - entry->offset,
-						resource_size(entry->res));
+		atu.index = i;
+		atu.type = PCIE_ATU_TYPE_MEM;
+		atu.cpu_addr = entry->res->start;
+		atu.pci_addr = entry->res->start - entry->offset;
+
+		/* Adjust iATU size if MSG TLP region was allocated before */
+		if (pp->msg_res && pp->msg_res->parent == entry->res)
+			atu.size = resource_size(entry->res) -
+					resource_size(pp->msg_res);
+		else
+			atu.size = resource_size(entry->res);
+
+		ret = dw_pcie6_prog_outbound_atu(pci, &atu);
 		if (ret) {
 			dev_err(pci->dev, "Failed to set MEM range %pr\n",
 				entry->res);
@@ -1376,10 +1854,13 @@ static int dw_pcie6_iatu_setup(struct dw_pcie6_rp *pp)
 
 	if (pp->io_size) {
 		if (pci->num_ob_windows > ++i) {
-			ret = dw_pcie6_prog_outbound_atu(pci, i, PCIE_ATU_TYPE_IO,
-							pp->io_base,
-							pp->io_bus_addr,
-							pp->io_size);
+			atu.index = i;
+			atu.type = PCIE_ATU_TYPE_IO;
+			atu.cpu_addr = pp->io_base;
+			atu.pci_addr = pp->io_bus_addr;
+			atu.size = pp->io_size;
+
+			ret = dw_pcie6_prog_outbound_atu(pci, &atu);
 			if (ret) {
 				dev_err(pci->dev, "Failed to set IO range %pr\n",
 					entry->res);
@@ -1391,8 +1872,40 @@ static int dw_pcie6_iatu_setup(struct dw_pcie6_rp *pp)
 	}
 
 	if (pci->num_ob_windows <= i)
-		dev_warn(pci->dev, "Resources exceed number of ATU entries (%d)\n",
+		dev_warn(pci->dev, "Ranges exceed outbound iATU size (%d)\n",
 			 pci->num_ob_windows);
+
+	if (pp->use_atu_msg) {
+		if (pci->num_ob_windows > ++i) {
+			pp->msg_atu_index = i;
+		} else {
+			dev_err(pci->dev, "Cannot add outbound window for MSG TLP\n");
+			return -ENOMEM;
+		}
+	}
+
+	i = 0;
+	resource_list_for_each_entry(entry, &pp->bridge->dma_ranges) {
+		if (resource_type(entry->res) != IORESOURCE_MEM)
+			continue;
+
+		if (pci->num_ib_windows <= i)
+			break;
+
+		ret = dw_pcie6_prog_inbound_atu(pci, i++, PCIE_ATU_TYPE_MEM,
+					       entry->res->start,
+					       entry->res->start - entry->offset,
+					       resource_size(entry->res));
+		if (ret) {
+			dev_err(pci->dev, "Failed to set DMA range %pr\n",
+				entry->res);
+			return ret;
+		}
+	}
+
+	if (pci->num_ib_windows <= i)
+		dev_warn(pci->dev, "Dma-ranges exceed inbound iATU size (%u)\n",
+			 pci->num_ib_windows);
 
 	return 0;
 }
@@ -1445,16 +1958,10 @@ int dw_pcie6_setup_rc(struct dw_pcie6_rp *pp)
 
 	/* Setup command register */
 	val = dw_pcie6_readl_dbi(pci, PCI_COMMAND);
-	val &= ~0xFFFF0000;
+	val &= 0xffff0000;
 	val |= PCI_COMMAND_IO | PCI_COMMAND_MEMORY |
 		PCI_COMMAND_MASTER | PCI_COMMAND_SERR;
 	dw_pcie6_writel_dbi(pci, PCI_COMMAND, val);
-
-	val = dw_pcie6_readl_dbi(pci, 0x70 + PCI_EXP_DEVCTL);
-	val &= ~0xFFFFFF1F;
-	val |= PCI_EXP_DEVCTL_CERE | PCI_EXP_DEVCTL_NFERE |
-		PCI_EXP_DEVCTL_FERE | PCI_EXP_DEVCTL_URRE;
-	dw_pcie6_writel_dbi(pci, 0x70 + PCI_EXP_DEVCTL, val);
 
 	/*
 	 * If the platform provides its own child bus config accesses, it means
@@ -1482,24 +1989,125 @@ int dw_pcie6_setup_rc(struct dw_pcie6_rp *pp)
 }
 EXPORT_SYMBOL_GPL(dw_pcie6_setup_rc);
 
-/*** PCIe Designware Endpoint ***/
-
-void dw_pcie6_ep_linkup(struct dw_pcie6_ep *ep)
+static int dw_pcie6_pme_turn_off(struct dw_pcie6 *pci)
 {
-	struct pci_epc *epc = ep->epc;
+	struct dw_pcie6_ob_atu_cfg atu = { 0 };
+	void __iomem *mem;
+	int ret;
 
-	pci_epc_linkup(epc);
+	if (pci->num_ob_windows <= pci->pp.msg_atu_index)
+		return -ENOSPC;
+
+	if (!pci->pp.msg_res)
+		return -ENOSPC;
+
+	atu.code = PCIE_MSG_CODE_PME_TURN_OFF;
+	atu.routing = PCIE_MSG_TYPE_R_BC;
+	atu.type = PCIE_ATU_TYPE_MSG;
+	atu.size = resource_size(pci->pp.msg_res);
+	atu.index = pci->pp.msg_atu_index;
+
+	atu.cpu_addr = pci->pp.msg_res->start;
+
+	ret = dw_pcie6_prog_outbound_atu(pci, &atu);
+	if (ret)
+		return ret;
+
+	mem = ioremap(pci->pp.msg_res->start, pci->region_align);
+	if (!mem)
+		return -ENOMEM;
+
+	/* A dummy write is converted to a Msg TLP */
+	writel(0, mem);
+
+	iounmap(mem);
+
+	return 0;
 }
-EXPORT_SYMBOL_GPL(dw_pcie6_ep_linkup);
 
-void dw_pcie6_ep_init_notify(struct dw_pcie6_ep *ep)
+int dw_pcie6_suspend_noirq(struct dw_pcie6 *pci)
 {
-	struct pci_epc *epc = ep->epc;
+	u8 offset = dw_pcie6_find_capability(pci, PCI_CAP_ID_EXP);
+	u32 val;
+	int ret = 0;
 
-	pci_epc_init_notify(epc);
+	/*
+	 * If L1SS is supported, then do not put the link into L2 as some
+	 * devices such as NVMe expect low resume latency.
+	 */
+	if (dw_pcie6_readw_dbi(pci, offset + PCI_EXP_LNKCTL) & PCI_EXP_LNKCTL_ASPM_L1)
+		return 0;
+
+	if (dw_pcie6_get_ltssm(pci) <= DW_PCIE_LTSSM_DETECT_ACT)
+		return 0;
+
+	if (pci->pp.ops->pme_turn_off)
+		pci->pp.ops->pme_turn_off(&pci->pp);
+	else
+		ret = dw_pcie6_pme_turn_off(pci);
+
+	if (ret)
+		return ret;
+
+	ret = read_poll_timeout(dw_pcie6_get_ltssm, val, val == DW_PCIE_LTSSM_L2_IDLE,
+				PCIE_PME_TO_L2_TIMEOUT_US/10,
+				PCIE_PME_TO_L2_TIMEOUT_US, false, pci);
+	if (ret) {
+		dev_err(pci->dev, "Timeout waiting for L2 entry! LTSSM: 0x%x\n", val);
+		return ret;
+	}
+
+	dw_pcie6_stop_link(pci);
+	if (pci->pp.ops->deinit)
+		pci->pp.ops->deinit(&pci->pp);
+
+	pci->suspended = true;
+
+	return ret;
 }
-EXPORT_SYMBOL_GPL(dw_pcie6_ep_init_notify);
+EXPORT_SYMBOL_GPL(dw_pcie6_suspend_noirq);
 
+int dw_pcie6_resume_noirq(struct dw_pcie6 *pci)
+{
+	int ret;
+
+	if (!pci->suspended)
+		return 0;
+
+	pci->suspended = false;
+
+	if (pci->pp.ops->init) {
+		ret = pci->pp.ops->init(&pci->pp);
+		if (ret) {
+			dev_err(pci->dev, "Host init failed: %d\n", ret);
+			return ret;
+		}
+	}
+
+	dw_pcie6_setup_rc(&pci->pp);
+
+	ret = dw_pcie6_start_link(pci);
+	if (ret)
+		return ret;
+
+	ret = dw_pcie6_wait_for_link(pci);
+	if (ret)
+		return ret;
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(dw_pcie6_resume_noirq);
+
+/* PCIe6 Designware Endpoint */
+
+/**
+ * dw_pcie6_ep_get_func_from_ep - Get the struct dw_pcie6_ep_func corresponding to
+ *				 the endpoint function
+ * @ep: DWC EP device
+ * @func_no: Function number of the endpoint device
+ *
+ * Return: struct dw_pcie6_ep_func if success, NULL otherwise.
+ */
 struct dw_pcie6_ep_func *
 dw_pcie6_ep_get_func_from_ep(struct dw_pcie6_ep *ep, u8 func_no)
 {
@@ -1513,36 +2121,28 @@ dw_pcie6_ep_get_func_from_ep(struct dw_pcie6_ep *ep, u8 func_no)
 	return NULL;
 }
 
-static unsigned int dw_pcie6_ep_func_select(struct dw_pcie6_ep *ep, u8 func_no)
-{
-	unsigned int func_offset = 0;
-
-	if (ep->ops->func_conf_select)
-		func_offset = ep->ops->func_conf_select(ep, func_no);
-
-	return func_offset;
-}
-
 static void __dw_pcie6_ep_reset_bar(struct dw_pcie6 *pci, u8 func_no,
 				   enum pci_barno bar, int flags)
 {
-	u32 reg;
-	unsigned int func_offset = 0;
 	struct dw_pcie6_ep *ep = &pci->ep;
+	u32 reg;
 
-	func_offset = dw_pcie6_ep_func_select(ep, func_no);
-
-	reg = func_offset + PCI_BASE_ADDRESS_0 + (4 * bar);
+	reg = PCI_BASE_ADDRESS_0 + (4 * bar);
 	dw_pcie6_dbi_ro_wr_en(pci);
-	dw_pcie6_writel_dbi2(pci, reg, 0x0);
-	dw_pcie6_writel_dbi(pci, reg, 0x0);
+	dw_pcie6_ep_writel_dbi2(ep, func_no, reg, 0x0);
+	dw_pcie6_ep_writel_dbi(ep, func_no, reg, 0x0);
 	if (flags & PCI_BASE_ADDRESS_MEM_TYPE_64) {
-		dw_pcie6_writel_dbi2(pci, reg + 4, 0x0);
-		dw_pcie6_writel_dbi(pci, reg + 4, 0x0);
+		dw_pcie6_ep_writel_dbi2(ep, func_no, reg + 4, 0x0);
+		dw_pcie6_ep_writel_dbi(ep, func_no, reg + 4, 0x0);
 	}
 	dw_pcie6_dbi_ro_wr_dis(pci);
 }
 
+/**
+ * dw_pcie6_ep_reset_bar - Reset endpoint BAR
+ * @pci: DWC PCI device
+ * @bar: BAR number of the endpoint
+ */
 void dw_pcie6_ep_reset_bar(struct dw_pcie6 *pci, enum pci_barno bar)
 {
 	u8 func_no, funcs;
@@ -1555,19 +2155,15 @@ void dw_pcie6_ep_reset_bar(struct dw_pcie6 *pci, enum pci_barno bar)
 EXPORT_SYMBOL_GPL(dw_pcie6_ep_reset_bar);
 
 static u8 __dw_pcie6_ep_find_next_cap(struct dw_pcie6_ep *ep, u8 func_no,
-		u8 cap_ptr, u8 cap)
+				     u8 cap_ptr, u8 cap)
 {
-	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
-	unsigned int func_offset = 0;
 	u8 cap_id, next_cap_ptr;
 	u16 reg;
 
 	if (!cap_ptr)
 		return 0;
 
-	func_offset = dw_pcie6_ep_func_select(ep, func_no);
-
-	reg = dw_pcie6_readw_dbi(pci, func_offset + cap_ptr);
+	reg = dw_pcie6_ep_readw_dbi(ep, func_no, cap_ptr);
 	cap_id = (reg & 0x00ff);
 
 	if (cap_id > PCI_CAP_ID_MAX)
@@ -1582,14 +2178,10 @@ static u8 __dw_pcie6_ep_find_next_cap(struct dw_pcie6_ep *ep, u8 func_no,
 
 static u8 dw_pcie6_ep_find_capability(struct dw_pcie6_ep *ep, u8 func_no, u8 cap)
 {
-	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
-	unsigned int func_offset = 0;
 	u8 next_cap_ptr;
 	u16 reg;
 
-	func_offset = dw_pcie6_ep_func_select(ep, func_no);
-
-	reg = dw_pcie6_readw_dbi(pci, func_offset + PCI_CAPABILITY_LIST);
+	reg = dw_pcie6_ep_readw_dbi(ep, func_no, PCI_CAPABILITY_LIST);
 	next_cap_ptr = (reg & 0x00ff);
 
 	return __dw_pcie6_ep_find_next_cap(ep, func_no, next_cap_ptr, cap);
@@ -1600,24 +2192,21 @@ static int dw_pcie6_ep_write_header(struct pci_epc *epc, u8 func_no, u8 vfunc_no
 {
 	struct dw_pcie6_ep *ep = epc_get_drvdata(epc);
 	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
-	unsigned int func_offset = 0;
-
-	func_offset = dw_pcie6_ep_func_select(ep, func_no);
 
 	dw_pcie6_dbi_ro_wr_en(pci);
-	dw_pcie6_writew_dbi(pci, func_offset + PCI_VENDOR_ID, hdr->vendorid);
-	dw_pcie6_writew_dbi(pci, func_offset + PCI_DEVICE_ID, hdr->deviceid);
-	dw_pcie6_writeb_dbi(pci, func_offset + PCI_REVISION_ID, hdr->revid);
-	dw_pcie6_writeb_dbi(pci, func_offset + PCI_CLASS_PROG, hdr->progif_code);
-	dw_pcie6_writew_dbi(pci, func_offset + PCI_CLASS_DEVICE,
-			   hdr->subclass_code | hdr->baseclass_code << 8);
-	dw_pcie6_writeb_dbi(pci, func_offset + PCI_CACHE_LINE_SIZE,
-			   hdr->cache_line_size);
-	dw_pcie6_writew_dbi(pci, func_offset + PCI_SUBSYSTEM_VENDOR_ID,
-			   hdr->subsys_vendor_id);
-	dw_pcie6_writew_dbi(pci, func_offset + PCI_SUBSYSTEM_ID, hdr->subsys_id);
-	dw_pcie6_writeb_dbi(pci, func_offset + PCI_INTERRUPT_PIN,
-			   hdr->interrupt_pin);
+	dw_pcie6_ep_writew_dbi(ep, func_no, PCI_VENDOR_ID, hdr->vendorid);
+	dw_pcie6_ep_writew_dbi(ep, func_no, PCI_DEVICE_ID, hdr->deviceid);
+	dw_pcie6_ep_writeb_dbi(ep, func_no, PCI_REVISION_ID, hdr->revid);
+	dw_pcie6_ep_writeb_dbi(ep, func_no, PCI_CLASS_PROG, hdr->progif_code);
+	dw_pcie6_ep_writew_dbi(ep, func_no, PCI_CLASS_DEVICE,
+			      hdr->subclass_code | hdr->baseclass_code << 8);
+	dw_pcie6_ep_writeb_dbi(ep, func_no, PCI_CACHE_LINE_SIZE,
+			      hdr->cache_line_size);
+	dw_pcie6_ep_writew_dbi(ep, func_no, PCI_SUBSYSTEM_VENDOR_ID,
+			      hdr->subsys_vendor_id);
+	dw_pcie6_ep_writew_dbi(ep, func_no, PCI_SUBSYSTEM_ID, hdr->subsys_id);
+	dw_pcie6_ep_writeb_dbi(ep, func_no, PCI_INTERRUPT_PIN,
+			      hdr->interrupt_pin);
 	dw_pcie6_dbi_ro_wr_dis(pci);
 
 	return 0;
@@ -1633,29 +2222,32 @@ static int dw_pcie6_ep_inbound_atu(struct dw_pcie6_ep *ep, u8 func_no, int type,
 	if (!ep->bar_to_atu[bar])
 		free_win = find_first_zero_bit(ep->ib_window_map, pci->num_ib_windows);
 	else
-		free_win = ep->bar_to_atu[bar];
+		free_win = ep->bar_to_atu[bar] - 1;
 
 	if (free_win >= pci->num_ib_windows) {
 		dev_err(pci->dev, "No free inbound window\n");
 		return -EINVAL;
 	}
 
-	ret = dw_pcie6_prog_inbound_atu(pci, func_no, free_win, type,
-				       cpu_addr, bar);
+	ret = dw_pcie6_prog_ep_inbound_atu(pci, func_no, free_win, type,
+					  cpu_addr, bar);
 	if (ret < 0) {
 		dev_err(pci->dev, "Failed to program IB window\n");
 		return ret;
 	}
 
-	ep->bar_to_atu[bar] = free_win;
+	/*
+	 * Always increment free_win before assignment, since value 0 is used to identify
+	 * unallocated mapping.
+	 */
+	ep->bar_to_atu[bar] = free_win + 1;
 	set_bit(free_win, ep->ib_window_map);
 
 	return 0;
 }
 
-static int dw_pcie6_ep_outbound_atu(struct dw_pcie6_ep *ep, u8 func_no,
-				   phys_addr_t phys_addr,
-				   u64 pci_addr, size_t size)
+static int dw_pcie6_ep_outbound_atu(struct dw_pcie6_ep *ep,
+				   struct dw_pcie6_ob_atu_cfg *atu)
 {
 	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
 	u32 free_win;
@@ -1667,13 +2259,13 @@ static int dw_pcie6_ep_outbound_atu(struct dw_pcie6_ep *ep, u8 func_no,
 		return -EINVAL;
 	}
 
-	ret = dw_pcie6_prog_ep_outbound_atu(pci, func_no, free_win, PCIE_ATU_TYPE_MEM,
-					   phys_addr, pci_addr, size);
+	atu->index = free_win;
+	ret = dw_pcie6_prog_outbound_atu(pci, atu);
 	if (ret)
 		return ret;
 
 	set_bit(free_win, ep->ob_window_map);
-	ep->outbound_addr[free_win] = phys_addr;
+	ep->outbound_addr[free_win] = atu->cpu_addr;
 
 	return 0;
 }
@@ -1684,7 +2276,10 @@ static void dw_pcie6_ep_clear_bar(struct pci_epc *epc, u8 func_no, u8 vfunc_no,
 	struct dw_pcie6_ep *ep = epc_get_drvdata(epc);
 	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
 	enum pci_barno bar = epf_bar->barno;
-	u32 atu_index = ep->bar_to_atu[bar];
+	u32 atu_index = ep->bar_to_atu[bar] - 1;
+
+	if (!ep->bar_to_atu[bar])
+		return;
 
 	__dw_pcie6_ep_reset_bar(pci, func_no, bar, epf_bar->flags);
 
@@ -1702,14 +2297,54 @@ static int dw_pcie6_ep_set_bar(struct pci_epc *epc, u8 func_no, u8 vfunc_no,
 	enum pci_barno bar = epf_bar->barno;
 	size_t size = epf_bar->size;
 	int flags = epf_bar->flags;
-	unsigned int func_offset = 0;
 	int ret, type;
 	u32 reg;
 
-	func_offset = dw_pcie6_ep_func_select(ep, func_no);
+	/*
+	 * DWC does not allow BAR pairs to overlap, e.g. you cannot combine BARs
+	 * 1 and 2 to form a 64-bit BAR.
+	 */
+	if ((flags & PCI_BASE_ADDRESS_MEM_TYPE_64) && (bar & 1))
+		return -EINVAL;
 
-	reg = PCI_BASE_ADDRESS_0 + (4 * bar) + func_offset;
+	/*
+	 * Certain EPF drivers dynamically change the physical address of a BAR
+	 * (i.e. they call set_bar() twice, without ever calling clear_bar(), as
+	 * calling clear_bar() would clear the BAR's PCI address assigned by the
+	 * host).
+	 */
+	if (ep->epf_bar[bar]) {
+		/*
+		 * We can only dynamically change a BAR if the new BAR size and
+		 * BAR flags do not differ from the existing configuration.
+		 */
+		if (ep->epf_bar[bar]->barno != bar ||
+		    ep->epf_bar[bar]->size != size ||
+		    ep->epf_bar[bar]->flags != flags)
+			return -EINVAL;
 
+		/*
+		 * When dynamically changing a BAR, skip writing the BAR reg, as
+		 * that would clear the BAR's PCI address assigned by the host.
+		 */
+		goto config_atu;
+	}
+
+	reg = PCI_BASE_ADDRESS_0 + (4 * bar);
+
+	dw_pcie6_dbi_ro_wr_en(pci);
+
+	dw_pcie6_ep_writel_dbi2(ep, func_no, reg, lower_32_bits(size - 1));
+	dw_pcie6_ep_writel_dbi(ep, func_no, reg, flags);
+
+	if (flags & PCI_BASE_ADDRESS_MEM_TYPE_64) {
+		dw_pcie6_ep_writel_dbi2(ep, func_no, reg + 4, upper_32_bits(size - 1));
+		dw_pcie6_ep_writel_dbi(ep, func_no, reg + 4, 0);
+	}
+
+	dw_pcie6_dbi_ro_wr_dis(pci);
+
+config_atu:
 	if (!(flags & PCI_BASE_ADDRESS_SPACE))
 		type = PCIE_ATU_TYPE_MEM;
 	else
@@ -1719,21 +2354,7 @@ static int dw_pcie6_ep_set_bar(struct pci_epc *epc, u8 func_no, u8 vfunc_no,
 	if (ret)
 		return ret;
 
-	if (ep->epf_bar[bar])
-		return 0;
-
-	dw_pcie6_dbi_ro_wr_en(pci);
-
-	dw_pcie6_writel_dbi2(pci, reg, lower_32_bits(size - 1));
-	dw_pcie6_writel_dbi(pci, reg, flags);
-
-	if (flags & PCI_BASE_ADDRESS_MEM_TYPE_64) {
-		dw_pcie6_writel_dbi2(pci, reg + 4, upper_32_bits(size - 1));
-		dw_pcie6_writel_dbi(pci, reg + 4, 0);
-	}
-
 	ep->epf_bar[bar] = epf_bar;
-	dw_pcie6_dbi_ro_wr_dis(pci);
 
 	return 0;
 }
@@ -1744,7 +2365,7 @@ static int dw_pcie6_find_index(struct dw_pcie6_ep *ep, phys_addr_t addr,
 	u32 index;
 	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
 
-	for (index = 0; index < pci->num_ob_windows; index++) {
+	for_each_set_bit(index, ep->ob_window_map, pci->num_ob_windows) {
 		if (ep->outbound_addr[index] != addr)
 			continue;
 		*atu_index = index;
@@ -1752,6 +2373,20 @@ static int dw_pcie6_find_index(struct dw_pcie6_ep *ep, phys_addr_t addr,
 	}
 
 	return -EINVAL;
+}
+
+static u64 dw_pcie6_ep_align_addr(struct pci_epc *epc, u64 pci_addr,
+				 size_t *pci_size, size_t *offset)
+{
+	struct dw_pcie6_ep *ep = epc_get_drvdata(epc);
+	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
+	u64 mask = pci->region_align - 1;
+	size_t ofst = pci_addr & mask;
+
+	*pci_size = ALIGN(ofst + *pci_size, epc->mem->window.page_size);
+	*offset = ofst;
+
+	return pci_addr & ~mask;
 }
 
 static void dw_pcie6_ep_unmap_addr(struct pci_epc *epc, u8 func_no, u8 vfunc_no,
@@ -1776,8 +2411,14 @@ static int dw_pcie6_ep_map_addr(struct pci_epc *epc, u8 func_no, u8 vfunc_no,
 	int ret;
 	struct dw_pcie6_ep *ep = epc_get_drvdata(epc);
 	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
+	struct dw_pcie6_ob_atu_cfg atu = { 0 };
 
-	ret = dw_pcie6_ep_outbound_atu(ep, func_no, addr, pci_addr, size);
+	atu.func_no = func_no;
+	atu.type = PCIE_ATU_TYPE_MEM;
+	atu.cpu_addr = addr;
+	atu.pci_addr = pci_addr;
+	atu.size = size;
+	ret = dw_pcie6_ep_outbound_atu(ep, &atu);
 	if (ret) {
 		dev_err(pci->dev, "Failed to enable address\n");
 		return ret;
@@ -1789,23 +2430,19 @@ static int dw_pcie6_ep_map_addr(struct pci_epc *epc, u8 func_no, u8 vfunc_no,
 static int dw_pcie6_ep_get_msi(struct pci_epc *epc, u8 func_no, u8 vfunc_no)
 {
 	struct dw_pcie6_ep *ep = epc_get_drvdata(epc);
-	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
-	u32 val, reg;
-	unsigned int func_offset = 0;
 	struct dw_pcie6_ep_func *ep_func;
+	u32 val, reg;
 
 	ep_func = dw_pcie6_ep_get_func_from_ep(ep, func_no);
 	if (!ep_func || !ep_func->msi_cap)
 		return -EINVAL;
 
-	func_offset = dw_pcie6_ep_func_select(ep, func_no);
-
-	reg = ep_func->msi_cap + func_offset + PCI_MSI_FLAGS;
-	val = dw_pcie6_readw_dbi(pci, reg);
+	reg = ep_func->msi_cap + PCI_MSI_FLAGS;
+	val = dw_pcie6_ep_readw_dbi(ep, func_no, reg);
 	if (!(val & PCI_MSI_FLAGS_ENABLE))
 		return -EINVAL;
 
-	val = (val & PCI_MSI_FLAGS_QSIZE) >> 4;
+	val = FIELD_GET(PCI_MSI_FLAGS_QSIZE, val);
 
 	return val;
 }
@@ -1815,22 +2452,19 @@ static int dw_pcie6_ep_set_msi(struct pci_epc *epc, u8 func_no, u8 vfunc_no,
 {
 	struct dw_pcie6_ep *ep = epc_get_drvdata(epc);
 	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
-	u32 val, reg;
-	unsigned int func_offset = 0;
 	struct dw_pcie6_ep_func *ep_func;
+	u32 val, reg;
 
 	ep_func = dw_pcie6_ep_get_func_from_ep(ep, func_no);
 	if (!ep_func || !ep_func->msi_cap)
 		return -EINVAL;
 
-	func_offset = dw_pcie6_ep_func_select(ep, func_no);
-
-	reg = ep_func->msi_cap + func_offset + PCI_MSI_FLAGS;
-	val = dw_pcie6_readw_dbi(pci, reg);
+	reg = ep_func->msi_cap + PCI_MSI_FLAGS;
+	val = dw_pcie6_ep_readw_dbi(ep, func_no, reg);
 	val &= ~PCI_MSI_FLAGS_QMASK;
-	val |= (interrupts << 1) & PCI_MSI_FLAGS_QMASK;
+	val |= FIELD_PREP(PCI_MSI_FLAGS_QMASK, interrupts);
 	dw_pcie6_dbi_ro_wr_en(pci);
-	dw_pcie6_writew_dbi(pci, reg, val);
+	dw_pcie6_ep_writew_dbi(ep, func_no, reg, val);
 	dw_pcie6_dbi_ro_wr_dis(pci);
 
 	return 0;
@@ -1839,19 +2473,15 @@ static int dw_pcie6_ep_set_msi(struct pci_epc *epc, u8 func_no, u8 vfunc_no,
 static int dw_pcie6_ep_get_msix(struct pci_epc *epc, u8 func_no, u8 vfunc_no)
 {
 	struct dw_pcie6_ep *ep = epc_get_drvdata(epc);
-	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
-	u32 val, reg;
-	unsigned int func_offset = 0;
 	struct dw_pcie6_ep_func *ep_func;
+	u32 val, reg;
 
 	ep_func = dw_pcie6_ep_get_func_from_ep(ep, func_no);
 	if (!ep_func || !ep_func->msix_cap)
 		return -EINVAL;
 
-	func_offset = dw_pcie6_ep_func_select(ep, func_no);
-
-	reg = ep_func->msix_cap + func_offset + PCI_MSIX_FLAGS;
-	val = dw_pcie6_readw_dbi(pci, reg);
+	reg = ep_func->msix_cap + PCI_MSIX_FLAGS;
+	val = dw_pcie6_ep_readw_dbi(ep, func_no, reg);
 	if (!(val & PCI_MSIX_FLAGS_ENABLE))
 		return -EINVAL;
 
@@ -1865,9 +2495,9 @@ static int dw_pcie6_ep_set_msix(struct pci_epc *epc, u8 func_no, u8 vfunc_no,
 {
 	struct dw_pcie6_ep *ep = epc_get_drvdata(epc);
 	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
-	u32 val, reg;
-	unsigned int func_offset = 0;
 	struct dw_pcie6_ep_func *ep_func;
+	u32 val, reg;
+	u16 actual_interrupts = interrupts + 1;
 
 	ep_func = dw_pcie6_ep_get_func_from_ep(ep, func_no);
 	if (!ep_func || !ep_func->msix_cap)
@@ -1875,21 +2505,19 @@ static int dw_pcie6_ep_set_msix(struct pci_epc *epc, u8 func_no, u8 vfunc_no,
 
 	dw_pcie6_dbi_ro_wr_en(pci);
 
-	func_offset = dw_pcie6_ep_func_select(ep, func_no);
-
-	reg = ep_func->msix_cap + func_offset + PCI_MSIX_FLAGS;
-	val = dw_pcie6_readw_dbi(pci, reg);
+	reg = ep_func->msix_cap + PCI_MSIX_FLAGS;
+	val = dw_pcie6_ep_readw_dbi(ep, func_no, reg);
 	val &= ~PCI_MSIX_FLAGS_QSIZE;
-	val |= interrupts;
+	val |= interrupts; /* 0's based value */
 	dw_pcie6_writew_dbi(pci, reg, val);
 
-	reg = ep_func->msix_cap + func_offset + PCI_MSIX_TABLE;
+	reg = ep_func->msix_cap + PCI_MSIX_TABLE;
 	val = offset | bir;
-	dw_pcie6_writel_dbi(pci, reg, val);
+	dw_pcie6_ep_writel_dbi(ep, func_no, reg, val);
 
-	reg = ep_func->msix_cap + func_offset + PCI_MSIX_PBA;
-	val = (offset + (interrupts * PCI_MSIX_ENTRY_SIZE)) | bir;
-	dw_pcie6_writel_dbi(pci, reg, val);
+	reg = ep_func->msix_cap + PCI_MSIX_PBA;
+	val = (offset + (actual_interrupts * PCI_MSIX_ENTRY_SIZE)) | bir;
+	dw_pcie6_ep_writel_dbi(ep, func_no, reg, val);
 
 	dw_pcie6_dbi_ro_wr_dis(pci);
 
@@ -1897,7 +2525,7 @@ static int dw_pcie6_ep_set_msix(struct pci_epc *epc, u8 func_no, u8 vfunc_no,
 }
 
 static int dw_pcie6_ep_raise_irq(struct pci_epc *epc, u8 func_no, u8 vfunc_no,
-				enum pci_epc_irq_type type, u16 interrupt_num)
+				unsigned int type, u16 interrupt_num)
 {
 	struct dw_pcie6_ep *ep = epc_get_drvdata(epc);
 
@@ -1938,6 +2566,7 @@ static const struct pci_epc_ops epc_ops = {
 	.write_header		= dw_pcie6_ep_write_header,
 	.set_bar		= dw_pcie6_ep_set_bar,
 	.clear_bar		= dw_pcie6_ep_clear_bar,
+	.align_addr		= dw_pcie6_ep_align_addr,
 	.map_addr		= dw_pcie6_ep_map_addr,
 	.unmap_addr		= dw_pcie6_ep_unmap_addr,
 	.set_msi		= dw_pcie6_ep_set_msi,
@@ -1950,62 +2579,74 @@ static const struct pci_epc_ops epc_ops = {
 	.get_features		= dw_pcie6_ep_get_features,
 };
 
-int dw_pcie6_ep_raise_legacy_irq(struct dw_pcie6_ep *ep, u8 func_no)
+/**
+ * dw_pcie6_ep_raise_intx_irq - Raise INTx IRQ to the host
+ * @ep: DWC EP device
+ * @func_no: Function number of the endpoint
+ *
+ * Return: 0 if success, errono otherwise.
+ */
+int dw_pcie6_ep_raise_intx_irq(struct dw_pcie6_ep *ep, u8 func_no)
 {
 	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
 	struct device *dev = pci->dev;
 
-	dev_err(dev, "EP cannot trigger legacy IRQs\n");
+	dev_err(dev, "EP cannot raise INTX IRQs\n");
 
 	return -EINVAL;
 }
-EXPORT_SYMBOL_GPL(dw_pcie6_ep_raise_legacy_irq);
+EXPORT_SYMBOL_GPL(dw_pcie6_ep_raise_intx_irq);
 
+/**
+ * dw_pcie6_ep_raise_msi_irq - Raise MSI IRQ to the host
+ * @ep: DWC EP device
+ * @func_no: Function number of the endpoint
+ * @interrupt_num: Interrupt number to be raised
+ *
+ * Return: 0 if success, errono otherwise.
+ */
 int dw_pcie6_ep_raise_msi_irq(struct dw_pcie6_ep *ep, u8 func_no,
 			     u8 interrupt_num)
 {
-	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
+	u32 msg_addr_lower, msg_addr_upper, reg;
 	struct dw_pcie6_ep_func *ep_func;
 	struct pci_epc *epc = ep->epc;
-	unsigned int aligned_offset;
-	unsigned int func_offset = 0;
+	size_t map_size = sizeof(u32);
+	size_t offset;
 	u16 msg_ctrl, msg_data;
-	u32 msg_addr_lower, msg_addr_upper, reg;
-	u64 msg_addr;
 	bool has_upper;
+	u64 msg_addr;
 	int ret;
 
 	ep_func = dw_pcie6_ep_get_func_from_ep(ep, func_no);
 	if (!ep_func || !ep_func->msi_cap)
 		return -EINVAL;
 
-	func_offset = dw_pcie6_ep_func_select(ep, func_no);
-
 	/* Raise MSI per the PCI Local Bus Specification Revision 3.0, 6.8.1. */
-	reg = ep_func->msi_cap + func_offset + PCI_MSI_FLAGS;
-	msg_ctrl = dw_pcie6_readw_dbi(pci, reg);
+	reg = ep_func->msi_cap + PCI_MSI_FLAGS;
+	msg_ctrl = dw_pcie6_ep_readw_dbi(ep, func_no, reg);
 	has_upper = !!(msg_ctrl & PCI_MSI_FLAGS_64BIT);
-	reg = ep_func->msi_cap + func_offset + PCI_MSI_ADDRESS_LO;
-	msg_addr_lower = dw_pcie6_readl_dbi(pci, reg);
+	reg = ep_func->msi_cap + PCI_MSI_ADDRESS_LO;
+	msg_addr_lower = dw_pcie6_ep_readl_dbi(ep, func_no, reg);
 	if (has_upper) {
-		reg = ep_func->msi_cap + func_offset + PCI_MSI_ADDRESS_HI;
-		msg_addr_upper = dw_pcie6_readl_dbi(pci, reg);
-		reg = ep_func->msi_cap + func_offset + PCI_MSI_DATA_64;
-		msg_data = dw_pcie6_readw_dbi(pci, reg);
+		reg = ep_func->msi_cap + PCI_MSI_ADDRESS_HI;
+		msg_addr_upper = dw_pcie6_ep_readl_dbi(ep, func_no, reg);
+		reg = ep_func->msi_cap + PCI_MSI_DATA_64;
+		msg_data = dw_pcie6_ep_readw_dbi(ep, func_no, reg);
 	} else {
 		msg_addr_upper = 0;
-		reg = ep_func->msi_cap + func_offset + PCI_MSI_DATA_32;
-		msg_data = dw_pcie6_readw_dbi(pci, reg);
+		reg = ep_func->msi_cap + PCI_MSI_DATA_32;
+		msg_data = dw_pcie6_ep_readw_dbi(ep, func_no, reg);
 	}
-	aligned_offset = msg_addr_lower & (epc->mem->window.page_size - 1);
-	msg_addr = ((u64)msg_addr_upper) << 32 |
-			(msg_addr_lower & ~aligned_offset);
+	msg_addr = ((u64)msg_addr_upper) << 32 | msg_addr_lower;
+
+	msg_addr = dw_pcie6_ep_align_addr(epc, msg_addr, &map_size, &offset);
 	ret = dw_pcie6_ep_map_addr(epc, func_no, 0, ep->msi_mem_phys, msg_addr,
-				  epc->mem->window.page_size);
+				  map_size);
 	if (ret)
 		return ret;
 
-	writel(msg_data | (interrupt_num - 1), ep->msi_mem + aligned_offset);
+	writel(msg_data | (interrupt_num - 1), ep->msi_mem + offset);
 
 	dw_pcie6_ep_unmap_addr(epc, func_no, 0, ep->msi_mem_phys);
 
@@ -2013,6 +2654,15 @@ int dw_pcie6_ep_raise_msi_irq(struct dw_pcie6_ep *ep, u8 func_no,
 }
 EXPORT_SYMBOL_GPL(dw_pcie6_ep_raise_msi_irq);
 
+/**
+ * dw_pcie6_ep_raise_msix_irq_doorbell - Raise MSI-X to the host using Doorbell
+ *					method
+ * @ep: DWC EP device
+ * @func_no: Function number of the endpoint device
+ * @interrupt_num: Interrupt number to be raised
+ *
+ * Return: 0 if success, errno otherwise.
+ */
 int dw_pcie6_ep_raise_msix_irq_doorbell(struct dw_pcie6_ep *ep, u8 func_no,
 				       u16 interrupt_num)
 {
@@ -2031,18 +2681,25 @@ int dw_pcie6_ep_raise_msix_irq_doorbell(struct dw_pcie6_ep *ep, u8 func_no,
 
 	return 0;
 }
-EXPORT_SYMBOL_GPL(dw_pcie6_ep_raise_msix_irq);
 
+/**
+ * dw_pcie6_ep_raise_msix_irq - Raise MSI-X to the host
+ * @ep: DWC EP device
+ * @func_no: Function number of the endpoint device
+ * @interrupt_num: Interrupt number to be raised
+ *
+ * Return: 0 if success, errno otherwise.
+ */
 int dw_pcie6_ep_raise_msix_irq(struct dw_pcie6_ep *ep, u8 func_no,
 			      u16 interrupt_num)
 {
 	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
-	struct dw_pcie6_ep_func *ep_func;
 	struct pci_epf_msix_tbl *msix_tbl;
+	struct dw_pcie6_ep_func *ep_func;
 	struct pci_epc *epc = ep->epc;
-	unsigned int func_offset = 0;
+	size_t map_size = sizeof(u32);
+	size_t offset;
 	u32 reg, msg_data, vec_ctrl;
-	unsigned int aligned_offset;
 	u32 tbl_offset;
 	u64 msg_addr;
 	int ret;
@@ -2052,11 +2709,9 @@ int dw_pcie6_ep_raise_msix_irq(struct dw_pcie6_ep *ep, u8 func_no,
 	if (!ep_func || !ep_func->msix_cap)
 		return -EINVAL;
 
-	func_offset = dw_pcie6_ep_func_select(ep, func_no);
-
-	reg = ep_func->msix_cap + func_offset + PCI_MSIX_TABLE;
-	tbl_offset = dw_pcie6_readl_dbi(pci, reg);
-	bir = (tbl_offset & PCI_MSIX_TABLE_BIR);
+	reg = ep_func->msix_cap + PCI_MSIX_TABLE;
+	tbl_offset = dw_pcie6_ep_readl_dbi(ep, func_no, reg);
+	bir = FIELD_GET(PCI_MSIX_TABLE_BIR, tbl_offset);
 	tbl_offset &= PCI_MSIX_TABLE_OFFSET;
 
 	msix_tbl = ep->epf_bar[bir]->addr + tbl_offset;
@@ -2069,29 +2724,57 @@ int dw_pcie6_ep_raise_msix_irq(struct dw_pcie6_ep *ep, u8 func_no,
 		return -EPERM;
 	}
 
-	aligned_offset = msg_addr & (epc->mem->window.page_size - 1);
-	msg_addr = ALIGN_DOWN(msg_addr, epc->mem->window.page_size);
+	msg_addr = dw_pcie6_ep_align_addr(epc, msg_addr, &map_size, &offset);
 	ret = dw_pcie6_ep_map_addr(epc, func_no, 0, ep->msi_mem_phys, msg_addr,
-				  epc->mem->window.page_size);
+				  map_size);
 	if (ret)
 		return ret;
 
-	writel(msg_data, ep->msi_mem + aligned_offset);
+	writel(msg_data, ep->msi_mem + offset);
+
+	/* flush posted write before unmap */
+	readl(ep->msi_mem + offset);
 
 	dw_pcie6_ep_unmap_addr(epc, func_no, 0, ep->msi_mem_phys);
 
 	return 0;
 }
 
-void dw_pcie6_ep_exit(struct dw_pcie6_ep *ep)
+/**
+ * dw_pcie6_ep_cleanup - Cleanup DWC EP resources after fundamental reset
+ * @ep: DWC EP device
+ *
+ * Cleans up the DWC EP specific resources like eDMA etc... after fundamental
+ * reset like PERST#. Note that this API is only applicable for drivers
+ * supporting PERST# or any other methods of fundamental reset.
+ */
+void dw_pcie6_ep_cleanup(struct dw_pcie6_ep *ep)
+{
+	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
+
+	dw_pcie6_edma_remove(pci);
+}
+EXPORT_SYMBOL_GPL(dw_pcie6_ep_cleanup);
+
+/**
+ * dw_pcie6_ep_deinit - Deinitialize the endpoint device
+ * @ep: DWC EP device
+ *
+ * Deinitialize the endpoint device. EPC device is not destroyed since that will
+ * be taken care by Devres.
+ */
+void dw_pcie6_ep_deinit(struct dw_pcie6_ep *ep)
 {
 	struct pci_epc *epc = ep->epc;
+
+	dw_pcie6_ep_cleanup(ep);
 
 	pci_epc_mem_free_addr(epc, ep->msi_mem_phys, ep->msi_mem,
 			      epc->mem->window.page_size);
 
 	pci_epc_mem_exit(epc);
 }
+EXPORT_SYMBOL_GPL(dw_pcie6_ep_deinit);
 
 static unsigned int dw_pcie6_ep_find_ext_capability(struct dw_pcie6 *pci, int cap)
 {
@@ -2111,23 +2794,11 @@ static unsigned int dw_pcie6_ep_find_ext_capability(struct dw_pcie6 *pci, int ca
 	return 0;
 }
 
-int dw_pcie6_ep_init_complete(struct dw_pcie6_ep *ep)
+static void dw_pcie6_ep_init_non_sticky_registers(struct dw_pcie6 *pci)
 {
-	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
 	unsigned int offset;
 	unsigned int nbars;
-	u8 hdr_type;
-	u32 reg;
-	int i;
-
-	hdr_type = dw_pcie6_readb_dbi(pci, PCI_HEADER_TYPE) &
-		   PCI_HEADER_TYPE_MASK;
-	if (hdr_type != PCI_HEADER_TYPE_NORMAL) {
-		dev_err(pci->dev,
-			"PCIe controller is not set to EP mode (hdr_type:0x%x)!\n",
-			hdr_type);
-		return -EIO;
-	}
+	u32 reg, i;
 
 	offset = dw_pcie6_ep_find_ext_capability(pci, PCI_EXT_CAP_ID_REBAR);
 
@@ -2149,44 +2820,180 @@ int dw_pcie6_ep_init_complete(struct dw_pcie6_ep *ep)
 
 	dw_pcie6_setup(pci);
 	dw_pcie6_dbi_ro_wr_dis(pci);
+}
+
+/**
+ * dw_pcie6_ep_init_registers - Initialize DWC EP specific registers
+ * @ep: DWC EP device
+ *
+ * Initialize the registers (CSRs) specific to DWC EP. This API should be called
+ * only when the endpoint receives an active refclk (either from host or
+ * generated locally).
+ */
+int dw_pcie6_ep_init_registers(struct dw_pcie6_ep *ep)
+{
+	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
+	struct dw_pcie6_ep_func *ep_func;
+	struct device *dev = pci->dev;
+	struct pci_epc *epc = ep->epc;
+	u32 ptm_cap_base, reg;
+	u8 hdr_type;
+	u8 func_no;
+	void *addr;
+	int ret;
+
+	hdr_type = dw_pcie6_readb_dbi(pci, PCI_HEADER_TYPE) &
+		   PCI_HEADER_TYPE_MASK;
+	if (hdr_type != PCI_HEADER_TYPE_NORMAL) {
+		dev_err(pci->dev,
+			"PCIe controller is not set to EP mode (hdr_type:0x%x)!\n",
+			hdr_type);
+		return -EIO;
+	}
+
+	dw_pcie6_version_detect(pci);
+
+	dw_pcie6_iatu_detect(pci);
+
+	ret = dw_pcie6_edma_detect(pci);
+	if (ret)
+		return ret;
+
+	ret = -ENOMEM;
+	if (!ep->ib_window_map) {
+		ep->ib_window_map = devm_bitmap_zalloc(dev, pci->num_ib_windows,
+						       GFP_KERNEL);
+		if (!ep->ib_window_map)
+			goto err_remove_edma;
+	}
+
+	if (!ep->ob_window_map) {
+		ep->ob_window_map = devm_bitmap_zalloc(dev, pci->num_ob_windows,
+						       GFP_KERNEL);
+		if (!ep->ob_window_map)
+			goto err_remove_edma;
+	}
+
+	if (!ep->outbound_addr) {
+		addr = devm_kcalloc(dev, pci->num_ob_windows, sizeof(phys_addr_t),
+				    GFP_KERNEL);
+		if (!addr)
+			goto err_remove_edma;
+		ep->outbound_addr = addr;
+	}
+
+	for (func_no = 0; func_no < epc->max_functions; func_no++) {
+
+		ep_func = dw_pcie6_ep_get_func_from_ep(ep, func_no);
+		if (ep_func)
+			continue;
+
+		ep_func = devm_kzalloc(dev, sizeof(*ep_func), GFP_KERNEL);
+		if (!ep_func)
+			goto err_remove_edma;
+
+		ep_func->func_no = func_no;
+		ep_func->msi_cap = dw_pcie6_ep_find_capability(ep, func_no,
+							      PCI_CAP_ID_MSI);
+		ep_func->msix_cap = dw_pcie6_ep_find_capability(ep, func_no,
+							       PCI_CAP_ID_MSIX);
+
+		list_add_tail(&ep_func->list, &ep->func_list);
+	}
+
+	if (ep->ops->init)
+		ep->ops->init(ep);
+
+	ptm_cap_base = dw_pcie6_ep_find_ext_capability(pci, PCI_EXT_CAP_ID_PTM);
+
+	/*
+	 * PTM responder capability can be disabled only after disabling
+	 * PTM root capability.
+	 */
+	if (ptm_cap_base) {
+		dw_pcie6_dbi_ro_wr_en(pci);
+		reg = dw_pcie6_readl_dbi(pci, ptm_cap_base + PCI_PTM_CAP);
+		reg &= ~PCI_PTM_CAP_ROOT;
+		dw_pcie6_writel_dbi(pci, ptm_cap_base + PCI_PTM_CAP, reg);
+
+		reg = dw_pcie6_readl_dbi(pci, ptm_cap_base + PCI_PTM_CAP);
+		reg &= ~(PCI_PTM_CAP_RES | PCI_PTM_GRANULARITY_MASK);
+		dw_pcie6_writel_dbi(pci, ptm_cap_base + PCI_PTM_CAP, reg);
+		dw_pcie6_dbi_ro_wr_dis(pci);
+	}
+
+	dw_pcie6_ep_init_non_sticky_registers(pci);
 
 	return 0;
-}
-EXPORT_SYMBOL_GPL(dw_pcie6_ep_init_complete);
 
+err_remove_edma:
+	dw_pcie6_edma_remove(pci);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(dw_pcie6_ep_init_registers);
+
+/**
+ * dw_pcie6_ep_linkup - Notify EPF drivers about Link Up event
+ * @ep: DWC EP device
+ */
+void dw_pcie6_ep_linkup(struct dw_pcie6_ep *ep)
+{
+	struct pci_epc *epc = ep->epc;
+
+	pci_epc_linkup(epc);
+}
+EXPORT_SYMBOL_GPL(dw_pcie6_ep_linkup);
+
+/**
+ * dw_pcie6_ep_linkdown - Notify EPF drivers about Link Down event
+ * @ep: DWC EP device
+ *
+ * Non-sticky registers are also initialized before sending the notification to
+ * the EPF drivers. This is needed since the registers need to be initialized
+ * before the link comes back again.
+ */
+void dw_pcie6_ep_linkdown(struct dw_pcie6_ep *ep)
+{
+	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
+	struct pci_epc *epc = ep->epc;
+
+	/*
+	 * Initialize the non-sticky DWC registers as they would've reset post
+	 * Link Down. This is specifically needed for drivers not supporting
+	 * PERST# as they have no way to reinitialize the registers before the
+	 * link comes back again.
+	 */
+	dw_pcie6_ep_init_non_sticky_registers(pci);
+
+	pci_epc_linkdown(epc);
+}
+EXPORT_SYMBOL_GPL(dw_pcie6_ep_linkdown);
+
+/**
+ * dw_pcie6_ep_init - Initialize the endpoint device
+ * @ep: DWC EP device
+ *
+ * Initialize the endpoint device. Allocate resources and create the EPC
+ * device with the endpoint framework.
+ *
+ * Return: 0 if success, errno otherwise.
+ */
 int dw_pcie6_ep_init(struct dw_pcie6_ep *ep)
 {
 	int ret;
-	void *addr;
-	u8 func_no;
 	struct resource *res;
 	struct pci_epc *epc;
 	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
 	struct device *dev = pci->dev;
 	struct platform_device *pdev = to_platform_device(dev);
 	struct device_node *np = dev->of_node;
-	const struct pci_epc_features *epc_features;
-	struct dw_pcie6_ep_func *ep_func;
 
 	INIT_LIST_HEAD(&ep->func_list);
 
-	if (!pci->dbi_base) {
-		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "dbi");
-		pci->dbi_base = devm_pci_remap_cfg_resource(dev, res);
-		if (IS_ERR(pci->dbi_base))
-			return PTR_ERR(pci->dbi_base);
-	}
-
-	if (!pci->dbi_base2) {
-		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "dbi2");
-		if (!res) {
-			pci->dbi_base2 = pci->dbi_base + SZ_4K;
-		} else {
-			pci->dbi_base2 = devm_pci_remap_cfg_resource(dev, res);
-			if (IS_ERR(pci->dbi_base2))
-				return PTR_ERR(pci->dbi_base2);
-		}
-	}
+	ret = dw_pcie6_get_resources(pci);
+	if (ret)
+		return ret;
 
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "addr_space");
 	if (!res)
@@ -2195,28 +3002,8 @@ int dw_pcie6_ep_init(struct dw_pcie6_ep *ep)
 	ep->phys_base = res->start;
 	ep->addr_size = resource_size(res);
 
-	dw_pcie6_version_detect(pci);
-
-	dw_pcie6_iatu_detect(pci);
-
-	ep->ib_window_map = devm_bitmap_zalloc(dev, pci->num_ib_windows,
-					       GFP_KERNEL);
-	if (!ep->ib_window_map)
-		return -ENOMEM;
-
-	ep->ob_window_map = devm_bitmap_zalloc(dev, pci->num_ob_windows,
-					       GFP_KERNEL);
-	if (!ep->ob_window_map)
-		return -ENOMEM;
-
-	addr = devm_kcalloc(dev, pci->num_ob_windows, sizeof(phys_addr_t),
-			    GFP_KERNEL);
-	if (!addr)
-		return -ENOMEM;
-	ep->outbound_addr = addr;
-
-	if (pci->link_gen < 1)
-		pci->link_gen = of_pci_get_max_link_speed(np);
+	if (ep->ops->pre_init)
+		ep->ops->pre_init(ep);
 
 	epc = devm_pci_epc_create(dev, &epc_ops);
 	if (IS_ERR(epc)) {
@@ -2230,23 +3017,6 @@ int dw_pcie6_ep_init(struct dw_pcie6_ep *ep)
 	ret = of_property_read_u8(np, "max-functions", &epc->max_functions);
 	if (ret < 0)
 		epc->max_functions = 1;
-
-	for (func_no = 0; func_no < epc->max_functions; func_no++) {
-		ep_func = devm_kzalloc(dev, sizeof(*ep_func), GFP_KERNEL);
-		if (!ep_func)
-			return -ENOMEM;
-
-		ep_func->func_no = func_no;
-		ep_func->msi_cap = dw_pcie6_ep_find_capability(ep, func_no,
-							      PCI_CAP_ID_MSI);
-		ep_func->msix_cap = dw_pcie6_ep_find_capability(ep, func_no,
-							       PCI_CAP_ID_MSIX);
-
-		list_add_tail(&ep_func->list, &ep->func_list);
-	}
-
-	if (ep->ops->ep_init)
-		ep->ops->ep_init(ep);
 
 	ret = pci_epc_mem_init(epc, ep->phys_base, ep->addr_size,
 			       ep->page_size);
@@ -2263,21 +3033,7 @@ int dw_pcie6_ep_init(struct dw_pcie6_ep *ep)
 		goto err_exit_epc_mem;
 	}
 
-	if (ep->ops->get_features) {
-		epc_features = ep->ops->get_features(ep);
-		if (epc_features->core_init_notifier)
-			return 0;
-	}
-
-	ret = dw_pcie6_ep_init_complete(ep);
-	if (ret)
-		goto err_free_epc_mem;
-
 	return 0;
-
-err_free_epc_mem:
-	pci_epc_mem_free_addr(epc, ep->msi_mem_phys, ep->msi_mem,
-			      epc->mem->window.page_size);
 
 err_exit_epc_mem:
 	pci_epc_mem_exit(epc);
