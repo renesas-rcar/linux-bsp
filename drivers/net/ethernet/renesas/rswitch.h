@@ -14,6 +14,7 @@
 
 #include "rcar_gen4_ptp.h"
 #include "rswitch_regs.h"
+#include "rswitch3_fwd.h"
 
 #define RSWITCH_MAX_NUM_QUEUES	128
 
