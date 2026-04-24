@@ -11,9 +11,9 @@
 #include <linux/byteorder/generic.h>
 #include <linux/scmi_protocol.h>
 
-#include "common.h"
-#include "protocols.h"
-#include "notify.h"
+#include "../../common.h"
+#include "../../protocols.h"
+#include "../../notify.h"
 
 enum scmi_vendor_protocol_cmd {
 	RESET_DOMAIN_STATUS = 0x80,
@@ -82,6 +82,7 @@ static const struct scmi_protocol scmi_vendor = {
 	.owner = THIS_MODULE,
 	.instance_init = &scmi_vendor_protocol_init,
 	.ops = &renesas_vendor_ops,
+	.vendor_id = "Renesas",
 };
 
 DEFINE_SCMI_PROTOCOL_REGISTER_UNREGISTER(vendor, scmi_vendor)

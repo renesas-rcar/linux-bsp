@@ -8,7 +8,7 @@ scmi-transport-$(CONFIG_ARM_SCMI_HAVE_SHMEM) = shmem.o
 scmi-transport-$(CONFIG_ARM_SCMI_HAVE_MSG) += msg.o
 scmi-protocols-y := base.o clock.o perf.o power.o reset.o sensors.o system.o voltage.o powercap.o
 scmi-protocols-y += pinctrl.o
-scmi-protocols-$(CONFIG_ARCH_R8A78000) += vendor.o
+scmi-protocols-$(CONFIG_ARCH_R8A78000) += vendors/renesas/vendor.o
 scmi-module-objs := $(scmi-driver-y) $(scmi-protocols-y) $(scmi-transport-y)
 
 obj-$(CONFIG_ARM_SCMI_PROTOCOL) += transports/
@@ -18,4 +18,4 @@ obj-$(CONFIG_ARM_SCMI_PROTOCOL) += scmi-core.o
 obj-$(CONFIG_ARM_SCMI_PROTOCOL) += scmi-module.o
 
 obj-$(CONFIG_ARM_SCMI_POWER_CONTROL) += scmi_power_control.o
-obj-$(CONFIG_ARCH_R8A78000) += scmi_vendor.o
+obj-$(CONFIG_ARCH_R8A78000) += vendors/renesas/scmi_vendor.o
