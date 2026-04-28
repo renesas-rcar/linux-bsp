@@ -7,6 +7,7 @@
 #include <linux/err.h>
 #include <linux/etherdevice.h>
 #include <linux/if_bridge.h>
+#include <linux/if_vlan.h>
 #include <linux/kernel.h>
 #include <net/switchdev.h>
 
@@ -173,22 +174,6 @@ static void rswitch_port_update_brdev(struct net_device *ndev,
 	rswitch_update_offload_brdev(rdev->priv);
 }
 
-static int rswitch_port_update_stp_state(struct net_device *ndev, u8 stp_state)
-{
-	struct rswitch_device *rdev;
-
-	if (!is_rdev(ndev))
-		return -ENODEV;
-
-	rdev = netdev_priv(ndev);
-	rdev->learning_requested = (stp_state == BR_STATE_LEARNING ||
-				    stp_state == BR_STATE_FORWARDING);
-	rdev->forwarding_requested = (stp_state == BR_STATE_FORWARDING);
-	rswitch_update_l2_offload(rdev->priv);
-
-	return 0;
-}
-
 static int rswitch_netdevice_event(struct notifier_block *nb,
 				   unsigned long event,
 				   void *ptr)
@@ -212,61 +197,401 @@ static int rswitch_netdevice_event(struct notifier_block *nb,
 	return NOTIFY_OK;
 }
 
-static int rswitch_update_ageing_time(struct net_device *ndev, clock_t time)
+static int rswitch_port_update_stp_state(struct net_device *ndev, u8 stp_state)
 {
-	struct rswitch_device *rdev = netdev_priv(ndev);
-	u32 reg_val;
+	struct rswitch_device *rdev;
 
 	if (!is_rdev(ndev))
 		return -ENODEV;
+
+	rdev = netdev_priv(ndev);
+	rdev->learning_requested = (stp_state == BR_STATE_LEARNING ||
+				    stp_state == BR_STATE_FORWARDING);
+	rdev->forwarding_requested = (stp_state == BR_STATE_FORWARDING);
+	rswitch_update_l2_offload(rdev->priv);
+
+	return 0;
+}
+
+static int rswitch_update_ageing_time(struct rswitch_private *priv, clock_t time)
+{
+	u32 reg_val;
 
 	if (!FIELD_FIT(FWMACAGC_MACAGT, time))
 		return -EINVAL;
 
 	reg_val = FIELD_PREP(FWMACAGC_MACAGT, time);
 	reg_val |= FWMACAGC_MACAGE | FWMACAGC_MACAGSL;
-	iowrite32(reg_val, rdev->priv->addr + FWMACAGC);
+	iowrite32(reg_val, priv->addr + FWMACAGC);
 
 	return 0;
 }
 
-static int rswitch_port_attr_set(struct net_device *ndev, const void *ctx,
-				 const struct switchdev_attr *attr,
-				 struct netlink_ext_ack *extack)
+static void rswitch_update_vlan_filtering(struct rswitch_private *priv,
+					  bool vlan_filtering)
 {
+	if (vlan_filtering)
+		rswitch_modify(priv->addr, FWPC0(AGENT_INDEX_GWCA),
+			       0, FWPC0_VLANSA | FWPC0_VLANRU);
+	else
+		rswitch_modify(priv->addr, FWPC0(AGENT_INDEX_GWCA),
+			       FWPC0_VLANSA | FWPC0_VLANRU, 0);
+}
+
+static int rswitch_handle_port_attr_set(struct net_device *ndev,
+					struct notifier_block *nb,
+					struct switchdev_notifier_port_attr_info *info)
+{
+	const struct switchdev_attr *attr = info->attr;
+	struct rswitch_private *priv;
+	int err = 0;
+
+	priv = container_of(nb, struct rswitch_private, rswitch_switchdev_blocking_nb);
+
 	switch (attr->id) {
 	case SWITCHDEV_ATTR_ID_PORT_STP_STATE:
-		return rswitch_port_update_stp_state(ndev, attr->u.stp_state);
+		err = rswitch_port_update_stp_state(ndev, attr->u.stp_state);
+
+		break;
 	case SWITCHDEV_ATTR_ID_BRIDGE_AGEING_TIME:
-		return rswitch_update_ageing_time(ndev, attr->u.ageing_time);
+		err = rswitch_update_ageing_time(priv, attr->u.ageing_time);
+
+		break;
+	case SWITCHDEV_ATTR_ID_BRIDGE_VLAN_FILTERING:
+		rswitch_update_vlan_filtering(priv, attr->u.vlan_filtering);
+
+		break;
+	case SWITCHDEV_ATTR_ID_BRIDGE_MC_DISABLED:
+
+		break;
 	default:
 		return -EOPNOTSUPP;
 	}
+
+	if (err < 0)
+		return err;
+
+	info->handled = true;
+
+	return NOTIFY_DONE;
+}
+
+static int rswitch_read_vlan_table(struct rswitch_private *priv, u16 vid,
+				   u32 *vlanslvs, u32 *vlandvs)
+{
+	int err;
+
+	iowrite32(FIELD_PREP(VLANVIDS, vid), priv->addr + FWVLANTS);
+	err = rswitch_reg_wait(priv->addr, FWVLANTSR0, VLANTS, 0);
+	if (err < 0)
+		return err;
+
+	/* check if vlans are present in table */
+	if (!(ioread32(priv->addr + FWVLANTSR0) & VLANSNF)) {
+		*vlanslvs = (ioread32(priv->addr + FWVLANTSR1) & VLANSLVS);
+		*vlandvs = (ioread32(priv->addr + FWVLANTSR3) & VLANDVS);
+	}
+
+	return 0;
+}
+
+static int rswitch_write_vlan_table(struct rswitch_private *priv, u16 vid, u32 index)
+{
+	u32 vlancsdl = priv->gwca.l2_shared_rx_queue->index;
+	u32 vlanslvs = 0, vlandvs = 0;
+	int err;
+
+	err = rswitch_read_vlan_table(priv, vid, &vlanslvs, &vlandvs);
+	if (err < 0)
+		return err;
+
+	rswitch_modify(priv->addr, FWVLANTL0, VLANED, 0);
+	iowrite32(FIELD_PREP(VLANVIDL, vid), priv->addr + FWVLANTL1);
+
+	vlanslvs |= BIT(index);
+	vlandvs  |= BIT(index);
+	iowrite32(FIELD_PREP(VLANSLVL, vlanslvs), priv->addr + FWVLANTL2);
+	iowrite32(FIELD_PREP(VLANCSDL, vlancsdl), priv->addr + FWVLANTL3(GWCA_INDEX));
+	iowrite32(FIELD_PREP(VLANDVL, vlandvs), priv->addr + FWVLANTL4);
+
+	return rswitch_reg_wait(priv->addr, FWVLANTLR, VLANTL, 0);
+}
+
+static int rswitch_erase_vlan_table(struct rswitch_private *priv, u16 vid, u32 index)
+{
+	u32 vlanslvs = 0, vlandvs = 0;
+	int err;
+
+	err = rswitch_read_vlan_table(priv, vid, &vlanslvs, &vlandvs);
+	if (err < 0)
+		return err;
+
+	vlanslvs &= ~BIT(index);
+	vlandvs  &= ~BIT(index);
+
+	/* only erase empty vlan table entries */
+	if (vlanslvs == 0)
+		rswitch_modify(priv->addr, FWVLANTL0, 0, VLANED);
+
+	iowrite32(FIELD_PREP(VLANVIDL, vid), priv->addr + FWVLANTL1);
+	iowrite32(FIELD_PREP(VLANSLVL, vlanslvs), priv->addr + FWVLANTL2);
+	iowrite32(FIELD_PREP(VLANDVL, vlandvs), priv->addr + FWVLANTL4);
+
+	return rswitch_reg_wait(priv->addr, FWVLANTLR, VLANTL, 0);
+}
+
+static int rswitch_port_set_vlan_tag(struct rswitch_etha *etha,
+				     struct switchdev_obj_port_vlan *p_vlan,
+				     bool delete)
+{
+	u32 vem_val;
+	int err;
+
+	err = rswitch_etha_change_mode(etha, EAMC_OPC_CONFIG);
+	if (err < 0)
+		return err;
+
+	rswitch_modify(etha->addr, EAVCC, VIM, 0);
+
+	if (((ioread32(etha->addr + EAVTC) & CTV) == p_vlan->vid) && delete) {
+		rswitch_modify(etha->addr, EAVTC, CTV, 0);
+		rswitch_modify(etha->addr, EAVCC, VEM, 0);
+	} else if (!delete) {
+		if ((p_vlan->flags & BRIDGE_VLAN_INFO_PVID) &&
+		    (p_vlan->flags & BRIDGE_VLAN_INFO_UNTAGGED))
+			vem_val = FIELD_PREP(VEM, C_TAG_VLAN);
+		else if (p_vlan->flags & BRIDGE_VLAN_INFO_PVID)
+			vem_val = FIELD_PREP(VEM, HW_C_TAG_VLAN);
+		else
+			vem_val = 0;
+		rswitch_modify(etha->addr, EAVCC, VEM, vem_val);
+		rswitch_modify(etha->addr, EAVTC, CTV, FIELD_PREP(CTV, p_vlan->vid));
+	}
+
+	return rswitch_etha_change_mode(etha, EAMC_OPC_OPERATION);
+}
+
+static int rswitch_gwca_set_vlan_tag(struct rswitch_private *priv,
+				     struct switchdev_obj_port_vlan *p_vlan,
+				     bool delete)
+{
+	u32 vem_val;
+	int err;
+
+	err = rswitch_gwca_change_mode(priv, GWMC_OPC_CONFIG);
+	if (err < 0)
+		return err;
+
+	rswitch_modify(priv->addr, GWVCC, VIM, 0);
+
+	if (((ioread32(priv->addr + GWVTC) & CTV) == p_vlan->vid) && delete) {
+		rswitch_modify(priv->addr, GWVTC, CTV, 0);
+		rswitch_modify(priv->addr, GWVCC, VEM, 0);
+	} else  if (!delete) {
+		if ((p_vlan->flags & BRIDGE_VLAN_INFO_PVID) &&
+		    (p_vlan->flags & BRIDGE_VLAN_INFO_UNTAGGED))
+			vem_val = FIELD_PREP(VEM, C_TAG_VLAN);
+		else if (p_vlan->flags & BRIDGE_VLAN_INFO_PVID)
+			vem_val = FIELD_PREP(VEM, HW_C_TAG_VLAN);
+		else
+			vem_val = 0;
+		rswitch_modify(priv->addr, GWVCC, VEM, vem_val);
+		rswitch_modify(priv->addr, GWVTC, CTV, FIELD_PREP(CTV, p_vlan->vid));
+	}
+
+	return rswitch_gwca_change_mode(priv, GWMC_OPC_OPERATION);
+}
+
+static int rswitch_port_obj_do_add(struct net_device *ndev,
+				   struct switchdev_obj_port_vlan *p_vlan)
+{
+	struct rswitch_device *rdev = netdev_priv(ndev);
+	struct rswitch_private *priv = rdev->priv;
+	struct rswitch_etha *etha = rdev->etha;
+	int err;
+
+	/* Set Rswitch VLAN mode */
+	iowrite32(br_vlan_enabled(rdev->brdev) ? FIELD_PREP(FWGC_SVM, C_TAG) : 0,
+		  priv->addr + FWGC);
+
+	err = rswitch_write_vlan_table(priv, p_vlan->vid, etha->index);
+	if (err < 0)
+		return err;
+
+	/* If the default vlan for this port has been set, don't overwrite it. */
+	if (ioread32(etha->addr + EAVCC))
+		return NOTIFY_DONE;
+
+	if (br_vlan_enabled(rdev->brdev))
+		rswitch_modify(priv->addr, FWPC0(etha->index), 0, FWPC0_VLANSA | FWPC0_VLANRU);
+
+	rswitch_modify(priv->addr, FWPC2(AGENT_INDEX_GWCA),
+		       FIELD_PREP(FWPC2_LTWFW, BIT(etha->index)),
+		       0);
+
+	return rswitch_port_set_vlan_tag(etha, p_vlan, false);
+}
+
+static int rswitch_port_obj_do_add_gwca(struct net_device *ndev,
+					struct rswitch_private *priv,
+					struct switchdev_obj_port_vlan *p_vlan)
+{
+	int err;
+
+	if (!(p_vlan->flags & BRIDGE_VLAN_INFO_BRENTRY))
+		return NOTIFY_DONE;
+
+	/* Set Rswitch VLAN mode */
+	iowrite32(br_vlan_enabled(ndev) ? FIELD_PREP(FWGC_SVM, C_TAG) : 0, priv->addr + FWGC);
+
+	err = rswitch_write_vlan_table(priv, p_vlan->vid, AGENT_INDEX_GWCA);
+	if (err < 0)
+		return err;
+
+	/* If the default vlan for this port has been set, don't overwrite it. */
+	if (ioread32(priv->addr + GWVCC))
+		return NOTIFY_DONE;
+
+	return rswitch_gwca_set_vlan_tag(priv, p_vlan, false);
+}
+
+static int rswitch_port_obj_do_del(struct net_device *ndev,
+				   struct switchdev_obj_port_vlan *p_vlan)
+{
+	struct rswitch_device *rdev = netdev_priv(ndev);
+	struct rswitch_private *priv = rdev->priv;
+	struct rswitch_etha *etha = rdev->etha;
+	int err;
+
+	err = rswitch_port_set_vlan_tag(etha, p_vlan, true);
+	if (err < 0)
+		return err;
+
+	rswitch_modify(priv->addr, FWPC0(etha->index), FWPC0_VLANSA | FWPC0_VLANRU, 0);
+	rswitch_modify(priv->addr, FWPC2(AGENT_INDEX_GWCA), 0,
+		       FIELD_PREP(FWPC2_LTWFW, BIT(etha->index)));
+	rswitch_modify(priv->addr, FWPC2(rdev->port),
+		       0, FIELD_PREP(FWPC2_LTWFW, GENMASK(RSWITCH_NUM_AGENTS - 1, 0)));
+
+	return rswitch_erase_vlan_table(priv, p_vlan->vid, etha->index);
+}
+
+static int rswitch_port_obj_do_del_gwca(struct net_device *ndev,
+					struct rswitch_private *priv,
+					struct switchdev_obj_port_vlan *p_vlan)
+{
+	int err;
+
+	err = rswitch_gwca_set_vlan_tag(priv, p_vlan, true);
+	if (err < 0)
+		return err;
+
+	rswitch_modify(priv->addr, FWPC0(AGENT_INDEX_GWCA),
+		       FWPC0_VLANSA | FWPC0_VLANRU,
+		       0);
+
+	return rswitch_erase_vlan_table(priv, p_vlan->vid, AGENT_INDEX_GWCA);
+}
+
+static int rswitch_handle_port_obj_add(struct net_device *ndev,
+				       struct notifier_block *nb,
+				       struct switchdev_notifier_port_obj_info *info)
+{
+	struct switchdev_obj_port_vlan *p_vlan;
+	struct rswitch_private *priv;
+	int err;
+
+	switch (info->obj->id) {
+	case SWITCHDEV_OBJ_ID_PORT_VLAN:
+		p_vlan = SWITCHDEV_OBJ_PORT_VLAN(info->obj);
+		if ((p_vlan->flags & BRIDGE_VLAN_INFO_MASTER) ||
+		    (p_vlan->flags & BRIDGE_VLAN_INFO_RANGE_BEGIN) ||
+		    (p_vlan->flags & BRIDGE_VLAN_INFO_RANGE_END) ||
+		    (p_vlan->flags & BRIDGE_VLAN_INFO_ONLY_OPTS))
+			return NOTIFY_DONE;
+
+		priv = container_of(nb, struct rswitch_private,
+				    rswitch_switchdev_blocking_nb);
+
+		if (!is_rdev(ndev))
+			err = rswitch_port_obj_do_add_gwca(ndev, priv, p_vlan);
+		else
+			err = rswitch_port_obj_do_add(ndev, p_vlan);
+
+		if (err < 0)
+			return err;
+
+		break;
+	default:
+		return -EOPNOTSUPP;
+	}
+
+	info->handled = true;
+
+	return NOTIFY_DONE;
+}
+
+static int rswitch_handle_port_obj_del(struct net_device *ndev,
+				       struct notifier_block *nb,
+				       struct switchdev_notifier_port_obj_info *info)
+{
+	struct switchdev_obj_port_vlan *p_vlan;
+	struct rswitch_private *priv;
+	int err;
+
+	switch (info->obj->id) {
+	case SWITCHDEV_OBJ_ID_PORT_VLAN:
+		p_vlan = SWITCHDEV_OBJ_PORT_VLAN(info->obj);
+		if ((p_vlan->flags & BRIDGE_VLAN_INFO_MASTER) ||
+		    (p_vlan->flags & BRIDGE_VLAN_INFO_RANGE_BEGIN) ||
+		    (p_vlan->flags & BRIDGE_VLAN_INFO_RANGE_END) ||
+		    (p_vlan->flags & BRIDGE_VLAN_INFO_ONLY_OPTS))
+			return NOTIFY_DONE;
+
+		priv = container_of(nb, struct rswitch_private,
+				    rswitch_switchdev_blocking_nb);
+
+		if (!is_rdev(ndev))
+			err = rswitch_port_obj_do_del_gwca(ndev, priv, p_vlan);
+		else
+			err = rswitch_port_obj_do_del(ndev, p_vlan);
+
+		if (err < 0)
+			return err;
+
+		break;
+	default:
+		return -EOPNOTSUPP;
+	}
+
+	info->handled = true;
+
+	return NOTIFY_DONE;
 }
 
 static int rswitch_switchdev_blocking_event(struct notifier_block *nb,
-					    unsigned long event, void *ptr)
+					    unsigned long event,
+					    void *ptr)
 {
 	struct net_device *ndev = switchdev_notifier_info_to_dev(ptr);
-	int ret;
+	int err;
 
 	switch (event) {
 	case SWITCHDEV_PORT_OBJ_ADD:
-		return -EOPNOTSUPP;
+		err = rswitch_handle_port_obj_add(ndev, nb, ptr);
+
+		return notifier_from_errno(err);
 	case SWITCHDEV_PORT_OBJ_DEL:
-		return -EOPNOTSUPP;
+		err = rswitch_handle_port_obj_del(ndev, nb, ptr);
+
+		return notifier_from_errno(err);
 	case SWITCHDEV_PORT_ATTR_SET:
-		ret = switchdev_handle_port_attr_set(ndev, ptr,
-						     is_rdev,
-						     rswitch_port_attr_set);
-		break;
-	default:
-		if (is_rdev(ndev))
-			return -EOPNOTSUPP;
-		return NOTIFY_DONE;
+		err = rswitch_handle_port_attr_set(ndev, nb, ptr);
+
+		return notifier_from_errno(err);
 	}
 
-	return notifier_from_errno(ret);
+	return NOTIFY_DONE;
 }
 
 static int rswitch_gwca_write_mac_address(struct rswitch_private *priv, const u8 *mac)
