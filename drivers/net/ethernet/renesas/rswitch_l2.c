@@ -23,7 +23,8 @@ static bool rdev_for_l2_offload(struct rswitch_device *rdev)
 static void rswitch_change_l2_hw_offloading(struct rswitch_device *rdev,
 					    bool start, bool learning)
 {
-	u32 bits = learning ? FWPC0_MACSSA | FWPC0_MACHLA | FWPC0_MACHMA : FWPC0_MACDSA;
+	u32 bits = learning ? FWPC0_MACSSA | FWPC0_MACHLA | FWPC0_MACHMA | FWPC0_MACRUDA :
+			      FWPC0_MACDSA;
 	u32 clear = start ? 0 : bits;
 	u32 set = start ? bits : 0;
 
@@ -82,8 +83,9 @@ static void rswitch_update_l2_hw_forwarding(struct rswitch_private *priv)
 			 *
 			 * Do not allow L2 forwarding to self for hw port.
 			 */
-			iowrite32(FIELD_PREP(FWPC2_LTWFW, fwd_mask | BIT(rdev->port)),
-				  priv->addr + FWPC2(rdev->port));
+			rswitch_modify(priv->addr, FWPC2(rdev->port),
+				       FIELD_PREP(FWPC2_LTWFW, ~(fwd_mask | BIT(rdev->port))),
+				       0);
 		}
 
 		if (new_forwarding_offload && !rdev->forwarding_offloaded)
@@ -188,7 +190,8 @@ static int rswitch_port_update_stp_state(struct net_device *ndev, u8 stp_state)
 }
 
 static int rswitch_netdevice_event(struct notifier_block *nb,
-				   unsigned long event, void *ptr)
+				   unsigned long event,
+				   void *ptr)
 {
 	struct net_device *ndev = netdev_notifier_info_to_dev(ptr);
 	struct netdev_notifier_changeupper_info *info;
@@ -241,25 +244,6 @@ static int rswitch_port_attr_set(struct net_device *ndev, const void *ctx,
 	}
 }
 
-static int rswitch_switchdev_event(struct notifier_block *nb,
-				   unsigned long event, void *ptr)
-{
-	struct net_device *ndev = switchdev_notifier_info_to_dev(ptr);
-	int ret;
-
-	if (event == SWITCHDEV_PORT_ATTR_SET) {
-		ret = switchdev_handle_port_attr_set(ndev, ptr,
-						     is_rdev,
-						     rswitch_port_attr_set);
-		return notifier_from_errno(ret);
-	}
-
-	if (!is_rdev(ndev))
-		return NOTIFY_DONE;
-
-	return notifier_from_errno(-EOPNOTSUPP);
-}
-
 static int rswitch_switchdev_blocking_event(struct notifier_block *nb,
 					    unsigned long event, void *ptr)
 {
@@ -283,6 +267,177 @@ static int rswitch_switchdev_blocking_event(struct notifier_block *nb,
 	}
 
 	return notifier_from_errno(ret);
+}
+
+static int rswitch_gwca_write_mac_address(struct rswitch_private *priv, const u8 *mac)
+{
+	int err;
+
+	err = rswitch_gwca_change_mode(priv, GWMC_OPC_CONFIG);
+	if (err < 0)
+		return err;
+
+	iowrite32((mac[0] << 8) | mac[1], priv->addr + GWMAC0);
+	iowrite32((mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5],
+		  priv->addr + GWMAC1);
+
+	return rswitch_gwca_change_mode(priv, GWMC_OPC_OPERATION);
+}
+
+static int rswitch_add_addr_to_mactable(struct rswitch_private *priv, const u8 *mac)
+{
+	u32 index = priv->gwca.l2_shared_rx_queue->index;
+	int err;
+
+	rswitch_modify(priv->addr, FWMACTL0, FWMACTL0_ED, 0);
+	iowrite32((mac[0] << 8) | mac[1], priv->addr + FWMACTL1);
+	iowrite32((mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5],
+		  priv->addr + FWMACTL2);
+	iowrite32(FWMACTL3_DSLV | FWMACTL3_SSLV,
+		  priv->addr + FWMACTL3);
+	iowrite32(FIELD_PREP(FWMACTL4_CSDL, index),
+		  priv->addr + FWMACTL4(GWCA_INDEX));
+	iowrite32(FIELD_PREP(FWMACTL5_DV, BIT(AGENT_INDEX_GWCA)),
+		  priv->addr + FWMACTL5);
+
+	err = rswitch_reg_wait(priv->addr, FWMACTLR, FWMACTLR_L, 0);
+	if (err < 0)
+		return err;
+
+	if (ioread32(priv->addr + FWMACTLR))
+		return NOTIFY_BAD;
+
+	return NOTIFY_DONE;
+}
+
+static int rswitch_del_addr_from_mactable(struct rswitch_private *priv, const u8 *mac)
+{
+	int err;
+
+	rswitch_modify(priv->addr, FWMACTL0, 0, FWMACTL0_ED);
+	iowrite32((mac[0] << 8) | mac[1], priv->addr + FWMACTL1);
+	iowrite32((mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5],
+		  priv->addr + FWMACTL2);
+	iowrite32(FWMACTL3_DSLV | FWMACTL3_SSLV,
+		  priv->addr + FWMACTL3);
+	iowrite32(FIELD_PREP(FWMACTL4_CSDL, BIT(0)),
+		  priv->addr + FWMACTL4(GWCA_INDEX));
+	iowrite32(FIELD_PREP(FWMACTL5_DV, BIT(AGENT_INDEX_GWCA)),
+		  priv->addr + FWMACTL5);
+
+	err = rswitch_reg_wait(priv->addr, FWMACTLR, FWMACTLR_L, 0);
+	if (err < 0)
+		return err;
+
+	err = ioread32(priv->addr + FWMACTLR);
+	if (err)
+		return NOTIFY_BAD;
+
+	return NOTIFY_DONE;
+}
+
+static void rswitch_switchdev_bridge_fdb_event_work(struct work_struct *work)
+{
+	struct rswitch_switchdev_event_work *switchdev_work;
+	const unsigned char addr[] = {0, 0, 0, 0, 0, 0};
+	struct rswitch_device *rdev;
+	struct net_device *ndev;
+
+	switchdev_work = container_of(work, struct rswitch_switchdev_event_work, work);
+	ndev = switchdev_work->ndev;
+
+	rtnl_lock();
+
+	/* Unfortunately all net_device members point to br0, there is no simple way to check
+	 * if the event was triggered by a port device setting.
+	 */
+	rswitch_for_all_ports(switchdev_work->priv, rdev) {
+		if (ether_addr_equal(rdev->ndev->dev_addr, switchdev_work->fdb_info.addr))
+			goto out;
+	}
+
+	/* Handle only bridge device */
+	if (is_rdev(ndev) || !netif_is_bridge_master(ndev))
+		goto out;
+
+	switch (switchdev_work->event) {
+	case SWITCHDEV_FDB_ADD_TO_DEVICE:
+		rswitch_gwca_write_mac_address(switchdev_work->priv, switchdev_work->fdb_info.addr);
+		rswitch_add_addr_to_mactable(switchdev_work->priv, switchdev_work->fdb_info.addr);
+		break;
+	case SWITCHDEV_FDB_DEL_TO_DEVICE:
+		rswitch_del_addr_from_mactable(switchdev_work->priv, switchdev_work->fdb_info.addr);
+		rswitch_gwca_write_mac_address(switchdev_work->priv, addr);
+		break;
+	default:
+		break;
+	}
+
+out:
+	rtnl_unlock();
+
+	kfree(switchdev_work->fdb_info.addr);
+	rdev = netdev_priv(ndev);
+	netdev_put(ndev, &switchdev_work->dev_tracker);
+	kfree(switchdev_work);
+}
+
+/* called under rcu_read_lock() */
+static int rswitch_switchdev_event(struct notifier_block *nb,
+				   unsigned long event,
+				   void *ptr)
+{
+	struct net_device *ndev = switchdev_notifier_info_to_dev(ptr);
+	struct rswitch_switchdev_event_work *switchdev_work;
+	struct switchdev_notifier_fdb_info *fdb_info;
+	struct switchdev_notifier_info *info = ptr;
+	struct rswitch_private *priv;
+	struct rswitch_device *rdev;
+
+	priv = container_of(nb, struct rswitch_private, rswitch_switchdev_nb);
+
+	switch (event) {
+	case SWITCHDEV_FDB_ADD_TO_DEVICE:
+		fallthrough;
+	case SWITCHDEV_FDB_DEL_TO_DEVICE:
+		switchdev_work = kzalloc(sizeof(*switchdev_work), GFP_ATOMIC);
+
+		if (!switchdev_work)
+			return NOTIFY_BAD;
+
+		switchdev_work->ndev = info->dev;
+		switchdev_work->priv = priv;
+		switchdev_work->event = event;
+		rdev = netdev_priv(switchdev_work->ndev);
+
+		fdb_info = container_of(info,
+					struct switchdev_notifier_fdb_info,
+					info);
+
+		INIT_WORK(&switchdev_work->work, rswitch_switchdev_bridge_fdb_event_work);
+
+		memcpy(&switchdev_work->fdb_info, ptr, sizeof(switchdev_work->fdb_info));
+
+		switchdev_work->fdb_info.addr = kzalloc(ETH_ALEN, GFP_ATOMIC);
+		if (!switchdev_work->fdb_info.addr)
+			goto err_addr_alloc;
+
+		priv->switchdev_work = switchdev_work;
+
+		ether_addr_copy((u8 *)switchdev_work->fdb_info.addr,
+				fdb_info->addr);
+		netdev_hold(ndev, &switchdev_work->dev_tracker, GFP_ATOMIC);
+		queue_work(system_long_wq, &switchdev_work->work);
+
+		break;
+	}
+
+	return NOTIFY_DONE;
+
+err_addr_alloc:
+	kfree(switchdev_work);
+
+	return NOTIFY_BAD;
 }
 
 int rswitch_register_notifiers(struct rswitch_private *priv)

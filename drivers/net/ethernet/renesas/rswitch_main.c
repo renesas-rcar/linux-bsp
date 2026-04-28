@@ -2263,6 +2263,8 @@ static void rswitch_deinit(struct rswitch_private *priv)
 	rswitch_gwca_ts_queue_free(priv);
 	rswitch_gwca_linkfix_free(priv);
 
+	cancel_work_sync(&priv->switchdev_work->work);
+
 	rswitch_clock_disable(priv);
 }
 

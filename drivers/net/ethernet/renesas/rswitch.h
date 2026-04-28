@@ -1225,6 +1225,17 @@ struct rswitch_private {
 
 	enum hwtstamp_tx_types tstamp_tx_ctrl;
 	enum hwtstamp_rx_filters tstamp_rx_ctrl;
+
+	struct rswitch_switchdev_event_work *switchdev_work;
+};
+
+struct rswitch_switchdev_event_work {
+	struct work_struct work;
+	netdevice_tracker dev_tracker;
+	struct switchdev_notifier_fdb_info fdb_info;
+	struct net_device *ndev;
+	struct rswitch_private *priv;
+	unsigned long event;
 };
 
 bool is_rdev(const struct net_device *ndev);
