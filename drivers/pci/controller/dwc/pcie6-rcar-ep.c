@@ -107,7 +107,7 @@ static void rcar_gen5_pcie6_ep_pre_init(struct dw_pcie6_ep *ep)
 	/* 20. Set Max Link Speed*/
 	val = dw_pcie6_readl_dbi(pci, PCIEG6_LINK_CONTROL2_LINK_STATUS2_REG);
 	val &= ~PCIE_CAP_TARGET_LINK_SPEED;
-	val |= (pci->link_gen);
+	val |= (pci->max_link_speed);
 	dw_pcie6_writel_dbi(pci, PCIEG6_LINK_CONTROL2_LINK_STATUS2_REG, val);
 
 	/* 21. ECRC gen&Chk for Function0/1 */
@@ -188,16 +188,16 @@ static void rcar_gen5_pcie6_ep_init(struct dw_pcie6_ep *ep)
 }
 
 static int rcar_gen5_pcie6_ep_raise_irq(struct dw_pcie6_ep *ep, u8 func_no,
-					enum pci_epc_irq_type type, u16 interrupt_num)
+					unsigned int type, u16 interrupt_num)
 {
 	struct dw_pcie6 *pci = to_dw_pcie6_from_ep(ep);
 
 	switch (type) {
-	case PCI_EPC_IRQ_LEGACY:
-		return dw_pcie6_ep_raise_legacy_irq(ep, func_no);
-	case PCI_EPC_IRQ_MSI:
+	case PCI_IRQ_INTX:
+		return dw_pcie6_ep_raise_intx_irq(ep, func_no);
+	case PCI_IRQ_MSI:
 		return dw_pcie6_ep_raise_msi_irq(ep, func_no, interrupt_num);
-	case PCI_EPC_IRQ_MSIX:
+	case PCI_IRQ_MSIX:
 		return dw_pcie6_ep_raise_msix_irq(ep, func_no, interrupt_num);
 	default:
 		dev_err(pci->dev, "UNKNOWN IRQ type\n");
@@ -210,7 +210,6 @@ static const struct pci_epc_features pcie6_rcar_epc_get_features = {
 	.linkup_notifier = false,
 	.msi_capable = true,
 	.msix_capable = false,
-	.reserved_bar = 1 << BAR_5 | 1 << BAR_1 | 1 << BAR_3,
 	.align = SZ_1M,
 };
 
@@ -221,7 +220,7 @@ rcar_gen5_pcie6_ep_get_features(struct dw_pcie6_ep *ep)
 }
 
 static const struct dw_pcie6_ep_ops pcie6_rcar_ep_ops = {
-	.ep_init = rcar_gen5_pcie6_ep_init,
+	.init = rcar_gen5_pcie6_ep_init,
 	.raise_irq = rcar_gen5_pcie6_ep_raise_irq,
 	.get_features = rcar_gen5_pcie6_ep_get_features,
 };

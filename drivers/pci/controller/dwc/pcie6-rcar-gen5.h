@@ -11,7 +11,7 @@
 #include <linux/clk.h>
 #include <linux/gpio/consumer.h>
 #include <linux/firmware.h>
-#include <asm/unaligned.h>
+#include <linux/unaligned.h>
 
 #include "pcie6-designware.h"
 

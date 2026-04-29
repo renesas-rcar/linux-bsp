@@ -116,7 +116,7 @@ static int rcar_gen5_pcie6_host_init(struct dw_pcie6_rp *pp)
 	/* 20. Set Max Link Speed*/
 	val = dw_pcie6_readl_dbi(pci, PCIEG6_LINK_CONTROL2_LINK_STATUS2_REG);
 	val &= ~PCIE_CAP_TARGET_LINK_SPEED;
-	val |= (pci->link_gen);
+	val |= (pci->max_link_speed);
 	dw_pcie6_writel_dbi(pci, PCIEG6_LINK_CONTROL2_LINK_STATUS2_REG, val);
 
 	/* 21. ECRC gen&Chk for Function0/1 */
@@ -176,7 +176,7 @@ static int rcar_gen5_pcie6_host_init(struct dw_pcie6_rp *pp)
 }
 
 static const struct dw_pcie6_host_ops pcie6_rcar_host_ops = {
-	.host_init = rcar_gen5_pcie6_host_init,
+	.init = rcar_gen5_pcie6_host_init,
 };
 
 static int rcar_add_pcie6_port(struct rcar_pcie6 *rcar_pcie6,

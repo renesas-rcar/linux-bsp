@@ -12,6 +12,8 @@
 #include <linux/sys_soc.h>
 #include <linux/gpio/consumer.h>
 #include <linux/iopoll.h>
+#include <linux/platform_device.h>
+#include <linux/of.h>
 
 #include "pcie6-rcar-gen5.h"
 #include "pcie6-designware.h"
@@ -21,8 +23,6 @@ static void rcar_gen5_pcie6_fwupdate(struct rcar_pcie6 *rcar_pcie6, int num_lane
 {
 	u32 i, val;
 	void __iomem *sram_addr;
-
-	struct dw_pcie6 *pci = rcar_pcie6->pci;
 
 	if (channel == 0) {
 		// Write ICCM firmware
@@ -64,10 +64,10 @@ static void rcar_gen5_pcie6_fwupdate(struct rcar_pcie6 *rcar_pcie6, int num_lane
 
 void rcar_gen5_pcie6_txpreset_coef_mapping(struct dw_pcie6 *pci)
 {
-	u32 val;
-	u32 k = 0;
+	u32 val, k;
+
 	/* Full swing with preset = '0' */
-	for (k; k <= 2; k++) {
+	for (k = 0; k <= 2; k++) {
 		val = dw_pcie6_readl_dbi(pci, PCIEG6_PF0_GEN3_RELATED_OFF);
 		val &= ~RATE_SHADOW_SELECT;
 		if (k != 0)
@@ -634,7 +634,7 @@ int rcar_gen5_pcie6_get_resources(struct rcar_pcie6 *rcar_pcie6,
 
 	of_property_read_u32(np, "num-lanes", &pci->num_lanes);
 
-	pci->link_gen = rcar_gen5_pcie6_get_link_speed(np);
+	pci->max_link_speed = rcar_gen5_pcie6_get_link_speed(np);
 
 	if (of_property_read_u32(np, "channel-id", &rcar_pcie6->ch))
 		dev_err(&pdev->dev, "Missing channel-id\n");
