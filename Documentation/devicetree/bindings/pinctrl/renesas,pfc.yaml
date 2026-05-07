@@ -48,6 +48,7 @@ properties:
       - renesas,pfc-r8a779f0    # R-Car S4-8
       - renesas,pfc-r8a779g0    # R-Car V4H
       - renesas,pfc-r8a779h0    # R-Car V4M
+      - renesas,pfc-r8a78000    # R-Car X5H
       - renesas,pfc-sh73a0      # SH-Mobile AG5
 
   reg:
