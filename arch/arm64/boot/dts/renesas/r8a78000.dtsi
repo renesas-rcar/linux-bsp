@@ -1188,6 +1188,11 @@
 				#clock-cells = <1>;
 			};
 
+			scmi_sensors0: protocol@15 {
+				reg = <0x15>;
+				#thermal-sensor-cells = <1>;
+			};
+
 			scmi_reset: protocol@16 {
 				reg = <0x16>;
 				#reset-cells = <1>;
@@ -1196,6 +1201,21 @@
 			scmi_vendor: protocol@80 {
 				reg = <0x80>;
 				#reset-cells = <1>;
+			};
+		};
+
+		thermal-zones {
+			dbsc {
+				thermal-sensors = <&scmi_sensors0 0>;
+			};
+			scp-rt {
+				thermal-sensors = <&scmi_sensors0 1>;
+			};
+			npu-app {
+				thermal-sensors = <&scmi_sensors0 2>;
+			};
+			dsp {
+				thermal-sensors = <&scmi_sensors0 3>;
 			};
 		};
 
