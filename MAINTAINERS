@@ -24931,6 +24931,12 @@ F:	include/linux/watchdog.h
 F:	include/trace/events/watchdog.h
 F:	include/uapi/linux/watchdog.h
 
+RENESAS WWDT DRIVER
+M:	Minh LE <minh.le.aj@renesas.com>
+L:	linux-watchdog@vger.kernel.org
+S:	Supported
+F:	drivers/watchdog/renesas_wwdt.c
+
 WAVE5 VPU CODEC DRIVER
 M:	Nas Chung <nas.chung@chipsnmedia.com>
 M:	Jackson Lee <jackson.lee@chipsnmedia.com>
