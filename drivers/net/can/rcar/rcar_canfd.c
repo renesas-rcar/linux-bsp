@@ -505,6 +505,7 @@
  * FIFOs dedicated to them. Use the first (index 0) FIFO out of the 3 for Tx.
  */
 #define RCANFD_CFFIFO_IDX		0
+#define CANFD_CLK_SCP			80000000
 
 struct rcar_canfd_global;
 
@@ -2296,11 +2297,16 @@ static int rcar_canfd_probe(struct platform_device *pdev)
 
 		/* CANFD clock may be further divided within the IP */
 		fcan_freq = clk_get_rate(gpriv->can_clk) / info->postdiv;
+		if (fcan_freq < CANFD_CLK_SCP) {
+			err = clk_set_rate(gpriv->can_clk, CANFD_CLK_SCP);
+			if (err)
+				dev_err(dev, "cannot set canfd clock\n");
+		}
 	} else {
 		fcan_freq = clk_get_rate(gpriv->can_clk);
 		gpriv->extclk = gpriv->info->external_clk;
 	}
-	if (!fcan_freq) {
+	if (!fcan_freq || fcan_freq < CANFD_CLK_SCP) {
 		u32 clk_rate;
 
 		if (of_property_read_u32(dev->of_node,
