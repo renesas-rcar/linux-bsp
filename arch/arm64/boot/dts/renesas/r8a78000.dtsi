@@ -2216,6 +2216,7 @@
 			clock-names = "fck", "canfd", "ram_clk", "can_clk";
 			assigned-clocks = <&can_clk>;
 			assigned-clock-rates = <80000000>;
+			renesas,canfd-clk = <80000000>;
 			interrupts = <GIC_SPI 4675 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4677 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4681 IRQ_TYPE_LEVEL_HIGH>,
@@ -2270,6 +2271,7 @@
 			clock-names = "fck", "canfd", "ram_clk", "can_clk";
 			assigned-clocks = <&can_clk>;
 			assigned-clock-rates = <80000000>;
+			renesas,canfd-clk = <80000000>;
 			interrupts = <GIC_SPI 4725 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4728 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 4731 IRQ_TYPE_LEVEL_HIGH>,
