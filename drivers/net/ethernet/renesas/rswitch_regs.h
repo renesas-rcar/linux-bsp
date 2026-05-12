@@ -959,7 +959,7 @@ enum switch_vlan_mode {
 
 /* bit field definitions for FWVLANTEM */
 #define VLANTUEN		GENMASK(28, 16)
-#define VLANTEN			GENAMSK(12, 0)
+#define VLANTEN			GENMASK(12, 0)
 
 /* bit field definitions for FWVLANTS */
 #define	VLANVIDS		GENMASK(11, 0)

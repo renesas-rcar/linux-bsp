@@ -323,8 +323,13 @@ static int rswitch3_fwd_init(struct rswitch_private *priv)
 	iowrite32(RSW3_L23UTIOG, priv->addr_mfwd + RSW3_FWL23UTIM);
 	ret = rswitch_reg_wait(priv->addr_mfwd, RSW3_FWL23UTIM, RSW3_L23UTR, RSW3_L23UTR);
 
+	/* Allow entire VLAN table to be used for "un-secure" entries */
+	iowrite32(RSW3_VLANTMUE, priv->addr_mfwd + RSW3_FWVLANTEC);
 
-	return ret;
+	/* Initialize VLAN table */
+	iowrite32(RSW3_VLANTIOG, priv->addr_mfwd + RSW3_FWVLANTIM);
+
+	return rswitch_reg_wait(priv->addr_mfwd, RSW3_FWVLANTIM, RSW3_VLANTIOG, 0);
 }
 
 /* Gateway CPU agent block (GWCA) */

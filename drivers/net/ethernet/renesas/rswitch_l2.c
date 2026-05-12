@@ -293,17 +293,31 @@ static int rswitch_read_vlan_table(struct rswitch_private *priv, u16 vid,
 {
 	int err;
 
-	iowrite32(FIELD_PREP(VLANVIDS, vid), priv->addr_mfwd + FWVLANTS);
-	err = rswitch_reg_wait(priv->addr_mfwd, FWVLANTSR0, VLANTS, 0);
-	if (err < 0)
-		return err;
+	if (priv->info->rswitch_version == RSW20) {
+		iowrite32(FIELD_PREP(VLANVIDS, vid), priv->addr_mfwd + FWVLANTS);
+		err = rswitch_reg_wait(priv->addr_mfwd, FWVLANTSR0, VLANTS, 0);
+		if (err < 0)
+			return err;
 
-	/* check if vlans are present in table */
-	if (!(ioread32(priv->addr_mfwd + FWVLANTSR0) & VLANSNF)) {
-		*vlanslvs = (ioread32(priv->addr_mfwd + FWVLANTSR1) & VLANSLVS);
-		*vlandvs = (ioread32(priv->addr_mfwd + FWVLANTSR3) & VLANDVS);
+		/* check if vlans are present in table */
+		if (!(ioread32(priv->addr_mfwd + FWVLANTSR0) & VLANSNF)) {
+			*vlanslvs = FIELD_GET(VLANSLVS, ioread32(priv->addr_mfwd + FWVLANTSR1));
+			*vlandvs = FIELD_GET(VLANDVS, ioread32(priv->addr_mfwd + FWVLANTSR3));
+		}
+	} else {
+		iowrite32(FIELD_PREP(VLANVIDS, vid), priv->addr_mfwd + RSW3_FWVLANTS);
+		err = rswitch_reg_wait(priv->addr_mfwd, RSW3_FWVLANTSR0, RSW3_VLANTS, 0);
+		if (err < 0)
+			return err;
+
+		/* check if vlans are present in table */
+		if (!(ioread32(priv->addr_mfwd + RSW3_FWVLANTSR0) & RSW3_VLANSNF)) {
+			*vlanslvs = FIELD_GET(RSW3_VLANSLVS,
+					      ioread32(priv->addr_mfwd + RSW3_FWVLANTSR3));
+			*vlandvs = FIELD_GET(RSW3_VLANDVS,
+					     ioread32(priv->addr_mfwd + RSW3_FWVLANTSR6));
+		}
 	}
-
 	return 0;
 }
 
@@ -318,16 +332,26 @@ static int rswitch_write_vlan_table(struct rswitch_private *priv, u16 vid, u32 i
 	if (err < 0)
 		return err;
 
-	rswitch_modify(priv->addr_mfwd, FWVLANTL0, VLANED, 0);
-	iowrite32(FIELD_PREP(VLANVIDL, vid), priv->addr_mfwd + FWVLANTL1);
-
 	vlanslvs |= BIT(index);
 	vlandvs  |= BIT(index);
-	iowrite32(FIELD_PREP(VLANSLVL, vlanslvs), priv->addr_mfwd + FWVLANTL2);
-	iowrite32(FIELD_PREP(VLANCSDL, vlancsdl), priv->addr_mfwd + FWVLANTL3(gwca_index));
-	iowrite32(FIELD_PREP(VLANDVL, vlandvs), priv->addr_mfwd + FWVLANTL4);
 
-	err = rswitch_reg_wait(priv->addr_mfwd, FWVLANTLR, VLANTL, 0);
+	if (priv->info->rswitch_version == RSW20) {
+		rswitch_modify(priv->addr_mfwd, FWVLANTL0, VLANED, 0);
+		iowrite32(FIELD_PREP(VLANVIDL, vid), priv->addr_mfwd + FWVLANTL1);
+		iowrite32(FIELD_PREP(VLANSLVL, vlanslvs), priv->addr_mfwd + FWVLANTL2);
+		iowrite32(FIELD_PREP(VLANCSDL, vlancsdl), priv->addr_mfwd + FWVLANTL3(gwca_index));
+		iowrite32(FIELD_PREP(VLANDVL, vlandvs), priv->addr_mfwd + FWVLANTL4);
+		err = rswitch_reg_wait(priv->addr_mfwd, FWVLANTLR, VLANTL, 0);
+	} else {
+		rswitch_modify(priv->addr_mfwd, RSW3_FWVLANTL0, RSW3_VLANED, 0);
+		iowrite32(FIELD_PREP(RSW3_VLANVIDL, vid), priv->addr_mfwd + RSW3_FWVLANTL1);
+		iowrite32(FIELD_PREP(RSW3_VLANSLVL, vlanslvs), priv->addr_mfwd + RSW3_FWVLANTL4);
+		iowrite32(FIELD_PREP(RSW3_VLANCSDL, vlancsdl),
+			  priv->addr_mfwd + RSW3_FWVLANTL6(gwca_index));
+		iowrite32(FIELD_PREP(RSW3_VLANDVL, vlandvs), priv->addr_mfwd + RSW3_FWVLANTL7);
+		err = rswitch_reg_wait(priv->addr_mfwd, RSW3_FWVLANTLR, RSW3_VLANTL, 0);
+	}
+
 	return err;
 }
 
@@ -343,15 +367,25 @@ static int rswitch_erase_vlan_table(struct rswitch_private *priv, u16 vid, u32 i
 	vlanslvs &= ~BIT(index);
 	vlandvs  &= ~BIT(index);
 
-	/* only erase empty vlan table entries */
-	if (vlanslvs == 0)
-		rswitch_modify(priv->addr_mfwd, FWVLANTL0, 0, VLANED);
+	if (priv->info->rswitch_version == RSW20) {
+		/* only erase empty vlan table entries */
+		if (vlanslvs == 0)
+			rswitch_modify(priv->addr_mfwd, FWVLANTL0, 0, VLANED);
+		iowrite32(FIELD_PREP(VLANVIDL, vid), priv->addr_mfwd + FWVLANTL1);
+		iowrite32(FIELD_PREP(VLANSLVL, vlanslvs), priv->addr_mfwd + FWVLANTL2);
+		iowrite32(FIELD_PREP(VLANDVL, vlandvs), priv->addr_mfwd + FWVLANTL4);
+		err = rswitch_reg_wait(priv->addr_mfwd, FWVLANTLR, VLANTL, 0);
+	} else {
+		/* only erase empty vlan table entries */
+		if (vlanslvs == 0)
+			rswitch_modify(priv->addr_mfwd, RSW3_FWVLANTL0, 0, RSW3_VLANED);
+		iowrite32(FIELD_PREP(RSW3_VLANVIDL, vid), priv->addr_mfwd + RSW3_FWVLANTL1);
+		iowrite32(FIELD_PREP(RSW3_VLANSLVL, vlanslvs), priv->addr_mfwd + RSW3_FWVLANTL4);
+		iowrite32(FIELD_PREP(RSW3_VLANDVL, vlandvs), priv->addr_mfwd + RSW3_FWVLANTL7);
+		err = rswitch_reg_wait(priv->addr_mfwd, RSW3_FWVLANTLR, RSW3_VLANTL, 0);
+	}
 
-	iowrite32(FIELD_PREP(VLANVIDL, vid), priv->addr_mfwd + FWVLANTL1);
-	iowrite32(FIELD_PREP(VLANSLVL, vlanslvs), priv->addr_mfwd + FWVLANTL2);
-	iowrite32(FIELD_PREP(VLANDVL, vlandvs), priv->addr_mfwd + FWVLANTL4);
-
-	return rswitch_reg_wait(priv->addr_mfwd, FWVLANTLR, VLANTL, 0);
+	return err;
 }
 
 static int rswitch_port_set_vlan_tag(struct rswitch_etha *etha,

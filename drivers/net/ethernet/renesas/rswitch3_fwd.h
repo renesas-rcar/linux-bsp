@@ -200,7 +200,7 @@ enum rswitch3_reg {
 	RSW3_FWVLANTL60		= 0x4928,
 	RSW3_FWVLANTL7		= 0x4968,
 	RSW3_FWVLANTLR		= 0x496C,
-	RSW3_FWVLANT0M		= 0x4970,
+	RSW3_FWVLANTIM		= 0x4970,
 	RSW3_FWVLANTEM		= 0x4974,
 	RSW3_FWVLANTS		= 0x4980,
 	RSW3_FWVLANTSR0		= 0x4984,
@@ -476,6 +476,109 @@ enum rswitch3_reg {
 #define RSW3_MACTHWLFC1			BIT(15)
 #define RSW3_MACTHWLFC0			BIT(14)
 #define RSW3_MACTHWLSA			GENMASK(10, 0)
+
+/* bit field definitions for FWMACTLn */
+#define RSW3_MACED			BIT(31)
+#define RSW3_MACCSDL			GENMASK(15, 0)
+#define RSW3_MACDVL			GENMASK(15, 0)
+
+/* bit field definitions for FWVLANTEC */
+#define RSW3_VLANTMUE			GENMASK(28, 16)
+
+/* bit field definitions for FWVLANTL0 */
+#define RSW3_VLANED			BIT(16)
+#define RSW3_VLANFPL			GENMASK(23, 20)
+#define RSW3_VLANRPL			GENMASK(19, 16)
+#define RSW3_VLANBLL			BIT(12)
+#define RSW3_VLANHLDL			BIT(10)
+#define RSW3_VLANSLL			BIT(8)
+
+/* bit field definitions for FWVLANTL1 */
+#define RSW3_VLANVIDL			GENMASK(11, 0)
+
+/* bit field definitions for FWVLANTL2 */
+#define RSW3_VLANMSDUNL			GENMASK(19, 16)
+#define RSW3_VLANGATENL			GENMASK(2, 0)
+
+/* bit field definitions for FWVLANTL3 */
+#define RSW3_VLANMTNRL			GENMASK(22, 16)
+#define RSW3_VLANFRERNL			GENMASK(6, 0)
+
+/* bit field definitions for FWVLANTL4 */
+#define RSW3_VLANSLVL			GENMASK(31, 16)
+#define RSW3_VLANRVL			BIT(15)
+#define	RSW3_VLANRNL			GENMASK(10, 0)
+
+/* bit field definitions for FWVLANTL5 */
+#define RSW3_VLANFMVL			GENMASK(15, 0)
+
+/* bit field definitions for FWVLANTL6i */
+#define RSW3_VLANCSDL			GENMASK(15, 0)
+
+/* bit field definitions for FWVLANTL7 */
+#define RSW3_VLANCMEL			BIT(21)
+#define RSW3_VLANEMEL			BIT(20)
+#define RSW3_VLANIPUL			BIT(19)
+#define RSW3_VLANIPVL			GENMASK(18, 16)
+#define RSW3_VLANDVL			GENMASK(15, 0)
+
+/* bit field definitions for FWVLANTLR */
+#define RSW3_VLANTL			BIT(31)
+#define RSW3_VLANLO			BIT(3)
+#define RSW3_VLANLEF			BIT(2)
+#define RSW3_VLANLSF			BIT(1)
+#define RSW3_VLANLF			BIT(0)
+
+/* bit field definitions for FWVLANTIM */
+#define RSW3_VLANTR			BIT(1)
+#define RSW3_VLANTIOG			BIT(0)
+
+/* bit field definitions for FWVLANTEM */
+#define RSW3_VLANTUEN			GENMASK(28, 16)
+#define RSW3_VLANTEN			GENMASK(12, 0)
+
+/* bit field definitions for FWVLANTS */
+#define	RSW3_VLANVIDS			GENMASK(11, 0)
+
+/* bit field definitions for FWVLANTSR0 */
+#define RSW3_VLANTS			BIT(31)
+#define RSW3_VLANFPS			GENMASK(23, 20)
+#define RSW3_VLANRPS			GENMASK(19, 16)
+#define RSW3_VLANBLS			BIT(12)
+#define RSW3_VLANHLDS			BIT(10)
+#define RSW3_VLANSLS			BIT(8)
+#define	RSW3_VLANSNF			BIT(1)
+#define RSW3_VLANSEF			BIT(0)
+
+/* bit field definitions for FWVLANTSR1 */
+#define RSW3_VLANMSDUVS			BIT(31)
+#define RSW3_VLANMSDUNS			GENMASK(19, 16)
+#define RSW3_VLANGATENS			GENMASK(2, 0)
+#define RSW3_VLANGATEVS			BIT(0)
+
+/* bit field definitions for FWVLANTSR2 */
+#define RSW3_VLANMTRVS			BIT(31)
+#define RSW3_VLANMTRNS			GENMASK(22, 16)
+#define RSW3_VLANFRERVS			BIT(15)
+#define RSW3_VLANFRERNS			GENMASK(6, 0)
+
+/* bit field definitions for FWVLANTSR3 */
+#define	RSW3_VLANSLVS			GENMASK(31, 16)
+#define	RSW3_VLANRVS			BIT(15)
+#define RSW3_VLANRNS			GENMASK(10, 0)
+
+/* bit field definitions for FWVLANTSR4 */
+#define RSW3_VLANFMVS			GENMASK(15, 0)
+
+/* bit field definitions for FWVLANTSR5i */
+#define RSW3_VLANCSDS			GENMASK(15, 0)
+
+/* bit field definitions for FWVLANTSR6 */
+#define RSW3_VLANCMES			BIT(21)
+#define RSW3_VLANEMES			BIT(20)
+#define RSW3_VLANIPUS			BIT(19)
+#define RSW3_VLANIPVS			GENMASK(18, 16)
+#define RSW3_VLANDVS			GENMASK(15, 0)
 
 /* bit field definitions for FWLTHTLx */
 #define RSW3_LTHELA			GENMASK(9, 0)
