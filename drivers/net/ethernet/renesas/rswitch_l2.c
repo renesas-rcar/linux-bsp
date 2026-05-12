@@ -231,7 +231,7 @@ static int rswitch_update_ageing_time(struct rswitch_private *priv, clock_t time
 			return -EINVAL;
 
 		reg_val = FIELD_PREP(RSW3_MACAGT, time);
-		reg_val |= MACAGE | MACAGSL;
+		reg_val |= RSW3_MACAGE | RSW3_MACAGSL;
 		iowrite32(reg_val, priv->addr_mfwd + RSW3_FWMACAGC);
 	}
 	return 0;

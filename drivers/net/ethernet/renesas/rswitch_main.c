@@ -278,7 +278,7 @@ static int rswitch3_fwd_init(struct rswitch_private *priv)
 
 	/* Configure MAC table aging */
 	rswitch_modify(priv->addr_mfwd, RSW3_FWMACAGUSPC, RSW3_MACAGUSP,
-		       field_prep(RSW3_MACAGUSP, 0x140));
+		       field_prep(RSW3_MACAGUSP, RSW3_AGEING_CLK_PER_US));
 
 	reg_val = field_prep(RSW3_MACAGT, RSW_AGEING_TIME);
 	reg_val |= RSW3_MACAGE | RSW3_MACAGSL;
@@ -1540,9 +1540,6 @@ static void rswitch3_rmac_setting(struct rswitch_etha *etha, const u8 *mac)
 			       __func__, etha->index);
 		}
 	}
-
-	rswitch_modify(etha->addr, MPIC, PLSPP, etha->fixed_link ? PLSPP : 0);
-	rswitch_modify(etha->addr, MIOC, BIT(5), etha->fixed_link ? BIT(5) : 0);
 }
 
 static void rswitch2_etha_enable_mii(struct rswitch_etha *etha)
@@ -1579,6 +1576,20 @@ static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac,
 	err = rswitch_etha_wait_link_verification(etha);
 	if (err < 0)
 		return err;
+
+	return rswitch_etha_change_mode(etha, OPC_OPERATION);
+}
+
+static int rswitch_etha_fixed_link(struct rswitch_etha *etha)
+{
+	int err;
+
+	err = rswitch_etha_change_mode(etha, OPC_CONFIG);
+	if (err < 0)
+		return err;
+
+	rswitch_modify(etha->addr, MPIC, PLSPP, etha->fixed_link ? PLSPP : 0);
+	rswitch_modify(etha->addr, MIOC, BIT(5), etha->fixed_link ? BIT(5) : 0);
 
 	return rswitch_etha_change_mode(etha, OPC_OPERATION);
 }
@@ -1902,6 +1913,10 @@ static int rswitch_phy_device_init(struct rswitch_device *rdev)
 		if (!phy)
 			return -ENODEV;
 	}
+
+	err = rswitch_etha_fixed_link(rdev->etha);
+	if (err < 0)
+		return err;
 
 	/* Set phydev->host_interfaces before calling of_phy_connect() to
 	 * configure the PHY with the information of host_interfaces.
