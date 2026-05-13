@@ -19,6 +19,7 @@
 #include <linux/of_irq.h>
 #include <linux/of_mdio.h>
 #include <linux/of_net.h>
+#include <linux/nvmem-consumer.h>
 #include <linux/clk.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
@@ -3058,12 +3059,11 @@ static void rswitch_rxdmac_free(struct net_device *ndev,
 static void rswitch_set_mac_address(struct rswitch_device *rdev)
 {
 	struct net_device *ndev = rdev->ndev;
-	const u8 *mac;
+	u8 mac_addr[ETH_ALEN];
 
 	if (rdev->etha && rdev->etha->port_node) {
-		mac = of_get_mac_address(rdev->etha->port_node);
-		if (!IS_ERR(mac))
-			ether_addr_copy(ndev->dev_addr, mac);
+		if (of_get_mac_address(rdev->etha->port_node, mac_addr) == 0)
+			eth_hw_addr_set(ndev, mac_addr);
 
 		/*
 		 * Kernels before commit f10843e04a07 ("of: net: fix
@@ -3075,6 +3075,7 @@ static void rswitch_set_mac_address(struct rswitch_device *rdev)
 		 */
 		if (!is_valid_ether_addr(ndev->dev_addr)) {
 			struct nvmem_cell *cell;
+			const u8 *mac;
 			size_t len;
 
 			cell = of_nvmem_cell_get(rdev->etha->port_node, "mac-address");
@@ -3082,7 +3083,7 @@ static void rswitch_set_mac_address(struct rswitch_device *rdev)
 				mac = nvmem_cell_read(cell, &len);
 				if (!IS_ERR(mac)) {
 					if (len == ETH_ALEN)
-						ether_addr_copy(ndev->dev_addr, mac);
+						eth_hw_addr_set(ndev, mac);
 					kfree(mac);
 				}
 				nvmem_cell_put(cell);
@@ -3137,7 +3138,7 @@ static int rswitch_ndev_create(struct rswitch_private *priv, int index)
 	ndev->max_mtu = MAX_MTU_SZ;
 	ndev->min_mtu = ETH_MIN_MTU;
 
-	netif_napi_add(ndev, &rdev->napi, rswitch_poll, 64);
+	netif_napi_add(ndev, &rdev->napi, rswitch_poll);
 
 	rswitch_set_mac_address(rdev);
 
