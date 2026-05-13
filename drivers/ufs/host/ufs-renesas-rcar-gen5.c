@@ -25,15 +25,6 @@ struct ufs_rcar_gen5_priv {
 	bool initialized;	/* The hardware needs initialization once */
 };
 
-static void ufs_rcar_gen5_send_dme_command(struct ufs_hba *hba, u32 cmd,
-					   u32 arg1, u32 arg2, u32 arg3)
-{
-	ufshcd_writel(hba, arg1, REG_UIC_COMMAND_ARG_1);
-	ufshcd_writel(hba, arg2, REG_UIC_COMMAND_ARG_2);
-	ufshcd_writel(hba, arg3, REG_UIC_COMMAND_ARG_3);
-	ufshcd_writel(hba, cmd, REG_UIC_COMMAND);
-}
-
 static void ufs_rcar_gen5_pre_init(struct ufs_hba *hba)
 {
 	struct ufs_rcar_gen5_priv *priv = ufshcd_get_variant(hba);
@@ -112,31 +103,34 @@ static void ufs_rcar_gen5_pre_init(struct ufs_hba *hba)
 
 	ufshcd_writel(hba, val32, 0x000000C0);
 
-	/* 26: Skip IE because we cannot handle interrupts here */
+	val32 = ufshcd_readl(hba, REG_INTERRUPT_ENABLE);
+
+	ufshcd_writel(hba, val32 | BIT(10),  REG_INTERRUPT_ENABLE);
+
 	/* 27 */
-	ufs_rcar_gen5_send_dme_command(hba, 0x00000002, 0x81010000, 0x00000000, 0x00000005);
+	ufshcd_dme_set(hba, 0x81010000, 0x00000005);
 	/* 28 */
-	ufs_rcar_gen5_send_dme_command(hba, 0x00000002, 0x81150000, 0x00000000, 0x00000001);
+	ufshcd_dme_set(hba, 0x81150000, 0x00000001);
 	/* 29 */
-	ufs_rcar_gen5_send_dme_command(hba, 0x00000002, 0x81180000, 0x00000000, 0x00000001);
+	ufshcd_dme_set(hba, 0x81180000, 0x00000001);
 	/* 30 */
-	ufs_rcar_gen5_send_dme_command(hba, 0x00000002, 0x80090000, 0x00000000, 0x0000000C);
+	ufshcd_dme_set(hba, 0x80090000, 0x0000000C);
 	/* 31 */
-	ufs_rcar_gen5_send_dme_command(hba, 0x00000002, 0x800a0000, 0x00000000, 0x00000080);
+	ufshcd_dme_set(hba, 0x800a0000, 0x00000080);
 	/* 32 */
-	ufs_rcar_gen5_send_dme_command(hba, 0x00000002, 0x80090001, 0x00000000, 0x0000000C);
+	ufshcd_dme_set(hba, 0x80090001, 0x0000000C);
 	/* 33 */
-	ufs_rcar_gen5_send_dme_command(hba, 0x00000002, 0x800a0001, 0x00000000, 0x00000080);
+	ufshcd_dme_set(hba, 0x800a0001, 0x00000080);
 	/* 34 */
-	ufs_rcar_gen5_send_dme_command(hba, 0x00000002, 0x800a0004, 0x00000000, 0x00000003);
+	ufshcd_dme_set(hba, 0x800a0004, 0x00000003);
 	/* 35 */
-	ufs_rcar_gen5_send_dme_command(hba, 0x00000002, 0x800b0004, 0x00000000, 0x000000EA);
+	ufshcd_dme_set(hba, 0x800b0004, 0x000000EA);
 	/* 36 */
-	ufs_rcar_gen5_send_dme_command(hba, 0x00000002, 0x800a0005, 0x00000000, 0x00000003);
+	ufshcd_dme_set(hba, 0x800a0005, 0x00000003);
 	/* 37 */
-	ufs_rcar_gen5_send_dme_command(hba, 0x00000002, 0x800b0005, 0x00000000, 0x000000EA);
+	ufshcd_dme_set(hba, 0x800b0005, 0x000000EA);
 	/* 38 */
-	ufs_rcar_gen5_send_dme_command(hba, 0x00000002, 0xd0850000, 0x00000000, 0x00000001);
+	ufshcd_dme_set(hba, 0xd0850000, 0x00000001);
 
 	val = ioread16(priv->phy_base + 0x20000);
 	iowrite16(val | BIT(0), priv->phy_base + 0x20000);	/* 39 */
@@ -170,7 +164,7 @@ static void ufs_rcar_gen5_pre_init(struct ufs_hba *hba)
 	val = ioread16(priv->phy_base + 0x20000);
 	iowrite16(val & ~BIT(0), priv->phy_base + 0x20000);
 
-	ufs_rcar_gen5_send_dme_command(hba, 0x00000002, 0xd0890000, 0x00000000, 0x00000001);
+	ufshcd_dme_set(hba, 0xd0890000, 0x00000001);
 
 	priv->initialized = true;
 }
