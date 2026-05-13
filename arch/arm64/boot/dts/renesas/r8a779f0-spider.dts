@@ -30,14 +30,14 @@
 &pfc {
 	tsn0_pins: tsn0 {
 		mux {
-			groups = "tsn0_link", "tsn0_mdio";
+			groups = "tsn0_link_a", "tsn0_mdio_b";
 			function = "tsn0";
 			drive-strength = <18>;
 			power-source = <1800>;
 		};
 
 		pins_mdio {
-			groups = "tsn0_mdio";
+			groups = "tsn0_mdio_b";
 			drive-strength = <18>;
 			power-source = <1800>;
 		};
@@ -45,14 +45,14 @@
 
 	tsn1_pins: tsn1 {
 		mux {
-			groups = "tsn1_link", "tsn1_mdio";
+			groups = "tsn1_link_a", "tsn1_mdio_b";
 			function = "tsn1";
 			drive-strength = <18>;
 			power-source = <1800>;
 		};
 
 		pins_mdio {
-			groups = "tsn1_mdio";
+			groups = "tsn1_mdio_b";
 			drive-strength = <18>;
 			power-source = <1800>;
 		};
@@ -60,14 +60,14 @@
 
 	tsn2_pins: tsn2 {
 		mux {
-			groups = "tsn2_link", "tsn2_mdio";
+			groups = "tsn2_link_a", "tsn2_mdio_b";
 			function = "tsn2";
 			drive-strength = <18>;
 			power-source = <1800>;
 		};
 
 		pins_mdio {
-			groups = "tsn2_mdio";
+			groups = "tsn2_mdio_b";
 			drive-strength = <18>;
 			power-source = <1800>;
 		};
