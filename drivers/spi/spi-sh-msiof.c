@@ -1216,12 +1216,18 @@ static struct dma_chan *sh_msiof_request_dma_chan(struct device *dev,
 	dma_cap_zero(mask);
 	dma_cap_set(DMA_SLAVE, mask);
 
-	chan = dma_request_slave_channel_compat(mask, shdma_chan_filter,
-				(void *)(unsigned long)id, dev,
-				dir == DMA_MEM_TO_DEV ? "tx" : "rx");
-	if (!chan) {
-		dev_warn(dev, "dma_request_slave_channel_compat failed\n");
-		return NULL;
+	if (dev->of_node) {
+		chan = dma_request_chan(dev, dir == DMA_MEM_TO_DEV ? "tx" : "rx");
+		if (IS_ERR(chan))
+			return chan;
+	} else {
+		chan = dma_request_slave_channel_compat(mask, shdma_chan_filter,
+					(void *)(unsigned long)id, dev,
+					dir == DMA_MEM_TO_DEV ? "tx" : "rx");
+		if (!chan) {
+			dev_warn(dev, "dma_request_slave_channel_compat failed\n");
+			return ERR_PTR(-ENODEV);
+		}
 	}
 
 	memset(&cfg, 0, sizeof(cfg));
@@ -1238,7 +1244,7 @@ static struct dma_chan *sh_msiof_request_dma_chan(struct device *dev,
 	if (ret) {
 		dev_warn(dev, "dmaengine_slave_config failed %d\n", ret);
 		dma_release_channel(chan);
-		return NULL;
+		return ERR_PTR(ret);
 	}
 
 	return chan;
@@ -1253,6 +1259,7 @@ static int sh_msiof_request_dma(struct sh_msiof_spi_priv *p)
 	const struct resource *res;
 	struct spi_controller *ctlr;
 	struct device *tx_dev, *rx_dev;
+	int err;
 
 	if (dev->of_node) {
 		/* In the OF case we will get the slave IDs from the DT */
@@ -1274,17 +1281,25 @@ static int sh_msiof_request_dma(struct sh_msiof_spi_priv *p)
 	ctlr = p->ctlr;
 	ctlr->dma_tx = sh_msiof_request_dma_chan(dev, DMA_MEM_TO_DEV,
 						 dma_tx_id, res->start + SITFDR);
-	if (!ctlr->dma_tx)
-		return -ENODEV;
+	if (IS_ERR(ctlr->dma_tx)) {
+		err = PTR_ERR(ctlr->dma_tx);
+		ctlr->dma_tx = NULL;
+		return err;
+	}
 
 	ctlr->dma_rx = sh_msiof_request_dma_chan(dev, DMA_DEV_TO_MEM,
 						 dma_rx_id, res->start + SIRFDR);
-	if (!ctlr->dma_rx)
-		goto free_tx_chan;
+	if (IS_ERR(ctlr->dma_rx)) {
+		err = PTR_ERR(ctlr->dma_rx);
+		dma_release_channel(ctlr->dma_tx);
+		ctlr->dma_tx = NULL;
+		ctlr->dma_rx = NULL;
+		return err;
+	}
 
 	p->tx_dma_page = (void *)__get_free_page(GFP_KERNEL | GFP_DMA);
 	if (!p->tx_dma_page)
-		goto free_rx_chan;
+		goto release_dma_chan;
 
 	p->rx_dma_page = (void *)__get_free_page(GFP_KERNEL | GFP_DMA);
 	if (!p->rx_dma_page)
@@ -1311,9 +1326,9 @@ free_rx_page:
 	free_page((unsigned long)p->rx_dma_page);
 free_tx_page:
 	free_page((unsigned long)p->tx_dma_page);
-free_rx_chan:
+release_dma_chan:
 	dma_release_channel(ctlr->dma_rx);
-free_tx_chan:
+	ctlr->dma_rx = NULL;
 	dma_release_channel(ctlr->dma_tx);
 	ctlr->dma_tx = NULL;
 	return -ENODEV;
@@ -1446,6 +1461,8 @@ static int sh_msiof_spi_probe(struct platform_device *pdev)
 	ctlr->max_native_cs = MAX_SS;
 
 	ret = sh_msiof_request_dma(p);
+	if (ret == -EPROBE_DEFER)
+		goto err2;
 	if (ret < 0)
 		dev_warn(&pdev->dev, "DMA not available, using PIO\n");
 
