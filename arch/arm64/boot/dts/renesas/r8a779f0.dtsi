@@ -1022,6 +1022,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 10>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_rt1: iommu@ee4c0000 {
@@ -1031,6 +1032,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 19>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_ds0: iommu@eed00000 {
@@ -1050,6 +1052,7 @@
 			renesas,ipmmu-main = <&ipmmu_mm 2>;
 			power-domains = <&sysc R8A779F0_PD_ALWAYS_ON>;
 			#iommu-cells = <1>;
+			status = "disabled";
 		};
 
 		ipmmu_mm: iommu@eefc0000 {
