@@ -7,6 +7,6 @@
 #ifndef RCAR_VERSION_H
 #define RCAR_VERSION_H
 
-#define VERSION_OF_RENESAS "1.0.11"
+#define VERSION_OF_RENESAS "1.0.12"
 
 #endif /* RCAR_VERSION_H */
