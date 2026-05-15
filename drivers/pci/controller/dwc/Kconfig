@@ -464,7 +464,7 @@ config PCIE6_DW
 
 config PCIE6_RCAR_HOST
 	tristate "Renesas R-Car Gen5 PCIe 6.0 Controller - Host mode"
-	depends on PCI && PCI_MSI_IRQ_DOMAIN
+	depends on PCI && PCI_MSI
 	select PCIE6_DW
 	help
 	  Enables support for the PCIe 6.0 controller in the Designware IP to
@@ -477,7 +477,7 @@ config PCIE6_RCAR_HOST
 
 config PCIE6_RCAR_EP
 	tristate "Renesas R-Car Gen5 PCIe 6.0 Controller - Endpoint mode"
-	depends on PCI && PCI_MSI_IRQ_DOMAIN
+	depends on PCI && PCI_MSI
 	depends on PCI_ENDPOINT
 	select PCIE6_DW
 	help
