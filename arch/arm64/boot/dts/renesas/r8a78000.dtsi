@@ -5373,8 +5373,9 @@
 			      <0x0 0xdb300000 0 0xd00000>,
 			      <0x0 0xde100000 0 0x1000>,
 			      <0x0 0xde180000 0 0x30000>,
+				  <0x0 0xde000000 0 0x1000>,
 			      <0x2C0 0x00000000 0x0 0x00020000>;
-			reg-names = "dbi", "atu", "apb", "phy", "config";
+			reg-names = "dbi", "atu", "apb", "phy", "apb_shared", "config";
 			#address-cells = <3>;
 			#size-cells = <2>;
 			bus-range = <0x00 0xff>;
@@ -5392,10 +5393,23 @@
 					 0 0 0 2 &gic GIC_SPI 758 IRQ_TYPE_LEVEL_HIGH
 					 0 0 0 3 &gic GIC_SPI 758 IRQ_TYPE_LEVEL_HIGH
 					 0 0 0 4 &gic GIC_SPI 758 IRQ_TYPE_LEVEL_HIGH>;
-			clocks = <&pcie6_bus_clk>;
-			clock-names = "pcie6_bus";
-			max-link-speed = <1>;
-			num-lanes = <1>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_PCI601>,
+					 <&scmi_clk X5H_CLOCK_ID_PCI611>,
+					 <&scmi_clk X5H_CLOCK_ID_PCI602>,
+					 <&scmi_clk X5H_CLOCK_ID_PCI612>,
+					 <&scmi_clk X5H_CLOCK_ID_PCI60BG0>,
+					 <&scmi_clk X5H_CLOCK_ID_PCI60BG1>;
+			clock-names = "pci601", "pci611", "pci602", "pci612",
+					"pci60bg0", "pci60bg1";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PCI6>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_U266_PCIE6>,
+					 <&scmi_reset X5H_RESET_DOMAIN_ID_PCI601>,
+					 <&scmi_reset X5H_RESET_DOMAIN_ID_PCI602>,
+					 <&scmi_reset X5H_RESET_DOMAIN_ID_PCI611>,
+					 <&scmi_reset X5H_RESET_DOMAIN_ID_PCI612>;
+			reset-names = "perst", "rst01", "rst02", "rst11", "rst12";
+			max-link-speed = <6>;
+			num-lanes = <4>;
 			channel-id = <1>;
 			status = "disabled";
 		};
@@ -5404,23 +5418,35 @@
 			compatible = "renesas,rcar-gen5-pcie6-ep";
 			reg = <0 0xdb000000 0 0x100000>, <0 0xdb100000 0 0x200000>,
 			      <0 0xdb300000 0 0xD00000>, <0x0 0xde100000 0 0x1000>,
-			      <0 0xde080000 0 0x30000>, <0x2C0 0x10000000 0x0 0x40000000>;
+			      <0 0xde180000 0 0x30000>, <0x0 0xde000000 0 0x1000>,
+				  <0x2C0 0x10000000 0x0 0x40000000>;
 			reg-names = "dbi", "dbi2",
 				    "atu", "apb",
-				    "phy", "addr_space";
+				    "phy", "apb_shared",
+					"addr_space";
 			interrupts = <GIC_SPI 758 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 748 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 760 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 750 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 749 IRQ_TYPE_LEVEL_HIGH>;
 			interrupt-names = "msi", "dma", "uncor", "corr", "vendor";
-			clocks = <&pcie6_bus_clk>;
-			clock-names = "pcie6_bus";
-			max-link-speed = <2>;
-			num-lanes = <1>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_PCI601>,
+					 <&scmi_clk X5H_CLOCK_ID_PCI611>,
+					 <&scmi_clk X5H_CLOCK_ID_PCI602>,
+					 <&scmi_clk X5H_CLOCK_ID_PCI612>,
+					 <&scmi_clk X5H_CLOCK_ID_PCI60BG0>,
+					 <&scmi_clk X5H_CLOCK_ID_PCI60BG1>;
+			clock-names = "pci601", "pci611", "pci602", "pci612",
+					"pci60bg0", "pci60bg1";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_PCI6>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_PCI601>,
+					 <&scmi_reset X5H_RESET_DOMAIN_ID_PCI602>,
+					 <&scmi_reset X5H_RESET_DOMAIN_ID_PCI611>,
+					 <&scmi_reset X5H_RESET_DOMAIN_ID_PCI612>;
+			reset-names = "rst01", "rst02", "rst11", "rst12";
+			max-link-speed = <6>;
+			num-lanes = <4>;
 			channel-id = <1>;
-			num-ib-windows = <16>;
-			num-ob-windows = <16>;
 			status = "disabled";
 		};
 
