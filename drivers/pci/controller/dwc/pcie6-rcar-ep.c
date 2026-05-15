@@ -40,7 +40,7 @@ static void rcar_gen5_pcie6_ep_pre_init(struct dw_pcie6_ep *ep)
 	rcar_gen5_pcie6_set_device_type(rcar_pcie6, false);
 
 	/* 3..5 Channel aggregation */
-	rcar_gen5_pcie6_channel_aggregation(rcar_pcie6, pci->num_lanes);
+	rcar_gen5_pcie6_channel_aggregation(rcar_pcie6, pci->num_lanes, rcar_pcie6->ch);
 
 	/* DBI_RO_WR_EN */
 	dw_pcie6_dbi_ro_wr_en(pci);
@@ -66,9 +66,7 @@ static void rcar_gen5_pcie6_ep_pre_init(struct dw_pcie6_ep *ep)
 	val |= APP_CLK_PM_EN_REQ_N | APP_ENTR_L1_L23;
 	writel(val, rcar_pcie6->base + PCIEPWRMNGCTRL);
 
-	/* 10. Lane Setting */
-	rcar_gen5_pcie6_set_max_link_width(rcar_pcie6, pci->num_lanes);
-
+	/* 10. Lane setting would be handled by PCIe DWC */
 	/* 11. Error Status Enable */
 	val = readl(rcar_pcie6->base + PCIEERRSTS0EN);
 	val |= CFG_SYS_ERR_RC | CFG_SAFETY_UNCORR | CFG_SAFETY_CORR;
@@ -210,6 +208,9 @@ static const struct pci_epc_features pcie6_rcar_epc_get_features = {
 	.linkup_notifier = false,
 	.msi_capable = true,
 	.msix_capable = false,
+	.bar[BAR_1] = { .type = BAR_RESERVED, },
+	.bar[BAR_3] = { .type = BAR_RESERVED, },
+	.bar[BAR_5] = { .type = BAR_RESERVED, },
 	.align = SZ_1M,
 };
 
@@ -220,6 +221,7 @@ rcar_gen5_pcie6_ep_get_features(struct dw_pcie6_ep *ep)
 }
 
 static const struct dw_pcie6_ep_ops pcie6_rcar_ep_ops = {
+	.pre_init = rcar_gen5_pcie6_ep_pre_init,
 	.init = rcar_gen5_pcie6_ep_init,
 	.raise_irq = rcar_gen5_pcie6_ep_raise_irq,
 	.get_features = rcar_gen5_pcie6_ep_get_features,
@@ -269,11 +271,17 @@ static int pcie6_rcar_ep_probe(struct platform_device *pdev)
 		}
 	}
 
-	rcar_gen5_pcie6_ep_pre_init(&pci->ep);
-
 	ret = dw_pcie6_ep_init(&pci->ep);
 	if (ret)
 		dev_err(dev, "Failed to initialize endpoint\n");
+
+	ret = dw_pcie6_ep_init_registers(&pci->ep);
+	if (ret) {
+		dev_info(dev, "Failed to initialize DWC endpoint registers\n");
+		dw_pcie6_ep_deinit(&pci->ep);
+	}
+
+	pci_epc_init_notify(pci->ep.epc);
 
 	return 0;
 

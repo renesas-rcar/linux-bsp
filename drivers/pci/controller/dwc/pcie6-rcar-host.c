@@ -27,6 +27,9 @@ static int rcar_gen5_pcie6_host_init(struct dw_pcie6_rp *pp)
 	u32 val;
 	int ret;
 
+	if (reset_control_assert(rcar_pcie6->perst))
+		dev_err(pci->dev, "Failed to assert PERST#");
+
 	for (int i = 0; i < PCIE6_RCAR_NUM_RSTS; i++) {
 		ret = reset_control_deassert(rcar_pcie6->rsts[i].rstc);
 		if (ret) {
@@ -43,7 +46,7 @@ static int rcar_gen5_pcie6_host_init(struct dw_pcie6_rp *pp)
 	rcar_gen5_pcie6_set_device_type(rcar_pcie6, true);
 
 	/* 3..5 Channel aggregation */
-	rcar_gen5_pcie6_channel_aggregation(rcar_pcie6, pci->num_lanes);
+	rcar_gen5_pcie6_channel_aggregation(rcar_pcie6, pci->num_lanes, rcar_pcie6->ch);
 
 	/* DBI_RO_WR_EN */
 	dw_pcie6_dbi_ro_wr_en(pci);
@@ -75,8 +78,7 @@ static int rcar_gen5_pcie6_host_init(struct dw_pcie6_rp *pp)
 	val |= APP_CLK_PM_EN_REQ_N;
 	writel(val, rcar_pcie6->base + PCIEPWRMNGCTRL);
 
-	/* 10. Lane Setting */
-	rcar_gen5_pcie6_set_max_link_width(rcar_pcie6, pci->num_lanes);
+	/* 10. Lane setting would be handled by DWC */
 
 	/* 11. Error Status Enable */
 	val = readl(rcar_pcie6->base + PCIEERRSTS0EN);

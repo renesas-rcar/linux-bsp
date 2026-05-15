@@ -129,6 +129,7 @@
 
 #define PCIE6_RCAR_NUM_CLKS			6
 #define PCIE6_RCAR_NUM_RSTS			4
+#define MAX_LANES_CH1				4
 
 static const char * const rcar_pcie6_clk_ids[PCIE6_RCAR_NUM_CLKS] = {
 	"pci601", "pci611", "pci602", "pci612", "pci60bg0", "pci60bg1"
@@ -144,6 +145,7 @@ struct rcar_pcie6 {
 	void __iomem		*phy_base;
 	void __iomem		*phy_shared;
 	void __iomem		*dbi_shared;
+	void __iomem		*base_shared;
 	struct clk_bulk_data	clks[PCIE6_RCAR_NUM_CLKS];
 	u32			ch;
 	struct reset_control	*perst;
@@ -155,7 +157,7 @@ struct rcar_pcie6 {
 #define to_rcar_gen5_pcie6(x)	dev_get_drvdata((x)->dev)
 
 void rcar_gen5_pcie6_set_device_type(struct rcar_pcie6 *rcar_pcie6, bool rc);
-void rcar_gen5_pcie6_channel_aggregation(struct rcar_pcie6 *rcar_pcie6, int num_lanes);
+void rcar_gen5_pcie6_channel_aggregation(struct rcar_pcie6 *rcar_pcie6, int num_lanes, int channel);
 int rcar_gen5_pcie6_get_resources(struct rcar_pcie6 *rcar_pcie6, struct platform_device *pdev);
 int rcar_gen5_pcie6_get_link_speed(struct device_node *node);
 void rcar_gen5_pcie6_set_max_link_width(struct rcar_pcie6 *rcar_pcie6, int num_lanes);

@@ -25,7 +25,7 @@ static void rcar_gen5_pcie6_fwupdate(struct rcar_pcie6 *rcar_pcie6, int num_lane
 	void __iomem *sram_addr;
 
 	if (channel == 0) {
-		// Write ICCM firmware
+		/* Write ICCM firmware */
 		sram_addr = rcar_pcie6->phy_base + ICCM_OFFSET;
 		for (i = 0; i < rcar_pcie6->fw_iccm->size; i += 4) {
 			val = get_unaligned_le32(rcar_pcie6->fw_iccm->data + i);
@@ -33,7 +33,7 @@ static void rcar_gen5_pcie6_fwupdate(struct rcar_pcie6 *rcar_pcie6, int num_lane
 			sram_addr += 4;
 		}
 
-		// Write DCCM firmware
+		/* Write DCCM firmware */
 		sram_addr = rcar_pcie6->phy_base + DCCM_OFFSET;
 		for (i = 0; i < rcar_pcie6->fw_dccm->size; i += 4) {
 			val = get_unaligned_le32(rcar_pcie6->fw_dccm->data + i);
@@ -41,6 +41,7 @@ static void rcar_gen5_pcie6_fwupdate(struct rcar_pcie6 *rcar_pcie6, int num_lane
 			sram_addr += 4;
 		}
 
+		/* 8 lanes is only for ch0 */
 		if (num_lanes == 8) {
 			// Write ICCM firmware for 8 lanes
 			sram_addr = rcar_pcie6->phy_shared + ICCM_OFFSET;
@@ -50,13 +51,28 @@ static void rcar_gen5_pcie6_fwupdate(struct rcar_pcie6 *rcar_pcie6, int num_lane
 				sram_addr += 4;
 			}
 
-			// Write DCCM firmware for 8 lanes
+			/* Write DCCM firmware for 8 lanes */
 			sram_addr = rcar_pcie6->phy_shared + DCCM_OFFSET;
 			for (i = 0; i < rcar_pcie6->fw_dccm->size; i += 4) {
 				val = get_unaligned_le32(rcar_pcie6->fw_dccm->data + i);
 				writel(val, sram_addr);
 				sram_addr += 4;
 			}
+		}
+	} else {
+		/* Write ICCM firmware */
+		sram_addr = rcar_pcie6->phy_base + ICCM_OFFSET;
+		for (i = 0; i < rcar_pcie6->fw_iccm->size; i += 4) {
+			val = get_unaligned_le32(rcar_pcie6->fw_iccm->data + i);
+			writel(val, sram_addr);
+			sram_addr += 4;
+		}
+		/* Write DCCM firmware */
+		sram_addr = rcar_pcie6->phy_base + DCCM_OFFSET;
+		for (i = 0; i < rcar_pcie6->fw_dccm->size; i += 4) {
+			val = get_unaligned_le32(rcar_pcie6->fw_dccm->data + i);
+			writel(val, sram_addr);
+			sram_addr += 4;
 		}
 	}
 
@@ -352,14 +368,22 @@ void rcar_gen5_pcie6_bootload(struct rcar_pcie6 *rcar_pcie6, int num_lanes, u32 
 				channel);
 		}
 	} else {
-		val = readl(rcar_pcie6->base + PCIE6BOOTLC);
-		val |= GENMASK(17, 16);
-		writel(val, rcar_pcie6->base + PCIE6BOOTLC);
+		/* 13..16. Store Firmware to SRAM */
+		rcar_gen5_pcie6_fwupdate(rcar_pcie6, num_lanes, channel);
 
-		boot_done = false;
+		writel(0x00181FE6, rcar_pcie6->phy_base + 0x20174);
+		writel(0x00181FE6, rcar_pcie6->phy_base + 0x201B4);
+		writel(0x00181FE6, rcar_pcie6->phy_base + 0x201F4);
+		writel(0x00181FE6, rcar_pcie6->phy_base + 0x20234);
+
+		/* 17. Deassert PHY reset */
+		val = readl(rcar_pcie6->base_shared + PCI6RESETC);
+		val |= PIPE_LANE_RESET_4_7;
+		writel(val, rcar_pcie6->base_shared + PCI6RESETC);
+
 		for (int i = 0; i < 1000; i++) {
-			val = readl(rcar_pcie6->base + PCIE6BOOTLC);
-			if ((val & BIT(18)) == BIT(18)) {
+			val = readl(rcar_pcie6->base_shared + PCIE6BOOTLC);
+			if ((val & BIT(1)) == 0) {
 				boot_done = true;
 				break;
 			}
@@ -374,39 +398,41 @@ void rcar_gen5_pcie6_bootload(struct rcar_pcie6 *rcar_pcie6, int num_lanes, u32 
 				"BootLoader load complete on PCIe6_ch%d\n",
 				channel);
 
-		val = readl(rcar_pcie6->base + PCIE6BOOTLC);
-		val &= ~BIT(17);
-		writel(val, rcar_pcie6->base + PCIE6BOOTLC);
+		dw_pcie6_writel_dbi(pci, PCIEG6_PF0_PHY_CONTROL_OFF,
+					BIT(15) | GENMASK(13, 12) | BIT(6));
+		dw_pcie6_writel_dbi(pci, PCIEG6_PF0_GEN3_RELATED_OFF, BIT(9));
 
-		val = readl(rcar_pcie6->base + PCI6RESETC);
-		val |= GENMASK(7, 4);
-		writel(val, rcar_pcie6->base + PCI6RESETC);
+		/* 18. Execute CPU request cpu to run*/
+		val = readl(rcar_pcie6->base_shared + PCI6CPUCTLSTS);
+		val |= PHY1_CPU_RUN_REQ_INT;
+		writel(val, rcar_pcie6->base_shared + PCI6CPUCTLSTS);
 
-		val = readl(rcar_pcie6->base + PCI6CPUCTLSTS);
-		val |= BIT(18);
-		writel(val, rcar_pcie6->base + PCI6CPUCTLSTS);
-
-		boot_done = false;
-		for (int i = 0; i < 1000; i++) {
-			val = readl(rcar_pcie6->base + PCI6CPUCTLSTS);
-			if ((val & BIT(25)) == BIT(25)) {
-				boot_done = true;
-				break;
-			}
-		}
-
-		if (!boot_done)
+		ret = readl_poll_timeout(rcar_pcie6->base_shared + PCI6CPUCTLSTS,
+					val,
+					(val & PHY1_CPU_RUN_ACK_OUT) ==
+					PHY1_CPU_RUN_ACK_OUT,
+					1, 1000000);
+		if (ret)
 			dev_info(pci->dev,
 				"Timeout: CPU failed to start programmed sequence on PCIe6_ch%d\n",
-				 channel);
-		else
-			dev_info(pci->dev,
-				"CPU start programming sequence on PCIe6_ch%d\n",
 				channel);
 
-		val = readl(rcar_pcie6->base + PCI6CPUCTLSTS);
-		val &= ~BIT(18);
-		writel(val, rcar_pcie6->base + PCI6CPUCTLSTS);
+		val = readl(rcar_pcie6->base_shared + PCI6CPUCTLSTS);
+		val &= ~PHY1_CPU_RUN_REQ_INT;
+		writel(val, rcar_pcie6->base_shared + PCI6CPUCTLSTS);
+
+		ret = readl_poll_timeout(rcar_pcie6->base_shared + PCI6CPUCTLSTS,
+					val,
+					(val & PHY1_CPU_RUN_ACK_OUT) == 0x00,
+					1, 1000000);
+		if (ret) {
+			dev_info(pci->dev,
+				"Timeout: CPU failed to start programmed sequence on PCIe6_ch%d\n",
+				channel);
+
+		dev_info(pci->dev, "CPU start programming sequence on PCIe6_ch%d\n",
+			channel);
+		}
 	}
 }
 
@@ -571,6 +597,10 @@ void rcar_gen5_pcie6_refres_phy1(struct rcar_pcie6 *rcar_pcie6, int channel)
 		val = readl(rcar_pcie6->base + PCI6RESCODE1);
 		val &= ~PHY1_CM0_RESCAL_MODE_INT;
 		writel(val, rcar_pcie6->base + PCI6RESCODE1);
+	} else {
+		val = readl(rcar_pcie6->base_shared + PCI6RESCODE1);
+		val &= ~PHY1_CM0_RESCAL_MODE_INT;
+		writel(val, rcar_pcie6->base_shared + PCI6RESCODE1);
 	}
 }
 
@@ -586,6 +616,14 @@ void rcar_gen5_pcie6_refclk_phy1(struct rcar_pcie6 *rcar_pcie6, int channel)
 		writel(val, rcar_pcie6->base + PCI6PY0REFCLK);
 		val |= BIT(28);
 		writel(val, rcar_pcie6->base + PCI6PY0REFCLK);
+	} else {
+		val = readl(rcar_pcie6->base_shared + PCI6PY0REFCLK);
+		val &= ~PHY0_REF0_REPEAT_CLK_EN_INT;
+		writel(val, rcar_pcie6->base_shared + PCI6PY0REFCLK);
+		val &= ~PHY1_REF0_REPEAT_CLK_EN_INT;
+		writel(val, rcar_pcie6->base_shared + PCI6PY0REFCLK);
+		val |= BIT(28);
+		writel(val, rcar_pcie6->base_shared + PCI6PY0REFCLK);
 	}
 	/* clk_det_en for debug */
 	val = readl(rcar_pcie6->base + PCI6PY0REFCLK);
@@ -593,19 +631,29 @@ void rcar_gen5_pcie6_refclk_phy1(struct rcar_pcie6 *rcar_pcie6, int channel)
 	writel(val, rcar_pcie6->base + PCI6PY0REFCLK);
 }
 
-void rcar_gen5_pcie6_channel_aggregation(struct rcar_pcie6 *rcar_pcie6, int num_lanes)
+void rcar_gen5_pcie6_channel_aggregation(struct rcar_pcie6 *rcar_pcie6, int num_lanes, int channel)
 {
 	u32 val;
 
 	/* Set lane bifurcation */
 	if (num_lanes != 8) {
-		val = readl(rcar_pcie6->base + PCIEMSR0);
-		val |= BFRCTNST;
-		writel(val, rcar_pcie6->base + PCIEMSR0);
+		if (channel == 0) {
+			val = readl(rcar_pcie6->base + PCIEMSR0);
+			val |= BFRCTNST;
+			writel(val, rcar_pcie6->base + PCIEMSR0);
 
-		val = readl(rcar_pcie6->base + PCIE6BOOTLC);
-		val |= IB_SEL_OFFSET;
-		writel(val, rcar_pcie6->base + PCIE6BOOTLC);
+			val = readl(rcar_pcie6->base + PCIE6BOOTLC);
+			val |= IB_SEL_OFFSET;
+			writel(val, rcar_pcie6->base + PCIE6BOOTLC);
+		} else {
+			val = readl(rcar_pcie6->base_shared + PCIEMSR0);
+			val |= BFRCTNST;
+			writel(val, rcar_pcie6->base_shared + PCIEMSR0);
+
+			val = readl(rcar_pcie6->base_shared + PCIE6BOOTLC);
+			val |= IB_SEL_OFFSET;
+			writel(val, rcar_pcie6->base_shared + PCIE6BOOTLC);
+		}
 	}
 }
 
@@ -632,17 +680,24 @@ int rcar_gen5_pcie6_get_resources(struct rcar_pcie6 *rcar_pcie6,
 
 	pci->ops = &dw_pcie6_ops;
 
-	of_property_read_u32(np, "num-lanes", &pci->num_lanes);
+	ret = of_property_read_u32(np, "num-lanes", &pci->num_lanes);
+	if (ret) {
+		dev_err(&pdev->dev, "Missing num-lanes\n");
+		return ret;
+	}
+
+	ret = of_property_read_u32(np, "channel-id", &rcar_pcie6->ch);
+	if (ret) {
+		dev_err(&pdev->dev, "Missing channel-id\n");
+		return ret;
+	}
+
+	if (rcar_pcie6->ch == 1 && pci->num_lanes > MAX_LANES_CH1) {
+		dev_err(&pdev->dev, "PCIe6 ch%d only supports up to %d lanes (got %d)", rcar_pcie6->ch, MAX_LANES_CH1, pci->num_lanes);
+		return -EINVAL;
+	}
 
 	pci->max_link_speed = rcar_gen5_pcie6_get_link_speed(np);
-
-	if (of_property_read_u32(np, "channel-id", &rcar_pcie6->ch))
-		dev_err(&pdev->dev, "Missing channel-id\n");
-
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "dbi");
-	pci->dbi_base = devm_pci_remap_cfg_resource(&pdev->dev, res);
-	if (IS_ERR(pci->dbi_base))
-		return PTR_ERR(pci->dbi_base);
 
 	/* eDMA region can be mapped to a custom base address */
 	if (!pci->edma.reg_base) {
@@ -684,6 +739,12 @@ int rcar_gen5_pcie6_get_resources(struct rcar_pcie6 *rcar_pcie6,
 		rcar_pcie6->dbi_shared = devm_platform_ioremap_resource_byname(pdev, "dbi_shared");
 		if (IS_ERR(rcar_pcie6->dbi_shared))
 			return PTR_ERR(rcar_pcie6->dbi_shared);
+	}
+
+	if (rcar_pcie6->ch == 1) {
+		rcar_pcie6->base_shared = devm_platform_ioremap_resource_byname(pdev, "apb_shared");
+		if (IS_ERR(rcar_pcie6->base_shared))
+			return PTR_ERR(rcar_pcie6->base_shared);
 	}
 
 	for (int i = 0; i < PCIE6_RCAR_NUM_CLKS; i++)
