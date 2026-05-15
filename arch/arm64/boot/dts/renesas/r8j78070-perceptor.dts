@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+/*
+ * Device Tree Source for the Perceptor board
+ *
+ * Copyright (C) 2026 Renesas Electronics Corp.
+ */
+
+/dts-v1/;
+#include "r8j78070.dtsi"
+#include "r8a78000-ironhide-common.dtsi"
+
+/ {
+	model = "Renesas Perceptor board based on r8j78070";
+	compatible = "renesas,perceptor", "renesas,r8j78070",
+		     "renesas,r8a78000";
+};
