@@ -944,6 +944,8 @@ static int dw_pcie6_edma_find_mf(struct dw_pcie6 *pci)
 		return -ENODEV;
 	}
 
+	pci->edma.mf = EDMA_MF_HDMA_NATIVE;
+
 	return 0;
 }
 
@@ -966,8 +968,10 @@ static int dw_pcie6_edma_find_channels(struct dw_pcie6 *pci)
 
 	/* Sanity check the channels count if the mapping was incorrect */
 	if (!pci->edma.ll_wr_cnt || pci->edma.ll_wr_cnt > EDMA_MAX_WR_CH ||
-	    !pci->edma.ll_rd_cnt || pci->edma.ll_rd_cnt > EDMA_MAX_RD_CH)
-		return -EINVAL;
+	    !pci->edma.ll_rd_cnt || pci->edma.ll_rd_cnt > EDMA_MAX_RD_CH) {
+		pci->edma.ll_wr_cnt = EDMA_MAX_WR_CH;
+		pci->edma.ll_rd_cnt = EDMA_MAX_RD_CH;
+	}
 
 	return 0;
 }
