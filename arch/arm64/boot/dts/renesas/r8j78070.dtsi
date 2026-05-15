@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+/*
+ * Device Tree Source for the R-Car X5HAIH (R8J78070) MDP
+ *
+ * Copyright (C) 2026 Renesas Electronics Corp.
+ */
+
+/* This MDP consists of R-Car X5H and 2x AI accelerators */
+
+#include "r8a78000.dtsi"
+
+/ {
+	compatible = "renesas,r8j78070", "renesas,r8a78000";
+};
