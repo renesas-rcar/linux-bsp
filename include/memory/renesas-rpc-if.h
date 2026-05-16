@@ -59,7 +59,13 @@ struct rpcif_op {
 
 enum rpcif_type {
 	RPCIF_RCAR_GEN3,
+	RPCIF_RCAR_GEN4,
 	RPCIF_RZ_G2L,
+};
+
+struct rpcif_info {
+	enum rpcif_type type;
+	u8 strtim;
 };
 
 struct rpcif {
