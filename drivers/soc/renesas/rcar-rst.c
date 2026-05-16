@@ -12,6 +12,7 @@
 
 #define WDTRSTCR_RESET		0xA55A0002
 #define WDTRSTCR		0x0054
+#define GEN4_WDTRSTCR          0x0010
 
 #define CR7BAR			0x0070
 #define CR7BAREN		BIT(4)
@@ -26,6 +27,12 @@ static int rcar_rst_enable_wdt_reset(void __iomem *base)
 	iowrite32(WDTRSTCR_RESET, base + WDTRSTCR);
 	return 0;
 }
+
+static int rcar_rst_gen4_enable_wdt_reset(void __iomem *base)
+{
+	iowrite32(WDTRSTCR_RESET, base + GEN4_WDTRSTCR);
+	return 0;
+};
 
 /*
  * Most of the R-Car Gen3 SoCs have an ARM Realtime Core.
@@ -68,6 +75,7 @@ static const struct rst_config rcar_rst_gen3 __initconst = {
 
 static const struct rst_config rcar_rst_gen4 __initconst = {
 	.modemr = 0x00,		/* MODEMR0 and it has CPG related bits */
+	.configure = rcar_rst_gen4_enable_wdt_reset,
 };
 
 static const struct of_device_id rcar_rst_matches[] __initconst = {

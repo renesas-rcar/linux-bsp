@@ -2,7 +2,7 @@
 /*
  * Renesas R-Car AVS Support
  *
- *  Copyright (C) 2021 Renesas Electronics Corporation
+ *  Copyright (C) 2022 Renesas Electronics Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,14 +71,12 @@ static int change_default_opp_pattern(struct device_node *avs_node,
 #define AVS_MAX_VALUE	7
 
 static const struct of_device_id rcar_avs_matches[] = {
-#if defined(CONFIG_ARCH_R8A77951) || \
-	defined(CONFIG_ARCH_R8A77960) || \
-	defined(CONFIG_ARCH_R8A77961)
 	{ .compatible = "renesas,rcar-gen3-avs" },
+	{ .compatible = "renesas,rcar-gen4-avs" },
 	{ .compatible = "renesas,r8a77951-avs" },
 	{ .compatible = "renesas,r8a77960-avs" },
 	{ .compatible = "renesas,r8a77961-avs" },
-#endif
+	{ .compatible = "renesas,r8a779g0-avs" },
 	{ /* sentinel */ }
 };
 

@@ -408,6 +408,10 @@ const struct soc_device_attribute rcar_sysc_quirks_match[] __initconst = {
 			| BIT(R8A7796_PD_3DG_B)),
 	},
 	{
+		.soc_id = "r8a77980",
+		.data = (void *)(BIT(R8A77980_PD_CR7)),
+	},
+	{
 		.soc_id = "r8a77961", .revision = "ES3.0",
 		.data = (void *)(BIT(R8A7796_PD_A3VC) | BIT(R8A7796_PD_A2VC1)),
 	},
