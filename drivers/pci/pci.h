@@ -166,8 +166,10 @@ extern unsigned int pci_pm_d3hot_delay;
 
 #ifdef CONFIG_PCI_MSI
 void pci_no_msi(void);
+void pci_has_msi(void);
 #else
 static inline void pci_no_msi(void) { }
+static inline void pci_has_msi(void) { }
 #endif
 
 void pci_realloc_get_opt(char *);
