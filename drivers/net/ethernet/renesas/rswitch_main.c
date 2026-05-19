@@ -2242,6 +2242,30 @@ err_ts_queue_alloc:
 	return err;
 }
 
+static void rswitch_deinit(struct rswitch_private *priv)
+{
+	unsigned int i;
+
+	rswitch_gwca_hw_deinit(priv);
+	rcar_gen4_ptp_unregister(priv->ptp_priv);
+
+	rswitch_for_each_enabled_port(priv, i) {
+		struct rswitch_device *rdev = priv->rdev[i];
+
+		unregister_netdev(rdev->ndev);
+		rswitch_ether_port_deinit_one(rdev);
+		phy_exit(priv->rdev[i]->serdes);
+	}
+
+	for (i = 0; i < RSWITCH_NUM_PORTS; i++)
+		rswitch_device_free(priv, i);
+
+	rswitch_gwca_ts_queue_free(priv);
+	rswitch_gwca_linkfix_free(priv);
+
+	rswitch_clock_disable(priv);
+}
+
 static const struct soc_device_attribute rswitch_soc_no_speed_change[]  = {
 	{ .soc_id = "r8a779f0", .revision = "ES1.0" },
 	{ /* Sentinel */ }
@@ -2319,9 +2343,13 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	if (list_empty(&priv->port_list))
 		dev_warn(&pdev->dev, "could not initialize any ports\n");
 
-	ret = rswitch_register_notifiers();
+	ret = rswitch_register_notifiers(priv);
 	if (ret) {
+		rswitch_deinit(priv);
+		pm_runtime_put(&pdev->dev);
+		pm_runtime_disable(&pdev->dev);
 		dev_err(&pdev->dev, "could not register notifiers\n");
+
 		return ret;
 	}
 
@@ -2330,35 +2358,11 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	return ret;
 }
 
-static void rswitch_deinit(struct rswitch_private *priv)
-{
-	unsigned int i;
-
-	rswitch_gwca_hw_deinit(priv);
-	rcar_gen4_ptp_unregister(priv->ptp_priv);
-
-	rswitch_for_each_enabled_port(priv, i) {
-		struct rswitch_device *rdev = priv->rdev[i];
-
-		unregister_netdev(rdev->ndev);
-		rswitch_ether_port_deinit_one(rdev);
-		phy_exit(priv->rdev[i]->serdes);
-	}
-
-	for (i = 0; i < RSWITCH_NUM_PORTS; i++)
-		rswitch_device_free(priv, i);
-
-	rswitch_gwca_ts_queue_free(priv);
-	rswitch_gwca_linkfix_free(priv);
-
-	rswitch_clock_disable(priv);
-}
-
 static void renesas_eth_sw_remove(struct platform_device *pdev)
 {
 	struct rswitch_private *priv = platform_get_drvdata(pdev);
 
-	rswitch_unregister_notifiers();
+	rswitch_unregister_notifiers(priv);
 	rswitch_deinit(priv);
 
 	pm_runtime_put(&pdev->dev);
