@@ -448,10 +448,6 @@ enum rswitch3_reg {
 #define RSW3_MACHMA			BIT(27)
 #define RSW3_VLANSA			BIT(28)
 
-/* bit field definitions for FWPC1 */
-#define RSW3_DDSL			BIT(1)
-#define RSW3_DDE			BIT(0)
-
 /* bit field definitions for FWPC2 */
 
 /* bit field definitions for FWPC3 */

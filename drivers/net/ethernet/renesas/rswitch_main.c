@@ -30,8 +30,6 @@
 #include "rswitch.h"
 #include "rswitch_l2.h"
 
-#define RSWITCH_GPTP_OFFSET_S4 0x00018000
-
 int rswitch_reg_wait(void __iomem *addr, u32 offs, u32 mask, u32 expected)
 {
 	u32 val;
@@ -40,7 +38,7 @@ int rswitch_reg_wait(void __iomem *addr, u32 offs, u32 mask, u32 expected)
 					 1, RSWITCH_TIMEOUT_US);
 }
 
-void rswitch_modify(void __iomem *addr, enum rswitch_reg reg, u32 clear, u32 set)
+void rswitch_modify(void __iomem *addr, u32 reg, u32 clear, u32 set)
 {
 	iowrite32((ioread32(addr + reg) & ~clear) | set, addr + reg);
 }
@@ -48,18 +46,18 @@ void rswitch_modify(void __iomem *addr, enum rswitch_reg reg, u32 clear, u32 set
 /* Common Agent block (COMA) */
 static void rswitch_reset(struct rswitch_private *priv)
 {
-	iowrite32(RR, priv->addr + RRC);
-	iowrite32(!RR, priv->addr + RRC);
+	iowrite32(RR, priv->addr_coma + RRC);
+	iowrite32(!RR, priv->addr_coma + RRC);
 }
 
 static void rswitch_clock_enable(struct rswitch_private *priv)
 {
-	iowrite32(RCEC_ACE_DEFAULT | RCE, priv->addr + RCEC);
+	iowrite32(RCEC_ACE_DEFAULT | RCE, priv->addr_coma + RCEC);
 }
 
 static void rswitch_clock_disable(struct rswitch_private *priv)
 {
-	iowrite32(RCD, priv->addr + RCDC);
+	iowrite32(RCD, priv->addr_coma + RCDC);
 }
 
 static bool rswitch_agent_clock_is_enabled(void __iomem *coma_addr,
@@ -87,95 +85,251 @@ static void rswitch_agent_clock_ctrl(void __iomem *coma_addr, unsigned int port,
 	}
 }
 
-static int rswitch_bpool_config(struct rswitch_private *priv)
+static int rswitch2_bpool_config(struct rswitch_private *priv)
 {
 	u32 val;
 
-	val = ioread32(priv->addr + CABPIRM);
+	val = ioread32(priv->addr_coma + CABPIRM);
 	if (val & BPR)
 		return 0;
 
-	iowrite32(BPIOG, priv->addr + CABPIRM);
+	iowrite32(BPIOG, priv->addr_coma + CABPIRM);
 
-	return rswitch_reg_wait(priv->addr, CABPIRM, BPR, BPR);
+	return rswitch_reg_wait(priv->addr_coma, CABPIRM, BPR, BPR);
+}
+
+static int rswitch3_bpool_config(struct rswitch_private *priv)
+{
+	u32 val;
+
+	val = ioread32(priv->addr_coma + CABPIRM_RSW3);
+	if (val & BPR)
+		return 0;
+
+	iowrite32(BPIOG, priv->addr_coma + CABPIRM_RSW3);
+
+	return rswitch_reg_wait(priv->addr_coma, CABPIRM_RSW3, BPR, BPR);
 }
 
 static void rswitch_coma_init(struct rswitch_private *priv)
 {
-	iowrite32(CABPPFLC_INIT_VALUE, priv->addr + CABPPFLC0);
+	iowrite32(CABPPFLC_INIT_VALUE, priv->addr_coma + CABPPFLC0);
 }
 
-/* R-Switch-2 block (TOP) */
 static void rswitch_top_init(struct rswitch_private *priv)
 {
 	unsigned int i;
 
-	for (i = 0; i < RSWITCH_MAX_NUM_QUEUES; i++)
-		iowrite32((i / 16) << (GWCA_INDEX * 8), priv->addr + TPEMIMC7(i));
+	for (i = 0; i < RSWITCH_MAX_NUM_QUEUES; i++) {
+		if (priv->info->rswitch_version == RSW20)
+			iowrite32((i / 16) << (GWCA_INDEX * 8), priv->addr_mfab + TPEMIMC7(i));
+		else
+			iowrite32((i / 16) << (GWCA_INDEX * 4), priv->addr_mfab + RSW3_TPDEMIMC(i));
+	}
 }
 
 /* Forwarding engine block (MFWD) */
-static int rswitch_fwd_init(struct rswitch_private *priv)
+static int rswitch2_fwd_init(struct rswitch_private *priv)
 {
-	u32 all_ports_mask = GENMASK(RSWITCH_NUM_AGENTS - 1, 0);
-	unsigned int i;
-	u32 reg_val;
-	int ret;
+	u8 num_agents = priv->info->rswitch_num_agents;
+	u32 all_ports_val = GENMASK(num_agents - 1, 0);
+	u32 reg_val, ret, i;
 
 	/* Start with empty configuration */
-	for (i = 0; i < RSWITCH_NUM_AGENTS; i++) {
+	for (i = 0; i < num_agents; i++) {
 		/* Disable all port features */
-		iowrite32(0, priv->addr + FWPC0(i));
+		iowrite32(0, priv->addr_mfwd + FWPC0(i));
 		/* Disallow L3 forwarding and direct descriptor forwarding */
-		iowrite32(FIELD_PREP(LTHFM, all_ports_mask),
-			  priv->addr + FWPC1(i));
+		iowrite32(field_prep(LTHFM(num_agents), all_ports_val),
+			  priv->addr_mfwd + FWPC1(i));
 		/* Disallow L2 forwarding */
-		iowrite32(FIELD_PREP(LTWFM, all_ports_mask),
-			  priv->addr + FWPC2(i));
+		iowrite32(field_prep(LTWFM(num_agents), all_ports_val),
+			  priv->addr_mfwd + FWPC2(i));
 		/* Disallow port based forwarding */
-		iowrite32(0, priv->addr + FWPBFC(i));
+		iowrite32(0, priv->addr_mfwd + FWPBFC(i));
 	}
 
 	/* Configure MAC table aging */
-	rswitch_modify(priv->addr, FWMACAGUSPC, MACAGUSP,
+	rswitch_modify(priv->addr_mfwd, FWMACAGUSPC, MACAGUSP,
 		       FIELD_PREP(MACAGUSP, RSW_AGEING_CLK_PER_US));
 
 	reg_val = FIELD_PREP(MACAGT, RSW_AGEING_TIME);
 	reg_val |= MACAGE | MACAGSL;
-	iowrite32(reg_val, priv->addr + FWMACAGC);
+	iowrite32(reg_val, priv->addr_mfwd + FWMACAGC);
 
 	/* For enabled ETHA ports, setup port based forwarding */
 	rswitch_for_each_enabled_port(priv, i) {
 		/* Port based forwarding from port i to GWCA port */
-		rswitch_modify(priv->addr, FWPBFC(i), PBDV,
-			       FIELD_PREP(PBDV, BIT(priv->gwca.index)));
+		rswitch_modify(priv->addr_mfwd, FWPBFC(i), PBDV(num_agents),
+			       field_prep(PBDV(num_agents), BIT(priv->gwca.agent_index)));
 		/* Within GWCA port, forward to Rx queue for port i */
 		iowrite32(priv->rdev[i]->rx_queue->index,
-			  priv->addr + FWPBFCSDC(GWCA_INDEX, i));
+			  priv->addr_mfwd + FWPBFCSDC(GWCA_INDEX, i));
 	}
 
 	/* For GWCA port, allow direct descriptor forwarding */
-	rswitch_modify(priv->addr, FWPC1(priv->gwca.index), 0, DDE);
+	rswitch_modify(priv->addr_mfwd, FWPC1(priv->gwca.agent_index), 0, DDE);
 
 	/* Initialize hardware L2 forwarding table */
 
 	/* Allow entire table to be used for "un-secure" entries */
-	rswitch_modify(priv->addr, FWMACHEC, 0, MACHMUE);
+	rswitch_modify(priv->addr_mfwd, FWMACHEC, 0, MACHMUE);
 
 	/* Initialize MAC hash table */
-	iowrite32(MACTIOG, priv->addr + FWMACTIM);
+	iowrite32(MACTIOG, priv->addr_mfwd + FWMACTIM);
 
-	ret = rswitch_reg_wait(priv->addr, FWMACTIM, MACTIOG, 0);
+	ret = rswitch_reg_wait(priv->addr_mfwd, FWMACTIM, MACTIOG, 0);
 	if (ret)
 		return ret;
 
 	/* Allow entire VLAN table to be used for "un-secure" entries */
-	iowrite32(VLANTMUE, priv->addr + FWVLANTEC);
+	iowrite32(VLANTMUE, priv->addr_mfwd + FWVLANTEC);
 
 	/* Initialize VLAN table */
-	iowrite32(VLANTIOG, priv->addr + FWVLANTIM);
+	iowrite32(VLANTIOG, priv->addr_mfwd + FWVLANTIM);
 
-	return rswitch_reg_wait(priv->addr, FWVLANTIM, VLANTIOG, 0);
+	return rswitch_reg_wait(priv->addr_mfwd, FWVLANTIM, VLANTIOG, 0);
+}
+
+static int rswitch3_fwd_init(struct rswitch_private *priv)
+{
+	u8 num_agents = priv->info->rswitch_num_agents;
+	u32 all_ports_val = GENMASK(num_agents - 1, 0);
+	u32 reg_val;
+	unsigned int i;
+	int ret;
+
+	/* Start with empty configuration */
+	for (i = 0; i < priv->info->rswitch_num_agents; i++) {
+		/* Disable all port features */
+		iowrite32(0, priv->addr_mfwd + RSW3_FWPC0(i));
+		/* Disallow L3 forwarding and direct descriptor forwarding */
+		iowrite32(field_prep(LTHFM(num_agents), all_ports_val),
+			  priv->addr_mfwd + RSW3_FWPC1(i));
+		/* Disallow L2 forwarding */
+		iowrite32(field_prep(LTWFM(num_agents), all_ports_val),
+			  priv->addr_mfwd + RSW3_FWPC2(i));
+		/* Disable L3 forwarding mask all port */
+		iowrite32(0, priv->addr_mfwd + RSW3_FWPC3(i));
+		/* Disallow port based forwarding */
+		iowrite32(0, priv->addr_mfwd + RSW3_FWPBFC0(i));
+		iowrite32(0, priv->addr_mfwd + RSW3_FWPBFC1(i));
+	}
+
+	//	iowrite32(RSW3_FWSCR22_L2SCRSL + all_ports_val, priv->addr_mfwd + RSW3_FWSCR22);
+	iowrite32(0xffffffff, priv->addr_mfwd + RSW3_FWSCR27);
+	iowrite32(0xffffffff, priv->addr_mfwd + RSW3_FWSCR28);
+	iowrite32(0xffffffff, priv->addr_mfwd + RSW3_FWSCR29);
+	iowrite32(0xffffffff, priv->addr_mfwd + RSW3_FWSCR30);
+	iowrite32(0xffffffff, priv->addr_mfwd + RSW3_FWSCR31);
+	iowrite32(0xffffffff, priv->addr_mfwd + RSW3_FWSCR32);
+	iowrite32(0xffffffff, priv->addr_mfwd + RSW3_FWSCR33);
+	iowrite32(0xffffffff, priv->addr_mfwd + RSW3_FWSCR34);
+
+	/* Start MAC table init */
+	/* Set all possible MAC table entries to insecure */
+	iowrite32(0x7ff, priv->addr_mfwd + RSW3_FWMACTEC0);
+
+	/* reserve some of the MAC table for HW learning */
+	rswitch_modify(priv->addr_mfwd, RSW3_FWMACHWLC0, 0,
+		       FIELD_PREP(RSW3_MACTHWLEA, 0x3f) |
+		       FIELD_PREP(RSW3_MACTHWLSA, 0));
+
+	/* MAC table reset flow */
+	iowrite32(MACTIOG, priv->addr_mfwd + RSW3_FWMACTIM);
+	ret = rswitch_reg_wait(priv->addr_mfwd, RSW3_FWMACTIM, MACTIOG, 0);
+
+	// MAC table entry flow
+	iowrite32(0x01, priv->addr_mfwd + RSW3_FWMACTL0);
+	iowrite32(0x00, priv->addr_mfwd + RSW3_FWMACTL1);
+	iowrite32(0x00, priv->addr_mfwd + RSW3_FWMACTL2);
+	iowrite32(0x00, priv->addr_mfwd + RSW3_FWMACTL3);
+
+	reg_val = FIELD_PREP(RSW3_MACDSLVL, ((1 << num_agents) - 1));
+	reg_val |= FIELD_PREP(RSW3_MACSSLVL, ((1 << num_agents) - 1));
+	iowrite32(reg_val, priv->addr_mfwd + RSW3_FWMACTL4);
+
+	const u8 *macaddr = priv->rdev[0]->ndev->dev_addr;
+
+	reg_val = ((macaddr[0] & 0xff) << 8) | macaddr[1];
+	iowrite32(reg_val, priv->addr_mfwd + RSW3_FWMACTL5);
+
+	reg_val = ((macaddr[2] & 0xff) << 24) | ((macaddr[3] & 0xff) << 16);
+	reg_val |= ((macaddr[4] & 0xff) << 8) | macaddr[5];
+	iowrite32(reg_val, priv->addr_mfwd + RSW3_FWMACTL6);
+
+	i = 0; // FIXME: temporary solution
+
+	reg_val = FIELD_PREP(RSW3_MACCSDL, priv->rdev[i]->rx_queue->index);   // i = ?
+	iowrite32(reg_val, priv->addr_mfwd + RSW3_FWMACTL7(GWCA_INDEX));
+
+	reg_val = FIELD_PREP(RSW3_MACDVL, (1 << num_agents));
+	iowrite32(reg_val, priv->addr_mfwd + RSW3_FWMACTL8);
+
+	ret = rswitch_reg_wait(priv->addr_mfwd, RSW3_FWMACTLR, 0, 0);
+	if (ret)
+		netdev_info(priv->rdev[i]->ndev, "MAC table learning timed out\n");
+
+	/* For GWCA port, allow direct descriptor forwarding */
+	rswitch_modify(priv->addr_mfwd, RSW3_FWPC1(priv->gwca.agent_index), 0, DDE);
+
+	// enable L2 stream
+	reg_val = LTHTA | IP4UE | IP4TE | L2SE;
+	rswitch_for_each_enabled_port(priv, i) {
+		iowrite32(reg_val, priv->addr_mfwd + RSW3_FWPC0(i));
+	}
+
+	/* Configure MAC table aging */
+	rswitch_modify(priv->addr_mfwd, RSW3_FWMACAGUSPC, RSW3_MACAGUSP,
+		       field_prep(RSW3_MACAGUSP, 0x140));
+
+	reg_val = field_prep(RSW3_MACAGT, RSW_AGEING_TIME);
+	reg_val |= RSW3_MACAGE | RSW3_MACAGSL;
+	iowrite32(reg_val, priv->addr_mfwd + RSW3_FWMACAGC);
+
+	/* For enabled ETHA ports, setup port based forwarding */
+	rswitch_for_each_enabled_port(priv, i) {
+		/* Within GWCA port, forward to Rx queue for port i */
+		iowrite32(priv->rdev[i]->rx_queue->index,
+			  priv->addr_mfwd + RSW3_FWPBFCSDC(GWCA_INDEX, i));
+
+		/* Port based forwarding from port i to GWCA port */
+		rswitch_modify(priv->addr_mfwd, RSW3_FWPBFC0(i), PBDV(num_agents),
+			       field_prep(PBDV(num_agents), BIT(priv->gwca.agent_index)));
+	}
+
+	/* L3 forwarding/filtering/routing L3/L2 stream hash ID functions */
+	iowrite32(0, priv->addr_mfwd + RSW3_FWIP4SC);
+
+	/* L3/L2 stream filter insecure entry number */
+	iowrite32(0x3ff, priv->addr_mfwd + RSW3_FWLTHTEC1);
+
+	/* Init L3 table */
+	iowrite32(RSW3_LTHTIOG, priv->addr_mfwd + RSW3_FWLTHTIM);
+
+	/* Wait for completion */
+	ret = rswitch_reg_wait(priv->addr_mfwd, RSW3_FWLTHTIM, LTHTR, LTHTR);
+	if (ret)
+		return ret;
+
+	/* Allow access to frame update rules from "un-secure" APB */
+	iowrite32(0xffffffff, priv->addr_mfwd + RSW3_FWSCR34);
+	iowrite32(0xffffffff, priv->addr_mfwd + RSW3_FWSCR33);
+	iowrite32(0xffffffff, priv->addr_mfwd + RSW3_FWSCR32);
+	iowrite32(0xffffffff, priv->addr_mfwd + RSW3_FWSCR31);
+	iowrite32(0xffffffff, priv->addr_mfwd + RSW3_FWSCR30);
+	iowrite32(0xffffffff, priv->addr_mfwd + RSW3_FWSCR29);
+	iowrite32(0xffffffff, priv->addr_mfwd + RSW3_FWSCR28);
+	iowrite32(0xffffffff, priv->addr_mfwd + RSW3_FWSCR27);
+
+	/* Initialize frame update rules table */
+	iowrite32(RSW3_L23UTIOG, priv->addr_mfwd + RSW3_FWL23UTIM);
+	ret = rswitch_reg_wait(priv->addr_mfwd, RSW3_FWL23UTIM, RSW3_L23UTR, RSW3_L23UTR);
+
+	/* TODO: add chrdev for fwd */
+	/* TODO: add proc for fwd */
+
+	return ret;
 }
 
 /* Gateway CPU agent block (GWCA) */
@@ -184,43 +338,43 @@ int rswitch_gwca_change_mode(struct rswitch_private *priv,
 {
 	int ret;
 
-	if (!rswitch_agent_clock_is_enabled(priv->addr, priv->gwca.index)) {
+	if (!rswitch_agent_clock_is_enabled(priv->addr_gwca, priv->gwca.agent_index)) {
 		spin_lock(&priv->agent_lock);
-		rswitch_agent_clock_ctrl(priv->addr, priv->gwca.index, 1);
+		rswitch_agent_clock_ctrl(priv->addr_gwca, priv->gwca.agent_index, 1);
 		spin_unlock(&priv->agent_lock);
 	}
 
-	iowrite32(OPC_DISABLE, priv->addr + GWMC);
+	iowrite32(OPC_DISABLE, priv->addr_gwca + GWMC);
 
-	ret = rswitch_reg_wait(priv->addr, GWMS, OPC, OPC_DISABLE);
+	ret = rswitch_reg_wait(priv->addr_gwca, GWMS, OPC, OPC_DISABLE);
 	if (ret < 0)
 		return ret;
 
 	if (mode == OPC_DISABLE) {
 		spin_lock(&priv->agent_lock);
-		rswitch_agent_clock_ctrl(priv->addr, priv->gwca.index, 0);
+		rswitch_agent_clock_ctrl(priv->addr_gwca, priv->gwca.agent_index, 0);
 		spin_unlock(&priv->agent_lock);
 
 		return ret;
 	}
 
-	iowrite32(mode, priv->addr + GWMC);
+	iowrite32(mode, priv->addr_gwca + GWMC);
 
-	return rswitch_reg_wait(priv->addr, GWMS, OPC, mode);
+	return rswitch_reg_wait(priv->addr_gwca, GWMS, OPC, mode);
 }
 
 static int rswitch_gwca_mcast_table_reset(struct rswitch_private *priv)
 {
-	iowrite32(MTIOG, priv->addr + GWMTIRM);
+	iowrite32(MTIOG, priv->addr_gwca + GWMTIRM);
 
-	return rswitch_reg_wait(priv->addr, GWMTIRM, MTR, MTR);
+	return rswitch_reg_wait(priv->addr_gwca, GWMTIRM, MTR, MTR);
 }
 
 static int rswitch_gwca_axi_ram_reset(struct rswitch_private *priv)
 {
-	iowrite32(ARIOG, priv->addr + GWARIRM);
+	iowrite32(ARIOG, priv->addr_gwca + GWARIRM);
 
-	return rswitch_reg_wait(priv->addr, GWARIRM, ARR, ARR);
+	return rswitch_reg_wait(priv->addr_gwca, GWARIRM, ARR, ARR);
 }
 
 static bool rswitch_is_any_data_irq(struct rswitch_private *priv, u32 *dis, bool tx)
@@ -241,8 +395,8 @@ static void rswitch_get_data_irq_status(struct rswitch_private *priv, u32 *dis)
 	unsigned int i;
 
 	for (i = 0; i < RSWITCH_NUM_IRQ_REGS; i++) {
-		dis[i] = ioread32(priv->addr + GWDIS(i));
-		dis[i] &= ioread32(priv->addr + GWDIE(i));
+		dis[i] = ioread32(priv->addr_gwca + GWDIS(i));
+		dis[i] &= ioread32(priv->addr_gwca + GWDIE(i));
 	}
 }
 
@@ -251,7 +405,7 @@ static void rswitch_enadis_data_irq(struct rswitch_private *priv,
 {
 	u32 offs = enable ? GWDIE(index / 32) : GWDID(index / 32);
 
-	iowrite32(BIT(index % 32), priv->addr + offs);
+	iowrite32(BIT(index % 32), priv->addr_gwca + offs);
 }
 
 static void rswitch_ack_data_irq(struct rswitch_private *priv,
@@ -259,7 +413,7 @@ static void rswitch_ack_data_irq(struct rswitch_private *priv,
 {
 	u32 offs = GWDIS(index / 32);
 
-	iowrite32(BIT(index % 32), priv->addr + offs);
+	iowrite32(BIT(index % 32), priv->addr_gwca + offs);
 }
 
 static unsigned int rswitch_next_queue_index(struct rswitch_gwca_queue *gq,
@@ -458,7 +612,7 @@ static int rswitch_gwca_queue_format(struct net_device *ndev,
 	rswitch_desc_set_dptr(linkfix, gq->ring_dma);
 
 	iowrite32(BALR | (gq->dir_tx ? DCP(GWCA_IPV_NUM) | DQT : 0) | EDE,
-		  priv->addr + GWDCC(gq->index));
+		  priv->addr_gwca + GWDCC(gq->index));
 
 	return 0;
 
@@ -559,7 +713,7 @@ static int rswitch_gwca_queue_ext_ts_format(struct device *dev,
 	rswitch_desc_set_dptr(linkfix, gq->ring_dma);
 
 	iowrite32(BALR | (gq->dir_tx ? DCP(GWCA_IPV_NUM) | DQT : 0) | ETS | EDE,
-		  priv->addr + GWDCC(gq->index));
+		  priv->addr_gwca + GWDCC(gq->index));
 
 	return 0;
 }
@@ -596,7 +750,7 @@ static int rswitch_gwca_ts_queue_alloc(struct rswitch_private *priv)
 	struct rswitch_gwca_queue *gq = &priv->gwca.ts_queue;
 	struct rswitch_ts_desc *desc;
 
-	gq->ring_size = TS_RING_SIZE;
+	gq->ring_size = TS_RING_SIZE(priv);
 	gq->ts_ring = dma_alloc_coherent(&priv->pdev->dev,
 					 sizeof(struct rswitch_ts_desc) *
 					 (gq->ring_size + 1), &gq->ring_dma, GFP_KERNEL);
@@ -604,7 +758,7 @@ static int rswitch_gwca_ts_queue_alloc(struct rswitch_private *priv)
 	if (!gq->ts_ring)
 		return -ENOMEM;
 
-	rswitch_gwca_ts_queue_fill(priv, 0, TS_RING_SIZE);
+	rswitch_gwca_ts_queue_fill(priv, 0, TS_RING_SIZE(priv));
 	desc = &gq->ts_ring[gq->ring_size];
 	desc->desc.die_dt = DT_LINKFIX;
 	rswitch_desc_set_dptr(&desc->desc, gq->ring_dma);
@@ -751,23 +905,23 @@ static int rswitch_gwca_hw_init(struct rswitch_private *priv)
 	if (err < 0)
 		return err;
 
-	iowrite32(0, priv->addr + GWVCC);
-	iowrite32(0, priv->addr + GWIRC);
-	iowrite32(FIELD_PREP(DQD, DES_RAM_DP), priv->addr + GWRDQDC0);
+	iowrite32(0, priv->addr_gwca + GWVCC);
+	iowrite32(0, priv->addr_gwca + GWIRC);
+	iowrite32(FIELD_PREP(DQD, DES_RAM_DP), priv->addr_gwca + GWRDQDC0);
 	/* Drop frames with unknown tags */
-	iowrite32(UT, priv->addr + GWTTFC);
+	iowrite32(UT, priv->addr_gwca + GWTTFC);
 
-	iowrite32(lower_32_bits(priv->gwca.linkfix_table_dma), priv->addr + GWDCBAC1);
-	iowrite32(upper_32_bits(priv->gwca.linkfix_table_dma), priv->addr + GWDCBAC0);
-	iowrite32(lower_32_bits(priv->gwca.ts_queue.ring_dma), priv->addr + GWTDCAC10);
-	iowrite32(upper_32_bits(priv->gwca.ts_queue.ring_dma), priv->addr + GWTDCAC00);
+	iowrite32(lower_32_bits(priv->gwca.linkfix_table_dma), priv->addr_gwca + GWDCBAC1);
+	iowrite32(upper_32_bits(priv->gwca.linkfix_table_dma), priv->addr_gwca + GWDCBAC0);
+	iowrite32(lower_32_bits(priv->gwca.ts_queue.ring_dma), priv->addr_gwca + GWTDCAC10);
+	iowrite32(upper_32_bits(priv->gwca.ts_queue.ring_dma), priv->addr_gwca + GWTDCAC00);
 	iowrite32(FIELD_PREP(TSDMN, 1) | FIELD_PREP(TXDMN, 0x1e) | FIELD_PREP(RXDMN, 0x1f),
-		  priv->addr + GWMDNC);
-	iowrite32(TE, priv->addr + GWTSDCC0);
+		  priv->addr_gwca + GWMDNC);
+	iowrite32(TE, priv->addr_gwca + GWTSDCC0);
 
-	iowrite32(PPPL(GWCA_IPV_NUM), priv->addr + GWTPC0);
+	iowrite32(PPPL(GWCA_IPV_NUM), priv->addr_gwca + GWTPC0);
 
-	for (i = 0; i < RSWITCH_NUM_PORTS; i++) {
+	for (i = 0; i < priv->info->rswitch_num_ports; i++) {
 		err = rswitch_rxdmac_init(priv, i);
 		if (err < 0)
 			return err;
@@ -1141,7 +1295,7 @@ static void rswitch_ts(struct rswitch_private *priv)
 		dma_rmb();
 
 		port = TS_DESC_DPN(__le32_to_cpu(desc->desc.dptrl));
-		if (unlikely(port >= RSWITCH_NUM_PORTS))
+		if (unlikely(port >= priv->info->rswitch_num_ports))
 			goto next;
 		rdev = priv->rdev[port];
 
@@ -1176,8 +1330,8 @@ static irqreturn_t rswitch_gwca_ts_irq(int irq, void *dev_id)
 {
 	struct rswitch_private *priv = dev_id;
 
-	if (ioread32(priv->addr + GWTSDIS) & TS) {
-		iowrite32(TS, priv->addr + GWTSDIS);
+	if (ioread32(priv->addr_gwca + GWTSDIS) & TS) {
+		iowrite32(TS, priv->addr_gwca + GWTSDIS);
 		rswitch_ts(priv);
 
 		return IRQ_HANDLED;
@@ -1620,10 +1774,10 @@ static int rswitch_serdes_set_params(struct rswitch_device *rdev)
 
 static void rswitch_etha_set_exception_path(struct rswitch_private *priv)
 {
-	iowrite32(FDMACUFEF, priv->addr + FWCEPRC2);
+	iowrite32(FDMACUFEF, priv->addr_mfwd + FWCEPRC2);
 	iowrite32(FIELD_PREP(EPCS, GWCA_INDEX) |
 		  FIELD_PREP(EPCSD, priv->gwca.l2_shared_rx_queue->index),
-		  priv->addr + FWCEPTC);
+		  priv->addr_mfwd + FWCEPTC);
 }
 
 static int rswitch_ether_port_init_one(struct rswitch_device *rdev)
@@ -1698,7 +1852,7 @@ static int rswitch_ether_port_init_all(struct rswitch_private *priv)
 err_serdes:
 	rswitch_for_each_enabled_port_continue_reverse(priv, i)
 		phy_exit(priv->rdev[i]->serdes);
-	i = RSWITCH_NUM_PORTS;
+	i = priv->info->rswitch_num_ports;
 
 err_init_one:
 	rswitch_for_each_enabled_port_continue_reverse(priv, i)
@@ -1722,8 +1876,8 @@ static int rswitch_open(struct net_device *ndev)
 	struct rswitch_device *rdev = netdev_priv(ndev);
 	unsigned long flags;
 
-	if (bitmap_empty(rdev->priv->opened_ports, RSWITCH_NUM_PORTS))
-		iowrite32(TS, rdev->priv->addr + GWTSDIE);
+	if (bitmap_empty(rdev->priv->opened_ports, rdev->priv->info->rswitch_num_ports))
+		iowrite32(TS, rdev->priv->addr_gwca + GWTSDIE);
 
 	napi_enable(&rdev->napi);
 
@@ -1771,8 +1925,8 @@ static int rswitch_stop(struct net_device *ndev)
 	if (rdev->brdev)
 		rswitch_update_l2_offload(rdev->priv);
 
-	if (bitmap_empty(rdev->priv->opened_ports, RSWITCH_NUM_PORTS))
-		iowrite32(TS, rdev->priv->addr + GWTSDID);
+	if (bitmap_empty(rdev->priv->opened_ports, RSWITCH_MAX_NUM_PORTS))
+		iowrite32(TS, rdev->priv->addr_gwca + GWTSDID);
 
 	for_each_set_bit(tag, rdev->ts_skb_used, TS_TAGS_PER_PORT) {
 		ts_skb = xchg(&rdev->ts_skb[tag], NULL);
@@ -2018,14 +2172,98 @@ static int rswitch_get_ts_info(struct net_device *ndev, struct kernel_ethtool_ts
 	return 0;
 }
 
+static int rswitch2_map_addr(struct platform_device *pdev, struct rswitch_private *priv)
+{
+	struct resource *res_mfwd;
+
+	res_mfwd = platform_get_resource_byname(pdev, IORESOURCE_MEM, "secure_base");
+	if (!res_mfwd) {
+		dev_err(&pdev->dev, "invalid resource\n");
+		return -EINVAL;
+	}
+
+	priv->ptp_priv = rcar_gen4_ptp_alloc(pdev);
+	if (!priv->ptp_priv)
+		return -ENOMEM;
+
+	priv->addr_mfwd = devm_ioremap_resource(&pdev->dev, res_mfwd);
+	if (IS_ERR(priv->addr_mfwd))
+		return PTR_ERR(priv->addr_mfwd);
+
+	priv->addr_mfab = priv->addr_mfwd + RSWITCH2_TOP_OFFSET;
+	priv->addr_coma = priv->addr_mfwd + RSWITCH2_COMA_OFFSET;
+	priv->addr_etha = priv->addr_mfwd + RSWITCH2_ETHA_OFFSET;
+	priv->addr_gwca = priv->addr_mfwd + RSWITCH2_GWCA0_OFFSET;
+	priv->ptp_priv->addr = priv->addr_mfwd + RSWITCH_GPTP_OFFSET_S4;
+
+	return 0;
+}
+
+static int rswitch3_map_addr(struct platform_device *pdev, struct rswitch_private *priv)
+{
+	struct resource *res_mfwd, *res_ptp;
+
+	res_mfwd = platform_get_resource_byname(pdev, IORESOURCE_MEM, "secure_base");
+	if (!res_mfwd) {
+		dev_err(&pdev->dev, "invalid resource\n");
+		return -EINVAL;
+	}
+
+	res_mfwd = platform_get_resource_byname(pdev, IORESOURCE_MEM, "secure_ptp");
+	if (!res_ptp) {
+		dev_err(&pdev->dev, "invalid resource\n");
+		return -EINVAL;
+	}
+
+	priv->ptp_priv = rcar_gen4_ptp_alloc(pdev);
+	if (!priv->ptp_priv)
+		return -ENOMEM;
+
+	priv->addr_mfwd = devm_ioremap_resource(&pdev->dev, res_mfwd);
+	if (IS_ERR(priv->addr_mfwd))
+		return PTR_ERR(priv->addr_mfwd);
+
+	priv->addr_mfab = priv->addr_mfwd + RSWITCH2_TOP_OFFSET;
+	priv->addr_coma = priv->addr_mfwd + RSWITCH2_COMA_OFFSET;
+	priv->addr_etha = priv->addr_mfwd + RSWITCH2_ETHA_OFFSET;
+	priv->addr_gwca = priv->addr_mfwd + RSWITCH2_GWCA0_OFFSET;
+
+	priv->ptp_priv->addr = devm_ioremap_resource(&pdev->dev, res_ptp);
+	if (IS_ERR(priv->ptp_priv->addr))
+		return PTR_ERR(priv->ptp_priv->addr);
+
+	return 0;
+}
+
 static const struct ethtool_ops rswitch_ethtool_ops = {
 	.get_ts_info = rswitch_get_ts_info,
 	.get_link_ksettings = phy_ethtool_get_link_ksettings,
 	.set_link_ksettings = phy_ethtool_set_link_ksettings,
 };
 
+static const struct rswitch_hw_info rswitch_rsw2_hw_info = {
+	.rswitch_map_addr = rswitch2_map_addr,
+	.bpool_config = rswitch2_bpool_config,
+	.rswitch_fwd_init = rswitch2_fwd_init,
+	.rswitch_num_ports = RSWITCH_NUM_PORTS_RSW2,
+	.rswitch_num_agents = RSWITCH_NUM_AGENTS_RSW2,
+	.agent_index_gwca = AGENT_INDEX_GWCA_RSW2,
+	.rswitch_version = RSW20,
+};
+
+static const struct rswitch_hw_info rswitch_rsw30_hw_info = {
+	.rswitch_map_addr = rswitch3_map_addr,
+	.bpool_config = rswitch3_bpool_config,
+	.rswitch_fwd_init = rswitch3_fwd_init,
+	.rswitch_num_ports = RSWITCH_NUM_PORTS_RSW3,
+	.rswitch_num_agents = RSWITCH_NUM_AGENTS_RSW3,
+	.agent_index_gwca = AGENT_INDEX_GWCA_RSW3,
+	.rswitch_version = RSW30,
+};
+
 static const struct of_device_id renesas_eth_sw_of_table[] = {
-	{ .compatible = "renesas,r8a779f0-ether-switch", },
+	{ .compatible = "renesas,r8a779f0-ether-switch", .data = &rswitch_rsw2_hw_info },
+	{ .compatible = "renesas,r8a78000-ether-switch", .data = &rswitch_rsw30_hw_info },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, renesas_eth_sw_of_table);
@@ -2036,8 +2274,8 @@ static void rswitch_etha_init(struct rswitch_private *priv, unsigned int index)
 
 	memset(etha, 0, sizeof(*etha));
 	etha->index = index;
-	etha->addr = priv->addr + RSWITCH_ETHA_OFFSET + index * RSWITCH_ETHA_SIZE;
-	etha->coma_addr = priv->addr;
+	etha->addr = priv->addr_etha  + index * RSWITCH_ETHA_SIZE;
+	etha->coma_addr = priv->addr_coma;
 	etha->priv = priv;
 
 	/* MPIC.PSMCS = (clk [MHz] / (MDC frequency [MHz] * 2) - 1.
@@ -2054,7 +2292,7 @@ static int rswitch_device_alloc(struct rswitch_private *priv, unsigned int index
 	struct net_device *ndev;
 	int err;
 
-	if (index >= RSWITCH_NUM_PORTS)
+	if (index >= priv->info->rswitch_num_ports)
 		return -EINVAL;
 
 	ndev = alloc_etherdev_mqs(sizeof(struct rswitch_device), 1, 1);
@@ -2070,7 +2308,7 @@ static int rswitch_device_alloc(struct rswitch_private *priv, unsigned int index
 	priv->rdev[index] = rdev;
 	rdev->port = index;
 	rdev->etha = &priv->etha[index];
-	rdev->addr = priv->addr;
+	rdev->addr = priv->addr_mfwd;
 	rdev->rx_old_queue = NULL;
 
 	ndev->base_addr = (unsigned long)rdev->addr;
@@ -2138,18 +2376,18 @@ static int rswitch_init(struct rswitch_private *priv)
 	unsigned int i;
 	int err;
 
-	for (i = 0; i < RSWITCH_NUM_PORTS; i++)
+	for (i = 0; i < priv->info->rswitch_num_ports; i++)
 		rswitch_etha_init(priv, i);
 
 	rswitch_clock_enable(priv);
-	for (i = 0; i < RSWITCH_NUM_PORTS; i++)
+	for (i = 0; i < priv->info->rswitch_num_ports; i++)
 		rswitch_etha_read_mac_address(&priv->etha[i]);
 
 	rswitch_reset(priv);
 
 	rswitch_clock_enable(priv);
 	rswitch_top_init(priv);
-	err = rswitch_bpool_config(priv);
+	err = priv->info->bpool_config(priv);
 	if (err < 0)
 		return err;
 
@@ -2163,7 +2401,7 @@ static int rswitch_init(struct rswitch_private *priv)
 	if (err < 0)
 		goto err_ts_queue_alloc;
 
-	for (i = 0; i < RSWITCH_NUM_PORTS; i++) {
+	for (i = 0; i < priv->info->rswitch_num_ports; i++) {
 		err = rswitch_device_alloc(priv, i);
 		if (err < 0) {
 			for (; i-- > 0; )
@@ -2172,7 +2410,7 @@ static int rswitch_init(struct rswitch_private *priv)
 		}
 	}
 
-	err = rswitch_fwd_init(priv);
+	err = priv->info->rswitch_fwd_init(priv);
 	if (err < 0)
 		goto err_fwd_init;
 
@@ -2225,7 +2463,7 @@ err_gwca_request_irq:
 
 err_fwd_init:
 err_ptp_register:
-	for (i = 0; i < RSWITCH_NUM_PORTS; i++)
+	for (i = 0; i < priv->info->rswitch_num_ports; i++)
 		rswitch_device_free(priv, i);
 
 err_device_alloc:
@@ -2252,7 +2490,7 @@ static void rswitch_deinit(struct rswitch_private *priv)
 		phy_exit(priv->rdev[i]->serdes);
 	}
 
-	for (i = 0; i < RSWITCH_NUM_PORTS; i++)
+	for (i = 0; i < priv->info->rswitch_num_ports; i++)
 		rswitch_device_free(priv, i);
 
 	rswitch_gwca_ts_queue_free(priv);
@@ -2271,21 +2509,21 @@ static const struct soc_device_attribute rswitch_soc_no_speed_change[]  = {
 static int renesas_eth_sw_probe(struct platform_device *pdev)
 {
 	const struct soc_device_attribute *attr;
+	const struct rswitch_hw_info *info;
 	struct rswitch_private *priv;
-	struct resource *res;
 	int ret;
-
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "secure_base");
-	if (!res) {
-		dev_err(&pdev->dev, "invalid resource\n");
-		return -EINVAL;
-	}
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
 
 	spin_lock_init(&priv->lock);
+
+	info = of_device_get_match_data(&pdev->dev);
+	if (info)
+		priv->info = info;
+	else
+		return PTR_ERR(info);
 
 	priv->clk = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(priv->clk))
@@ -2301,11 +2539,9 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, priv);
 	priv->pdev = pdev;
-	priv->addr = devm_ioremap_resource(&pdev->dev, res);
-	if (IS_ERR(priv->addr))
-		return PTR_ERR(priv->addr);
-
-	priv->ptp_priv->addr = priv->addr + RSWITCH_GPTP_OFFSET_S4;
+	ret = info->rswitch_map_addr(pdev, priv);
+	if (ret < 0)
+		return ret;
 
 	ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(40));
 	if (ret < 0) {
@@ -2314,8 +2550,8 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 			return ret;
 	}
 
-	priv->gwca.index = AGENT_INDEX_GWCA;
-	priv->gwca.num_queues = min(RSWITCH_NUM_PORTS * NUM_QUEUES_PER_NDEV,
+	priv->gwca.agent_index = AGENT_INDEX_GWCA;
+	priv->gwca.num_queues = min(priv->info->rswitch_num_ports * NUM_QUEUES_PER_NDEV,
 				    RSWITCH_MAX_NUM_QUEUES);
 	/* One extra queue for L2 switch reception */
 	priv->gwca.num_queues = min(priv->gwca.num_queues + 1,

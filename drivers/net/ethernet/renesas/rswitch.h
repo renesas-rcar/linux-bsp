@@ -16,16 +16,30 @@
 #include "rswitch_regs.h"
 #include "rswitch3_fwd.h"
 
-#define RSWITCH_MAX_NUM_QUEUES	128
+#define RSWITCH_MAX_NUM_QUEUES		128
+#define RSWITCH_MAX_NUM_PORTS		RSWITCH_NUM_PORTS_RSW3
 
-#define RSWITCH_NUM_AGENTS	5
-#define RSWITCH_NUM_PORTS	3
+#define RSWITCH2_TOP_OFFSET		0x00008000
+#define RSWITCH2_COMA_OFFSET		0x00009000
+#define RSWITCH2_ETHA_OFFSET		0x0000a000	/* with RMAC */
+#define RSWITCH_ETHA_SIZE		0x00002000	/* with RMAC */
+#define RSWITCH2_GWCA0_OFFSET		0x00010000
+#define RSWITCH2_GWCA1_OFFSET		0x00012000
+#define RSWITCH_GPTP_OFFSET_S4		0x00018000
+
+#define RSWITCH_NUM_AGENTS_RSW2		5
+#define RSWITCH_NUM_PORTS_RSW2		3
+#define AGENT_INDEX_GWCA_RSW2		RSWITCH_NUM_PORTS_RSW2
+
+#define RSWITCH_NUM_AGENTS_RSW3		15
+#define RSWITCH_NUM_PORTS_RSW3		13
+#define AGENT_INDEX_GWCA_RSW3		RSWITCH_NUM_PORTS_RSW3
 
 #define rswitch_for_all_ports(_priv, _rdev)			\
 	list_for_each_entry(_rdev, &(_priv)->port_list, list)
 
 #define rswitch_for_each_enabled_port(priv, i)		\
-	for (i = 0; i < RSWITCH_NUM_PORTS; i++)		\
+	for (i = 0; i < priv->info->rswitch_num_ports; i++)		\
 		if (priv->rdev[i]->disabled)		\
 			continue;			\
 		else
@@ -36,9 +50,12 @@
 			continue;				\
 		else
 
+#define field_get(_mask, _reg) (((_reg) & (_mask)) >> (ffs(_mask) - 1))
+#define field_prep(_mask, _val) (((_val) << (ffs(_mask) - 1)) & (_mask))
+
 #define TX_RING_SIZE		1024
 #define RX_RING_SIZE		4096
-#define TS_RING_SIZE		(TX_RING_SIZE * RSWITCH_NUM_PORTS)
+#define TS_RING_SIZE(priv)	(TX_RING_SIZE * (priv)->info->rswitch_num_ports)
 
 #define RSWITCH_MAX_MTU		9600
 #define RSWITCH_HEADROOM	(NET_SKB_PAD + NET_IP_ALIGN)
@@ -209,7 +226,7 @@ struct rswitch_gwca_queue {
 
 #define RSWITCH_NUM_IRQ_REGS	(RSWITCH_MAX_NUM_QUEUES / BITS_PER_TYPE(u32))
 struct rswitch_gwca {
-	unsigned int index;
+	unsigned int agent_index;
 	struct rswitch_desc *linkfix_table;
 	dma_addr_t linkfix_table_dma;
 	u32 linkfix_table_size;
@@ -263,14 +280,19 @@ struct rswitch_mfwd {
 
 struct rswitch_private {
 	struct platform_device *pdev;
-	void __iomem *addr;
+	void __iomem *addr_mfwd;
+	void __iomem *addr_mfab;
+	void __iomem *addr_coma;
+	void __iomem *addr_etha;
+	void __iomem *addr_gwca;
+
 	struct rcar_gen4_ptp_private *ptp_priv;
 
-	struct rswitch_device *rdev[RSWITCH_NUM_PORTS];
-	DECLARE_BITMAP(opened_ports, RSWITCH_NUM_PORTS);
+	struct rswitch_device *rdev[RSWITCH_MAX_NUM_PORTS];
+	DECLARE_BITMAP(opened_ports, RSWITCH_MAX_NUM_PORTS);
 
 	struct rswitch_gwca gwca;
-	struct rswitch_etha etha[RSWITCH_NUM_PORTS];
+	struct rswitch_etha etha[RSWITCH_MAX_NUM_PORTS];
 	struct rswitch_mfwd mfwd;
 
 	/* Notifiers */
@@ -287,12 +309,33 @@ struct rswitch_private {
 
 	bool etha_no_runtime_change;
 	bool gwca_halt;
+	const struct rswitch_hw_info *info;
+
 	struct net_device *offload_brdev;
 
 	enum hwtstamp_tx_types tstamp_tx_ctrl;
 	enum hwtstamp_rx_filters tstamp_rx_ctrl;
 
 	struct rswitch_switchdev_event_work *switchdev_work;
+};
+
+struct rswitch_hw_info {
+	int (*rswitch_map_addr)(struct platform_device *pdev, struct rswitch_private *priv);
+	int (*bpool_config)(struct rswitch_private *priv);
+	int (*rswitch_fwd_init)(struct rswitch_private *priv);
+	void (*rswitch_etha_enable_mii)(struct rswitch_etha *etha);
+	u8 rswitch_num_ports;
+	u8 rswitch_num_agents;
+	u8 agent_index_gwca;
+	u8 rswitch_version;
+};
+
+/* RSwitch hardware version */
+enum VERS {
+	RSW20 = 20,
+	RSW30 = 30,
+	RSW31 = 31,
+	RSWFPGA = 99,
 };
 
 struct rswitch_switchdev_event_work {
@@ -305,7 +348,7 @@ struct rswitch_switchdev_event_work {
 };
 
 bool is_rdev(const struct net_device *ndev);
-void rswitch_modify(void __iomem *addr, enum rswitch_reg reg, u32 clear, u32 set);
+void rswitch_modify(void __iomem *addr, u32 reg, u32 clear, u32 set);
 int rswitch_reg_wait(void __iomem *addr, u32 offs, u32 mask, u32 expected);
 int rswitch_gwca_change_mode(struct rswitch_private *priv, enum rswitch_port_mode mode);
 int rswitch_etha_change_mode(struct rswitch_etha *etha, enum rswitch_port_mode mode);
