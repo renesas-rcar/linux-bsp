@@ -822,34 +822,6 @@ static int mp_phy_probe(struct platform_device *pdev)
 		priv->chan[i].protocol_id = PHY_MODE_INVALID;
 	}
 
-	for (i = 0; i < NUM_OF_MPPHY_RST - 1; ++i) {
-		char rst_name[16] = {0};
-
-		sprintf(rst_name, "mpphy%d1", i);
-		priv->resets[i] = devm_reset_control_get(dev, rst_name);
-		if (IS_ERR(priv->resets[i])) {
-			dev_dbg(dev, "Failed to get reset control mpphy%d1, retries: %d\n",
-				i, rst_control_get_retries);
-			if (rst_control_get_retries) {
-				--rst_control_get_retries;
-				return -EPROBE_DEFER;
-			}
-			rst_control_get_retries = 0;
-			return PTR_ERR(priv->resets[0]);
-		}
-	}
-	priv->resets[NUM_OF_MPPHY_RST - 1] = devm_reset_control_get(dev, "mpphy02");
-	if (IS_ERR(priv->resets[NUM_OF_MPPHY_RST - 1])) {
-		dev_err(dev, "Failed to get reset control mpphy02\n");
-		return PTR_ERR(priv->resets[NUM_OF_MPPHY_RST - 1]);
-	}
-
-	priv->num_clks = devm_clk_bulk_get_all(dev, &priv->clks);
-	if (priv->num_clks < 1) {
-		dev_err(dev, "Failed to get mp_phy clocks\n");
-		return -ENODEV;
-	}
-
 	num_power_domains = of_count_phandle_with_args(np, "power-domains", "#power-domain-cells");
 	if (num_power_domains < 0) {
 		dev_err(dev, "Failed to get number of power domains (%d)\n", num_power_domains);
@@ -878,6 +850,7 @@ static int mp_phy_probe(struct platform_device *pdev)
 			}
 			return PTR_ERR(priv->pwr_devs.devs[i]);
 		}
+
 		ret = pm_runtime_get_sync(priv->pwr_devs.devs[i]);
 		if (ret < 0) {
 			dev_err(dev, "Failed to power on domain %d: %d\n", i, ret);
@@ -892,12 +865,42 @@ static int mp_phy_probe(struct platform_device *pdev)
 	}
 
 	for (i = 0; i < NUM_OF_MPPHY_RST - 1; ++i) {
+		char rst_name[16] = {0};
+
+		sprintf(rst_name, "mpphy%d1", i);
+		priv->resets[i] = devm_reset_control_get(dev, rst_name);
+		if (IS_ERR(priv->resets[i])) {
+			dev_dbg(dev, "Failed to get reset control mpphy%d1, retries: %d\n",
+				i, rst_control_get_retries);
+			if (rst_control_get_retries) {
+				--rst_control_get_retries;
+				return -EPROBE_DEFER;
+			}
+			rst_control_get_retries = 0;
+			return PTR_ERR(priv->resets[0]);
+		}
+	}
+
+	priv->resets[NUM_OF_MPPHY_RST - 1] = devm_reset_control_get(dev, "mpphy02");
+	if (IS_ERR(priv->resets[NUM_OF_MPPHY_RST - 1])) {
+		dev_err(dev, "Failed to get reset control mpphy02\n");
+		return PTR_ERR(priv->resets[NUM_OF_MPPHY_RST - 1]);
+	}
+
+	priv->num_clks = devm_clk_bulk_get_all(dev, &priv->clks);
+	if (priv->num_clks < 1) {
+		dev_err(dev, "Failed to get mp_phy clocks\n");
+		return -ENODEV;
+	}
+
+	for (i = 0; i < NUM_OF_MPPHY_RST - 1; ++i) {
 		ret = reset_control_assert(priv->resets[i]);
 		if (ret) {
 			dev_err(dev, "Failed to assert mpphy%d1", i);
 			return ret;
 		}
 	}
+
 	ret = reset_control_assert(priv->resets[NUM_OF_MPPHY_RST - 1]);
 	if (ret) {
 		dev_err(dev, "Failed to assert mpphy02");
@@ -911,6 +914,7 @@ static int mp_phy_probe(struct platform_device *pdev)
 			return ret;
 		}
 	}
+
 	ret = reset_control_deassert(priv->resets[NUM_OF_MPPHY_RST - 1]);
 	if (ret) {
 		dev_err(dev, "Failed to deassert mpphy02");
@@ -1008,20 +1012,16 @@ static int mp_phy_resume_noirq(struct device *dev)
 		dev_err(dev, "Failed to request firmware during resume: %d\n", ret);
 		return ret;
 	}
+
 	dev_dbg(dev, "Firmware loaded during resume\n");
 
-	for (int i = 0; i < NUM_OF_MPPHY_RST; ++i) {
-		ret = reset_control_assert(priv->resets[i]);
-		if (ret) {
-			dev_err(dev, "Failed to assert mpphy %d", i);
-			return ret;
-		}
-	}
-	for (int i = 0; i < NUM_OF_MPPHY_RST; ++i) {
-		ret = reset_control_deassert(priv->resets[i]);
-		if (ret) {
-			dev_err(dev, "Failed to deassert mpphy %d", i);
-			return ret;
+	for (int i = 0; i < priv->pwr_devs.no_pwr_devs; i++) {
+		if (priv->pwr_devs.devs[i]) {
+			ret = pm_runtime_get_sync(priv->pwr_devs.devs[i]);
+			if (ret < 0) {
+				dev_err(dev, "Failed to resume domain %d: %d\n", i, ret);
+				return ret;
+			}
 		}
 	}
 
@@ -1031,13 +1031,11 @@ static int mp_phy_resume_noirq(struct device *dev)
 		return ret;
 	}
 
-	for (int i = 0; i < priv->pwr_devs.no_pwr_devs; i++) {
-		if (priv->pwr_devs.devs[i]) {
-			ret = pm_runtime_get_sync(priv->pwr_devs.devs[i]);
-			if (ret < 0) {
-				dev_err(dev, "Failed to resume domain %d: %d\n", i, ret);
-				return ret;
-			}
+	for (int i = 0; i < NUM_OF_MPPHY_RST; ++i) {
+		ret = reset_control_deassert(priv->resets[i]);
+		if (ret) {
+			dev_err(dev, "Failed to deassert mpphy %d", i);
+			return ret;
 		}
 	}
 
