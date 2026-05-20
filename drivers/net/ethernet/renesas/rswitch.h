@@ -1095,6 +1095,7 @@ struct rswitch_etha {
 	unsigned int index;
 	void __iomem *addr;
 	void __iomem *coma_addr;
+	struct rswitch_private *priv;
 	bool external_phy;
 	struct mii_bus *mii;
 	phy_interface_t phy_interface;
@@ -1213,6 +1214,8 @@ struct rswitch_private {
 	struct list_head port_list;
 
 	spinlock_t lock;	/* lock interrupt registers' control */
+	spinlock_t agent_lock;	/* rswitch agent clock control */
+
 	struct clk *clk;
 
 	bool etha_no_runtime_change;

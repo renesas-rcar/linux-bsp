@@ -173,8 +173,12 @@ int rswitch_gwca_change_mode(struct rswitch_private *priv,
 {
 	int ret;
 
-	if (!rswitch_agent_clock_is_enabled(priv->addr, priv->gwca.index))
+	if (!rswitch_agent_clock_is_enabled(priv->addr, priv->gwca.index)) {
+		spin_lock(&priv->agent_lock);
 		rswitch_agent_clock_ctrl(priv->addr, priv->gwca.index, 1);
+		spin_unlock(&priv->agent_lock);
+	}
+
 	iowrite32(GWMC_OPC_DISABLE, priv->addr + GWMC);
 
 	ret = rswitch_reg_wait(priv->addr, GWMS, GWMS_OPS_MASK, GWMC_OPC_DISABLE);
@@ -182,7 +186,9 @@ int rswitch_gwca_change_mode(struct rswitch_private *priv,
 		return ret;
 
 	if (mode == GWMC_OPC_DISABLE) {
+		spin_lock(&priv->agent_lock);
 		rswitch_agent_clock_ctrl(priv->addr, priv->gwca.index, 0);
+		spin_unlock(&priv->agent_lock);
 
 		return ret;
 	}
@@ -1183,15 +1189,21 @@ int rswitch_etha_change_mode(struct rswitch_etha *etha,
 {
 	int ret;
 
-	if (!rswitch_agent_clock_is_enabled(etha->coma_addr, etha->index))
+	if (!rswitch_agent_clock_is_enabled(etha->coma_addr, etha->index)) {
+		spin_lock(&etha->priv->agent_lock);
 		rswitch_agent_clock_ctrl(etha->coma_addr, etha->index, 1);
+		spin_unlock(&etha->priv->agent_lock);
+	}
+
 	iowrite32(EAMC_OPC_DISABLE, etha->addr + EAMC);
 	ret = rswitch_reg_wait(etha->addr, EAMS, EAMS_OPS_MASK, EAMC_OPC_DISABLE);
 	if (ret < 0)
 		return ret;
 
 	if (mode == EAMC_OPC_DISABLE) {
+		spin_lock(&etha->priv->agent_lock);
 		rswitch_agent_clock_ctrl(etha->coma_addr, etha->index, 0);
+		spin_unlock(&etha->priv->agent_lock);
 
 		return ret;
 	}
@@ -2010,6 +2022,7 @@ static void rswitch_etha_init(struct rswitch_private *priv, unsigned int index)
 	etha->index = index;
 	etha->addr = priv->addr + RSWITCH_ETHA_OFFSET + index * RSWITCH_ETHA_SIZE;
 	etha->coma_addr = priv->addr;
+	etha->priv = priv;
 
 	/* MPIC.PSMCS = (clk [MHz] / (MDC frequency [MHz] * 2) - 1.
 	 * Calculating PSMCS value as MDC frequency = 2.5MHz. So, multiply
