@@ -99,6 +99,8 @@ struct dw_edma_chip {
 	enum dw_edma_map_format	mf;
 
 	struct dw_edma		*dw;
+	u32			dma_ch_offset;
+	u32			dma_dir_offset;
 };
 
 /* Export to the platform drivers */
