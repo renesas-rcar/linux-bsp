@@ -31,10 +31,21 @@ static inline struct dw_hdma_v0_regs __iomem *__dw_regs(struct dw_edma *dw)
 static inline struct dw_hdma_v0_ch_regs __iomem *
 __dw_ch_regs(struct dw_edma *dw, enum dw_edma_dir dir, u16 ch)
 {
-	if (dir == EDMA_DIR_WRITE)
-		return &(__dw_regs(dw)->ch[ch].wr);
-	else
-		return &(__dw_regs(dw)->ch[ch].rd);
+	void __iomem *base = __dw_regs(dw);
+
+	if (dw->chip->dma_ch_offset) {
+		base += ch * dw->chip->dma_ch_offset;
+
+		if (dir == EDMA_DIR_READ)
+			base += dw->chip->dma_dir_offset;
+
+		return (struct dw_hdma_v0_ch_regs __iomem *)base;
+	} else {
+		if (dir == EDMA_DIR_WRITE)
+			return &(__dw_regs(dw)->ch[ch].wr);
+		else
+			return &(__dw_regs(dw)->ch[ch].rd);
+	}
 }
 
 #define SET_CH_32(dw, dir, ch, name, value) \
