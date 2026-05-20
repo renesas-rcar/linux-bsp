@@ -28,6 +28,7 @@
 #include <linux/types.h>
 #include <linux/iopoll.h>
 #include <linux/bitfield.h>
+#include <linux/sys_soc.h>
 
 #include "../../pci.h"
 #include "pcie6-designware.h"
@@ -64,6 +65,11 @@ static const char * const dw_pcie6_core_rsts[DW_PCIE_NUM_CORE_RSTS] = {
 	[DW_PCIE_PHY_RST] = "phy",
 	[DW_PCIE_HOT_RST] = "hot",
 	[DW_PCIE_PWR_RST] = "pwr",
+};
+
+static const struct soc_device_attribute rcar_gen5_r8a78000[] = {
+	{ .soc_id = "r8a78000" },
+	{ /* sentinel */ }
 };
 
 static int dw_pcie6_get_clocks(struct dw_pcie6 *pci)
@@ -945,6 +951,11 @@ static int dw_pcie6_edma_find_mf(struct dw_pcie6 *pci)
 	}
 
 	pci->edma.mf = EDMA_MF_HDMA_NATIVE;
+
+	if (soc_device_match(rcar_gen5_r8a78000)) {
+		pci->edma.dma_ch_offset = 0x800;
+		pci->edma.dma_dir_offset = 0x400;
+	}
 
 	return 0;
 }
