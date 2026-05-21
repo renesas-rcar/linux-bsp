@@ -54,6 +54,10 @@ properties:
               - renesas,r9a07g044-rpc-if      # RZ/G2{L,LC}
               - renesas,r9a07g054-rpc-if      # RZ/V2L
           - const: renesas,rzg2l-rpc-if
+      - items:
+          - enum:
+              - renesas,r8a78000-rpc-if      # R-Car X5H
+          - const: renesas,rcar-gen5-rpc-if
 
   reg:
     items:
