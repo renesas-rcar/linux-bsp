@@ -766,8 +766,6 @@ enum vlan_egress_mode {
 	HW_SC_TAG_VLAN,
 };
 
-#define EAVCC_VEM_SC_TAG	(0x3 << 16)
-
 #define MPIC_PIS		GENMASK(2, 0)
 #define MPIC_PIS_GMII		2
 #define MPIC_PIS_XGMII		4
@@ -811,8 +809,6 @@ enum rswitch_gwca_mode {
 
 #define GWMTIRM_MTIOG		BIT(0)
 #define GWMTIRM_MTR		BIT(1)
-
-#define GWVCC_VEM_SC_TAG	(0x3 << 16)
 
 #define GWARIRM_ARIOG		BIT(0)
 #define GWARIRM_ARR		BIT(1)

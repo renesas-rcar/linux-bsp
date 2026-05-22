@@ -752,8 +752,12 @@ static int rswitch_gwca_hw_init(struct rswitch_private *priv)
 	if (err < 0)
 		return err;
 
-	iowrite32(GWVCC_VEM_SC_TAG, priv->addr + GWVCC);
-	iowrite32(0, priv->addr + GWTTFC);
+	iowrite32(0, priv->addr + GWVCC);
+	iowrite32(0, priv->addr + GWIRC);
+	iowrite32(FIELD_PREP(DQD, DES_RAM_DP), priv->addr + GWRDQDC0);
+	/* Drop frames with unknown tags */
+	iowrite32(UT, priv->addr + GWTTFC);
+
 	iowrite32(lower_32_bits(priv->gwca.linkfix_table_dma), priv->addr + GWDCBAC1);
 	iowrite32(upper_32_bits(priv->gwca.linkfix_table_dma), priv->addr + GWDCBAC0);
 	iowrite32(lower_32_bits(priv->gwca.ts_queue.ring_dma), priv->addr + GWTDCAC10);
@@ -895,6 +899,7 @@ static bool rswitch_rx(struct net_device *ndev, int *quota)
 	limit = boguscnt;
 
 	desc = &gq->rx_ring[gq->cur];
+
 	while ((desc->desc.die_dt & DT_MASK) != DT_FEMPTY) {
 		dma_rmb();
 		skb = rswitch_rx_handle_desc(ndev, gq, desc);
@@ -1305,7 +1310,12 @@ static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
 	if (err < 0)
 		return err;
 
-	iowrite32(EAVCC_VEM_SC_TAG, etha->addr + EAVCC);
+	iowrite32(0, etha->addr + EAIRC);
+	iowrite32(FIELD_PREP(DQD, DES_RAM_DP), etha->addr + EATDQDC0);
+
+	/* Drop frames with unknown tags */
+	iowrite32(UT, etha->addr + EARTFC);
+
 	rswitch_rmac_setting(etha, mac);
 	rswitch_etha_enable_mii(etha);
 
