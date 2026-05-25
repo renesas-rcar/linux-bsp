@@ -2095,8 +2095,8 @@ static int rcsi2_parse_dt(struct rcar_csi2 *priv)
 
 	ep = fwnode_graph_get_endpoint_by_id(dev_fwnode(priv->dev), 0, 0, 0);
 	if (!ep) {
-		dev_err(priv->dev, "Not connected to subdevice\n");
-		return -EINVAL;
+		dev_dbg(priv->dev, "Not connected to subdevice\n");
+		return 0;
 	}
 
 	ret = v4l2_fwnode_endpoint_parse(ep, &v4l2_ep);
