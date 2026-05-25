@@ -157,30 +157,6 @@ static const struct dw_pcie_ops dw_pcie_ops = {
 	.link_up = rcar_gen5_pcie_link_up,
 };
 
-static void rcar_gen5_pcie_set_max_link_width(struct rcar_pcie4 *rcar_pcie4, int num_lanes)
-{
-	struct dw_pcie *pci = rcar_pcie4->pci;
-	u32 val;
-
-	val = dw_pcie_readl_dbi(pci, EXPCAP(PCI_EXP_LNKCAP));
-	val &= ~PCI_EXP_LNKCAP_MLW;
-	switch (num_lanes) {
-	case 1:
-		val |= PCI_EXP_LNKCAP_MLW_X1;
-		break;
-	case 2:
-		val |= PCI_EXP_LNKCAP_MLW_X2;
-		break;
-	case 4:
-		val |= PCI_EXP_LNKCAP_MLW_X4;
-		break;
-	default:
-		dev_info(pci->dev, "Invalid num-lanes %d\n", num_lanes);
-		break;
-	}
-	dw_pcie_writel_dbi(pci, EXPCAP(PCI_EXP_LNKCAP), val);
-}
-
 static int rcar_gen5_pcie_set_device_type(struct rcar_pcie4 *rcar_pcie4, bool rc)
 {
 	u32 val;
@@ -227,12 +203,6 @@ static int rcar_gen5_pcie_host_init(struct dw_pcie_rp *pp)
 		return ret;
 	}
 
-/*
-	ret = reset_control_deassert(rcar_pcie4->rst);
-	if (ret)
-		goto err_clk_disable;
-*/
-
 	pci->ops = &dw_pcie_ops;
 
 	/* Set device type */
@@ -255,8 +225,6 @@ static int rcar_gen5_pcie_host_init(struct dw_pcie_rp *pp)
 		val |= MSI_CTRL_INT;
 		writel(val, rcar_pcie4->base + PCIEINTSTS0EN);
 	}
-
-	rcar_gen5_pcie_set_max_link_width(rcar_pcie4, pci->num_lanes);
 
 	val = dw_pcie_readl_dbi(pci, 0x40);
 	val |= BIT(19);
@@ -312,10 +280,7 @@ static int rcar_gen5_pcie_get_resources(struct rcar_pcie4 *rcar_pcie4,
 					struct platform_device *pdev)
 {
 	struct resource *res;
-	struct dw_pcie *pci = rcar_pcie4->pci;
 	struct device_node *np = dev_of_node(&pdev->dev);
-
-	of_property_read_u32(np, "num-lanes", &pci->num_lanes);
 
 	/* Renesas-specific registers */
 	rcar_pcie4->base = devm_platform_ioremap_resource_byname(pdev, "apb");
