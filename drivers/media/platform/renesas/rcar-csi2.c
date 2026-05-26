@@ -849,7 +849,9 @@ static int rcsi2_phtw_write(struct rcar_csi2 *priv, u8 data, u8 code)
 
 	/* Wait for DWEN and CWEN to be cleared by hardware. */
 	for (timeout = 0; timeout <= 20; timeout++) {
+#ifndef CONFIG_VIDEO_RCAR_VIN_VDK
 		if (!(rcsi2_read(priv, priv->info->regs->phtw) & (PHTW_DWEN | PHTW_CWEN)))
+#endif
 			return 0;
 
 		usleep_range(1000, 2000);
@@ -914,8 +916,10 @@ static void rcsi2_enter_standby(struct rcar_csi2 *priv)
 	if (priv->info->enter_standby)
 		priv->info->enter_standby(priv);
 
+#ifndef CONFIG_VIDEO_RCAR_VIN_VDK
 	reset_control_assert(priv->rstc);
 	usleep_range(100, 150);
+#endif
 	pm_runtime_put(priv->dev);
 }
 
@@ -927,7 +931,9 @@ static int rcsi2_exit_standby(struct rcar_csi2 *priv)
 	if (ret < 0)
 		return ret;
 
+#ifndef CONFIG_VIDEO_RCAR_VIN_VDK
 	reset_control_deassert(priv->rstc);
+#endif
 
 	return 0;
 }
@@ -941,8 +947,10 @@ static int rcsi2_wait_phy_start(struct rcar_csi2 *priv,
 	for (timeout = 0; timeout <= 20; timeout++) {
 		const u32 lane_mask = (1 << lanes) - 1;
 
+#ifndef CONFIG_VIDEO_RCAR_VIN_VDK
 		if ((rcsi2_read(priv, PHCLM_REG) & PHCLM_STOPSTATECKL)  &&
 		    (rcsi2_read(priv, PHDLM_REG) & lane_mask) == lane_mask)
+#endif
 			return 0;
 
 		usleep_range(1000, 2000);
@@ -2383,9 +2391,13 @@ static int rcsi2_probe_resources(struct rcar_csi2 *priv,
 	if (ret)
 		return ret;
 
+#ifndef CONFIG_VIDEO_RCAR_VIN_VDK
 	priv->rstc = devm_reset_control_get(&pdev->dev, NULL);
 
 	return PTR_ERR_OR_ZERO(priv->rstc);
+#endif
+
+	return 0;
 }
 
 static const struct rcsi2_register_layout rcsi2_registers_gen3 = {

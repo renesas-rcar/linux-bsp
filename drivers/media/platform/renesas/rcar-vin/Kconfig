@@ -32,3 +32,9 @@ config VIDEO_SNPS_CSI2_CAMERA
 	  Dummy Driver for Synopsys CSI-2 Camera
 	  model on VDK.
 
+config VIDEO_RCAR_VIN_VDK
+	bool "R-Car VIN Driver for VDK simulation"
+	depends on VIDEO_RCAR_VIN
+	help
+	  Enable R-Car Video Input driver on VDK environment.
+
