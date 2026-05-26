@@ -213,6 +213,75 @@ struct rcar_csi2;
 #define V4H_CORE_DIG_CLANE_2_RW_LP_0_REG		0x2a880
 #define V4H_CORE_DIG_CLANE_2_RW_HS_RX_REG(n)		(0x2a900 + ((n) * 2)) /* n = 0 - 6 */
 
+/** SNPS CSI-2 v4.0 **/
+/* MAIN registers */
+#define TO_HSRX_CFG							0x24
+#define TO_HSRX_CFG_BIT						GENMASK(31, 0)
+
+#define PWR_UP								0xc
+#define PWR_UP_BIT							BIT(0)
+
+/* PHY registers */
+#define PHY_MODE_CFG						0x100
+#define PPI_WIDTH							GENMASK(17, 16)
+#define PHY_L3_DISABLE						BIT(11)
+#define PHY_L2_DISABLE						BIT(10)
+#define PHY_L1_DISABLE						BIT(9)
+#define PHY_L0_DISABLE						BIT(8)
+#define PHY_MODE_BIT						BIT(0)
+
+#define PHY_DESKEW_CFG						0x104
+#define DESKEW_SYS_CYCLES					GENMASK(7, 0)
+
+/* CSI-2 registers */
+#define CSI2_GENERAL_CFG					0x200
+#define ECC_VCX_OVERRIDE					BIT(1)
+#define CSI2_RXSYNCHS_FILTER_EN				BIT(0)
+
+#define CSI2_DESCRAMBLING_CFG				0x204
+#define CSI2_DESCRAMBLING_EN				BIT(0)
+
+#define CSI2_DESCRAMBLING_CFG_REG(n)		(0x208 + ((n) * 4)) /* n = 0 - 7 */
+#define CSI2_DESCRAMBLING_L0_SEED1			GENMASK(31, 16)
+#define CSI2_DESCRAMBLING_L0_SEED0			GENMASK(15, 0)
+
+/* SDI registers */
+#define SDI_CFG								0x400
+#define SDI_ENCODE_MODE						BIT(1)
+#define SDI_ENABLE							BIT(0)
+
+#define SDI_FILTER_CFG						0x404
+#define SDI_HDR_FE_SP						BIT(20)
+#define SDI_EXCLUDE_HDR_FE					BIT(19)
+#define SDI_EXCLUDE_SP						BIT(18)
+#define SDI_SELECT_DT_EN					BIT(17)
+#define SDI_SELECT_VC_EN					BIT(16)
+#define SDI_SELECT_DT						GENMASK(13, 8)
+#define SDI_SELECT_VC						GENMASK(4, 0)
+
+#define SDI_CTRL							0x408
+
+/* INT registers */
+#define INT_ST_TO							0x528
+#define HSRX_TO_ERR_IRQ						BIT(0)
+
+#define INT_UNMASK_CSI2						0x59c
+#define UNMASK_MAX_N_DATA_IDS_ERR_IRQ		BIT(5)
+#define UNMASK_INVALID_DT_ERR_IRQ			BIT(4)
+#define UNMASK_CRC_ERR_IRQ					BIT(3)
+#define UNMASK_INVALID_RX_LENGTH_ERR_IRQ	BIT(2)
+#define UNMASK_HDR_NON_FATAL_ERR_IRQ		BIT(1)
+#define UNMASK_HDR_FATAL_ERR_IRQ			BIT(0)
+
+#define INT_UNMASK_FRAME					0x5a0
+#define UNMASK_FRAME_SEQUENCE_ERR_IRQ		BIT(1)
+#define UNMASK_FRAME_BOUNDARY_ERR_IRQ		BIT(0)
+
+#define INT_UNMASK_LINE						0x5a4
+#define UNMASK_LINE_SEQUENCE_ERR_IRQ		BIT(1)
+#define UNMASK_LINE_BOUNDARY_ERR_IRQ		BIT(0)
+/**  **/
+
 struct rcsi2_cphy_setting {
 	u16 msps;
 	u16 rx2;
@@ -821,6 +890,16 @@ static void rcsi2_write(struct rcar_csi2 *priv, unsigned int reg, u32 data)
 	iowrite32(data, priv->base + reg);
 }
 
+static void rcsi2_modify(struct rcar_csi2 *priv, unsigned int reg, u32 data, u32 mask)
+{
+	u32 val;
+
+	val = rcsi2_read(priv, reg);
+	val &= ~mask;
+	val |= data;
+	rcsi2_write(priv, reg, val);
+}
+
 static u16 rcsi2_read16(struct rcar_csi2 *priv, unsigned int reg)
 {
 	return ioread16(priv->base + reg);
@@ -984,6 +1063,9 @@ static int rcsi2_calc_mbps(struct rcar_csi2 *priv, unsigned int bpp,
 	if (!priv->remote)
 		return -ENODEV;
 
+	mbps= div_u64(7423000000, MEGA);
+
+#ifndef CONFIG_VIDEO_RCAR_VIN_VDK
 	source = priv->remote;
 
 	freq = v4l2_get_link_freq(source->ctrl_handler, bpp, 2 * lanes);
@@ -997,6 +1079,7 @@ static int rcsi2_calc_mbps(struct rcar_csi2 *priv, unsigned int bpp,
 	}
 
 	mbps = div_u64(freq * 2, MEGA);
+#endif
 
 	return mbps;
 }
@@ -1009,6 +1092,7 @@ static int rcsi2_get_active_lanes(struct rcar_csi2 *priv,
 
 	*lanes = priv->lanes;
 
+#ifndef CONFIG_VIDEO_RCAR_VIN_VDK
 	ret = v4l2_subdev_call(priv->remote, pad, get_mbus_config,
 			       priv->remote_pad, &mbus_config);
 	if (ret == -ENOIOCTLCMD) {
@@ -1044,6 +1128,7 @@ static int rcsi2_get_active_lanes(struct rcar_csi2 *priv,
 	}
 
 	*lanes = mbus_config.bus.mipi_csi2.num_data_lanes;
+#endif
 
 	return 0;
 }
@@ -1813,6 +1898,76 @@ static int rcsi2_start_receiver_v4m(struct rcar_csi2 *priv,
 	return 0;
 }
 
+static int rcsi2_start_receiver_x5h(struct rcar_csi2 *priv, struct v4l2_subdev_state *state)
+{
+	const struct rcar_csi2_format *format;
+	const struct v4l2_mbus_framefmt *fmt;
+	int msps, ret;
+	unsigned int lanes;
+	bool bBypassMode = true;
+	bool bExcludeSP = false;
+	bool bEnableVCFilter = false;
+	unsigned int nVCtoFilter = 0;
+	bool bEnableDTFilter = false;
+	unsigned int nDTtoFilter = 0;
+
+	/* Use the format on the sink pad to compute the receiver config. */
+	fmt = v4l2_subdev_state_get_format(state, RCAR_CSI2_SINK);
+	format = rcsi2_code_to_fmt(fmt->code);
+
+	ret = rcsi2_get_active_lanes(priv, &lanes);
+	if (ret)
+		return ret;
+
+	msps = rcsi2_calc_mbps(priv, format->bpp, lanes);
+	if (msps < 0)
+		return msps;
+
+	/* 1. Set the csi_hard_rstn signal low and then high to reset the CSI-2 v4 controller. */
+	rcsi2_modify(priv, PWR_UP, 0x0, PWR_UP_BIT);
+
+	/* 2. PHY Programming */
+	rcsi2_modify(priv, PHY_MODE_CFG, priv->info->support_dphy ? 1 : 0, PHY_MODE_BIT);
+	rcsi2_modify(priv, PHY_MODE_CFG, format->bpp, PPI_WIDTH);
+
+	rcsi2_modify(priv, PHY_DESKEW_CFG, 0x0, DESKEW_SYS_CYCLES);
+
+	/* 3. CSI-2 Programming */
+
+	/* 4. (Optional) CSE programming */
+
+	/* 5. (Optional) IPI Programming */
+
+	/* 6. SDI Programming */
+	rcsi2_modify(priv, SDI_CFG, 0x1, SDI_ENABLE);
+	rcsi2_modify(priv, SDI_CFG, bBypassMode ? 0 : 1, SDI_ENCODE_MODE);
+
+	rcsi2_modify(priv, SDI_FILTER_CFG, bEnableVCFilter ? 1 : 0, SDI_SELECT_VC_EN);
+	rcsi2_modify(priv, SDI_FILTER_CFG, nVCtoFilter, SDI_SELECT_VC);
+	rcsi2_modify(priv, SDI_FILTER_CFG, bEnableDTFilter ? 1 : 0, SDI_SELECT_DT_EN);
+	rcsi2_modify(priv, SDI_FILTER_CFG, nDTtoFilter, SDI_SELECT_DT);
+	rcsi2_modify(priv, SDI_FILTER_CFG, bExcludeSP ? 1 : 0, SDI_EXCLUDE_SP);
+
+	/* 7. Interrupt mask (INT_UNMASK_<group>) programming */
+	rcsi2_modify(priv, INT_UNMASK_CSI2, 0x1, UNMASK_HDR_FATAL_ERR_IRQ);
+	rcsi2_modify(priv, INT_UNMASK_CSI2, 0x1, UNMASK_HDR_NON_FATAL_ERR_IRQ);
+	rcsi2_modify(priv, INT_UNMASK_CSI2, 0x1, UNMASK_INVALID_RX_LENGTH_ERR_IRQ);
+	rcsi2_modify(priv, INT_UNMASK_CSI2, 0x1, UNMASK_CRC_ERR_IRQ);
+	rcsi2_modify(priv, INT_UNMASK_CSI2, 0x1, UNMASK_INVALID_DT_ERR_IRQ);
+	rcsi2_modify(priv, INT_UNMASK_CSI2, 0x1, UNMASK_MAX_N_DATA_IDS_ERR_IRQ);
+
+	rcsi2_modify(priv, INT_UNMASK_FRAME, 0x1, UNMASK_FRAME_BOUNDARY_ERR_IRQ);
+	rcsi2_modify(priv, INT_UNMASK_FRAME, 0x1, UNMASK_FRAME_SEQUENCE_ERR_IRQ);
+
+	rcsi2_modify(priv, INT_UNMASK_LINE, 0x1, UNMASK_LINE_BOUNDARY_ERR_IRQ);
+	rcsi2_modify(priv, INT_UNMASK_LINE, 0x1, UNMASK_LINE_SEQUENCE_ERR_IRQ);
+
+	/* 8. Assert the PWR_UP[0] to wake-up controller. */
+	rcsi2_modify(priv, PWR_UP, 0x1, PWR_UP_BIT);
+
+	return 0;
+}
+
 static int rcsi2_start(struct rcar_csi2 *priv, struct v4l2_subdev_state *state)
 {
 	int ret;
@@ -2524,6 +2679,12 @@ static const struct rcar_csi2_info rcar_csi2_info_r8a779h0 = {
 	.support_dphy = true,
 };
 
+static const struct rcar_csi2_info rcar_csi2_info_r8a78000 = {
+	.start_receiver = rcsi2_start_receiver_x5h,
+	.use_isp = true,
+	.support_dphy = true,
+};
+
 static const struct of_device_id rcar_csi2_of_table[] = {
 	{
 		.compatible = "renesas,r8a774a1-csi2",
@@ -2580,6 +2741,10 @@ static const struct of_device_id rcar_csi2_of_table[] = {
 	{
 		.compatible = "renesas,r8a779h0-csi2",
 		.data = &rcar_csi2_info_r8a779h0,
+	},
+	{
+		.compatible = "renesas,r8a78000-csi2",
+		.data = &rcar_csi2_info_r8a78000,
 	},
 	{ /* sentinel */ },
 };
