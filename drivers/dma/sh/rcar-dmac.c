@@ -41,15 +41,21 @@ struct rcar_dmac_xfer_chunk {
 
 /*
  * struct rcar_dmac_hw_desc - Hardware descriptor for a transfer chunk
- * @sar: value of the SAR register (source address)
- * @dar: value of the DAR register (destination address)
+ * @sar_lower: lower 32 bits value of the SAR register (source address)
+ * @sar_upper: upper 32 bits value of the SAR register (source address)
+ * @dar_lower: lower 32 bits value of the DAR register (destination address)
+ * @dar_upper: upper 32 bits value of the DAR register (destination address)
  * @tcr: value of the TCR register (transfer count)
  */
 struct rcar_dmac_hw_desc {
-	u32 sar;
-	u32 dar;
+	u32 sar_lower;
+	u32 sar_upper;
+	u32 dar_lower;
+	u32 dar_upper;
 	u32 tcr;
-	u32 reserved;
+	u32 reserved1;
+	u32 reserved2;
+	u32 reserved3;
 } __attribute__((__packed__));
 
 /*
@@ -318,6 +324,7 @@ struct rcar_dmac_of_data {
 #define RCAR_RATE_RD			0x00f4
 #define RCAR_RATE_WR			0x00f8
 #define RCAR_RATE_CNT_EN		(1 << 31)
+#define RCAR_ADR43MODE			0x0114
 
 /* Hardcode the MEMCPY transfer size to 4 bytes. */
 #define RCAR_DMAC_MEMCPY_XFER_SIZE	4
@@ -415,6 +422,7 @@ static void rcar_dmac_chan_start_xfer(struct rcar_dmac_chan *chan)
 			chan->index, desc, desc->nchunks, &desc->hwdescs.dma);
 
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
+		rcar_dmac_chan_write(chan, RCAR_ADR43MODE, 1);
 		rcar_dmac_chan_write(chan, RCAR_DMAFIXSAR,
 				     chunk->src_addr >> 32);
 		rcar_dmac_chan_write(chan, RCAR_DMAFIXDAR,
@@ -798,8 +806,10 @@ static int rcar_dmac_fill_hwdesc(struct rcar_dmac_chan *chan,
 		return -ENOMEM;
 
 	list_for_each_entry(chunk, &desc->chunks, node) {
-		hwdesc->sar = chunk->src_addr;
-		hwdesc->dar = chunk->dst_addr;
+		hwdesc->sar_lower = lower_32_bits(chunk->src_addr);
+		hwdesc->sar_upper = upper_32_bits(chunk->src_addr);
+		hwdesc->dar_lower = lower_32_bits(chunk->dst_addr);
+		hwdesc->dar_upper = upper_32_bits(chunk->dst_addr);
 		hwdesc->tcr = chunk->size >> desc->xfer_shift;
 		hwdesc++;
 	}
