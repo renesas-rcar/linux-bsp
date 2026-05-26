@@ -4556,7 +4556,7 @@
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_VSPD3>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_VSPD3>;
-			renesas,fcp = <&fcpvd3>;
+			renesas,fcp = <&fcpvd5>;
 		};
 
 		vspd8: vsp@c4820000 {
@@ -4643,14 +4643,45 @@
 			renesas,vsps = <&vspd0 0>, <&vspd1 0>, <&vspd2 0>, <&vspd3 0>;
 			status = "disabled";
 
+			/*
+			 * Empty i2c-bus subnode so DP-MST's I2C-over-AUX adapters
+			 * (which use this node as of_node) don't make of_i2c scan
+			 * the OF-graph "ports" node ("of_i2c: modalias failure").
+			 */
+			i2c-bus {
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+
 			ports {
 				#address-cells = <1>;
 				#size-cells = <0>;
 
 				port@0 {
 					reg = <0>;
-					vcon_out_dp0: endpoint {
-						remote-endpoint = <&dw_dp0_in>;
+					vcon_out_dp0_0: endpoint {
+						remote-endpoint = <&dw_dp0_0_in>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					vcon_out_dp0_1: endpoint {
+						remote-endpoint = <&dw_dp0_1_in>;
+					};
+				};
+
+				port@2 {
+					reg = <2>;
+					vcon_out_dp0_2: endpoint {
+						remote-endpoint = <&dw_dp0_2_in>;
+					};
+				};
+
+				port@3 {
+					reg = <3>;
+					vcon_out_dp0_3: endpoint {
+						remote-endpoint = <&dw_dp0_3_in>;
 					};
 				};
 			};
@@ -4680,17 +4711,42 @@
 			renesas,vsps = <&vspd4 0>, <&vspd5 0>, <&vspd6 0>, <&vspd7 0>;
 			status = "disabled";
 
+			i2c-bus {
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+
 			ports {
 				#address-cells = <1>;
 				#size-cells = <0>;
 
 				port@0 {
 					reg = <0>;
-					vcon_out_dp1: endpoint {
-						remote-endpoint = <&dw_dp1_in>;
+					vcon_out_dp1_0: endpoint {
+						remote-endpoint = <&dw_dp1_0_in>;
 					};
 				};
 
+				port@1 {
+					reg = <1>;
+					vcon_out_dp1_1: endpoint {
+						remote-endpoint = <&dw_dp1_1_in>;
+					};
+				};
+
+				port@2 {
+					reg = <2>;
+					vcon_out_dp1_2: endpoint {
+						remote-endpoint = <&dw_dp1_2_in>;
+					};
+				};
+
+				port@3 {
+					reg = <3>;
+					vcon_out_dp1_3: endpoint {
+						remote-endpoint = <&dw_dp1_3_in>;
+					};
+				};
 			};
 		};
 
@@ -4711,14 +4767,26 @@
 			renesas,vsps = <&vspd8 0>, <&vspd9 0>;
 			status = "disabled";
 
+			i2c-bus {
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+
 			ports {
 				#address-cells = <1>;
 				#size-cells = <0>;
 
 				port@0 {
 					reg = <0>;
-					vcon_out_dp2: endpoint {
-						remote-endpoint = <&dw_dp2_in>;
+					vcon_out_dp2_0: endpoint {
+						remote-endpoint = <&dw_dp2_0_in>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					vcon_out_dp2_1: endpoint {
+						remote-endpoint = <&dw_dp2_1_in>;
 					};
 				};
 			};
@@ -4743,8 +4811,29 @@
 
 				port@0 {
 					reg = <0>;
-					dw_dp0_in: endpoint {
-						remote-endpoint = <&vcon_out_dp0>;
+					dw_dp0_0_in: endpoint {
+						remote-endpoint = <&vcon_out_dp0_0>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					dw_dp0_1_in: endpoint {
+						remote-endpoint = <&vcon_out_dp0_1>;
+					};
+				};
+
+				port@2 {
+					reg = <2>;
+					dw_dp0_2_in: endpoint {
+						remote-endpoint = <&vcon_out_dp0_2>;
+					};
+				};
+
+				port@3 {
+					reg = <3>;
+					dw_dp0_3_in: endpoint {
+						remote-endpoint = <&vcon_out_dp0_3>;
 					};
 				};
 			};
@@ -4769,8 +4858,29 @@
 
 				port@0 {
 					reg = <0>;
-					dw_dp1_in: endpoint {
-						remote-endpoint = <&vcon_out_dp1>;
+					dw_dp1_0_in: endpoint {
+						remote-endpoint = <&vcon_out_dp1_0>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					dw_dp1_1_in: endpoint {
+						remote-endpoint = <&vcon_out_dp1_1>;
+					};
+				};
+
+				port@2 {
+					reg = <2>;
+					dw_dp1_2_in: endpoint {
+						remote-endpoint = <&vcon_out_dp1_2>;
+					};
+				};
+
+				port@3 {
+					reg = <3>;
+					dw_dp1_3_in: endpoint {
+						remote-endpoint = <&vcon_out_dp1_3>;
 					};
 				};
 			};
@@ -4795,8 +4905,15 @@
 
 				port@0 {
 					reg = <0>;
-					dw_dp2_in: endpoint {
-						remote-endpoint = <&vcon_out_dp2>;
+					dw_dp2_0_in: endpoint {
+						remote-endpoint = <&vcon_out_dp2_0>;
+					};
+				};
+
+				port@1 {
+					reg = <1>;
+					dw_dp2_1_in: endpoint {
+						remote-endpoint = <&vcon_out_dp2_1>;
 					};
 				};
 			};
