@@ -2633,7 +2633,6 @@ static void rcsi2_remove(struct platform_device *pdev)
 	struct rcar_csi2 *priv = platform_get_drvdata(pdev);
 
 	v4l2_async_nf_unregister(&priv->notifier);
-	v4l2_async_nf_cleanup(&priv->notifier);
 	v4l2_async_unregister_subdev(&priv->subdev);
 	v4l2_subdev_cleanup(&priv->subdev);
 
