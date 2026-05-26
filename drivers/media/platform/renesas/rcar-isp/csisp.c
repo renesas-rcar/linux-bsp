@@ -202,18 +202,22 @@ static int risp_power_on(struct rcar_isp *isp)
 	if (ret < 0)
 		return ret;
 
+#ifndef CONFIG_VIDEO_RCAR_VIN_VDK
 	ret = reset_control_deassert(isp->rstc);
 	if (ret < 0) {
 		pm_runtime_put(isp->dev);
 		return ret;
 	}
+#endif
 
 	return 0;
 }
 
 static void risp_power_off(struct rcar_isp *isp)
 {
+#ifndef CONFIG_VIDEO_RCAR_VIN_VDK
 	reset_control_assert(isp->rstc);
+#endif
 	pm_runtime_put(isp->dev);
 }
 
@@ -480,9 +484,13 @@ static int risp_probe_resources(struct rcar_isp *isp,
 	if (IS_ERR(isp->csbase))
 		return PTR_ERR(isp->csbase);
 
+#ifndef CONFIG_VIDEO_RCAR_VIN_VDK
 	isp->rstc = devm_reset_control_get(&pdev->dev, NULL);
 
 	return PTR_ERR_OR_ZERO(isp->rstc);
+#endif
+
+	return 0;
 }
 
 static const struct of_device_id risp_of_id_table[] = {

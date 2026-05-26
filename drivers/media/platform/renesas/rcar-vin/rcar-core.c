@@ -1192,12 +1192,14 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	if (IS_ERR(vin->base))
 		return PTR_ERR(vin->base);
 
+#ifndef CONFIG_VIDEO_RCAR_VIN_VDK
 	vin->rstc = devm_reset_control_get(&pdev->dev, NULL);
 	if (IS_ERR(vin->rstc)) {
 		dev_err(&pdev->dev, "failed to get cpg reset %s\n",
 			dev_name(vin->dev));
 		return PTR_ERR(vin->rstc);
 	}
+#endif
 
 	vin->clk = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(vin->clk)) {
