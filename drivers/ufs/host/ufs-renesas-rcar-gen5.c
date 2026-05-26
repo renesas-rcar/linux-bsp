@@ -204,6 +204,10 @@ ufs_rcar_gen5_pre_pwr_change(struct ufs_hba *hba,
 		dev_err(hba->dev, "%s: failed to determine capabilities\n",
 			__func__);
 
+	ufshcd_dme_configure_adapt(hba,
+				dev_req_params->gear_tx,
+				PA_INITIAL_ADAPT);
+
 	return 0;
 }
 
