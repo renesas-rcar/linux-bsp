@@ -13,6 +13,8 @@
 #define __RCAR_VIN__
 
 #include <linux/kref.h>
+#include <linux/clk.h>
+#include <linux/reset.h>
 
 #include <media/v4l2-async.h>
 #include <media/v4l2-ctrls.h>
@@ -146,6 +148,9 @@ struct rvin_info {
  * @v4l2_dev:		V4L2 device
  * @ctrl_handler:	V4L2 control handler
  *
+ * @rstc:		CPG reset/release control
+ * @clk:		CPG clock control
+ *
  * @parallel:		parallel input subdevice descriptor
  *
  * @group:		Gen3 CSI group
@@ -183,6 +188,9 @@ struct rvin_dev {
 	struct video_device vdev;
 	struct v4l2_device v4l2_dev;
 	struct v4l2_ctrl_handler ctrl_handler;
+
+	struct reset_control *rstc;
+	struct clk *clk;
 
 	struct rvin_parallel_entity parallel;
 

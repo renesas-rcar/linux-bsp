@@ -17,6 +17,7 @@
 #include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/pm_runtime.h>
+#include <linux/clk-provider.h>
 
 #include <media/v4l2-event.h>
 #include <media/videobuf2-dma-contig.h>
@@ -1384,6 +1385,8 @@ int rvin_start_streaming(struct rvin_dev *vin)
 	unsigned long flags;
 	int ret;
 
+	pm_runtime_get_sync(vin->dev);
+
 	ret = rvin_set_stream(vin, 1);
 	if (ret)
 		return ret;
@@ -1393,14 +1396,17 @@ int rvin_start_streaming(struct rvin_dev *vin)
 	vin->sequence = 0;
 
 	ret = rvin_capture_start(vin);
-	if (ret)
+	if (ret) {
 		rvin_set_stream(vin, 0);
+		pm_runtime_put_sync(vin->dev);
+		return ret;
+	}
 
 	vin->running = true;
 
 	spin_unlock_irqrestore(&vin->qlock, flags);
 
-	return ret;
+	return 0;
 }
 
 static int rvin_start_streaming_vq(struct vb2_queue *vq, unsigned int count)
@@ -1472,6 +1478,7 @@ void rvin_stop_streaming(struct rvin_dev *vin)
 					VB2_BUF_STATE_ERROR);
 	}
 
+	pm_runtime_put_sync(vin->dev);
 }
 
 static void rvin_stop_streaming_vq(struct vb2_queue *vq)
