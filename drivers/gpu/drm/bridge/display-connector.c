@@ -26,6 +26,7 @@ struct display_connector {
 
 	struct regulator	*dp_pwr;
 	struct gpio_desc	*ddc_en;
+	bool			no_use_ddc;
 };
 
 static inline struct display_connector *
@@ -44,6 +45,9 @@ static enum drm_connector_status
 display_connector_detect(struct drm_bridge *bridge)
 {
 	struct display_connector *conn = to_display_connector(bridge);
+
+	if (conn->no_use_ddc)
+		return connector_status_connected;
 
 	if (conn->hpd_gpio) {
 		if (gpiod_get_value_cansleep(conn->hpd_gpio))
@@ -360,6 +364,11 @@ static int display_connector_probe(struct platform_device *pdev)
 
 	conn->bridge.funcs = &display_connector_bridge_funcs;
 	conn->bridge.of_node = pdev->dev.of_node;
+
+	if (!conn->bridge.ddc && type == DRM_MODE_CONNECTOR_VGA) {
+		conn->no_use_ddc = true;
+		conn->bridge.ops |= DRM_BRIDGE_OP_DETECT;
+	}
 
 	if (conn->bridge.ddc)
 		conn->bridge.ops |= DRM_BRIDGE_OP_EDID
