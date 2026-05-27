@@ -375,9 +375,6 @@ static int rvin_g_selection(struct file *file, void *fh,
 	struct rvin_dev *vin = video_drvdata(file);
 	int ret;
 
-	if (!vin->scaler)
-		return -ENOIOCTLCMD;
-
 	if (s->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
 
@@ -420,9 +417,6 @@ static int rvin_s_selection(struct file *file, void *fh,
 		.height = 2,
 	};
 	int ret;
-
-	if (!vin->scaler)
-		return -ENOIOCTLCMD;
 
 	if (s->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
 		return -EINVAL;
@@ -534,11 +528,10 @@ static int rvin_mc_s_fmt_vid_cap(struct file *file, void *priv,
 
 	vin->format = f->fmt.pix;
 
-	vin->crop.top = 0;
-	vin->crop.left = 0;
-	vin->crop.width = vin->format.width;
-	vin->crop.height = vin->format.height;
-	vin->compose = vin->crop;
+	vin->compose.top = 0;
+	vin->compose.left = 0;
+	vin->compose.width = vin->format.width;
+	vin->compose.height = vin->format.height;
 
 	return 0;
 }
