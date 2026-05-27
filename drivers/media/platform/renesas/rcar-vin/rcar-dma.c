@@ -142,6 +142,9 @@
 #define VNDMR_A8BIT(n)		(((n) & 0xff) << 24)
 #define VNDMR_A8BIT_MASK	(0xff << 24)
 #define VNDMR_RMODE_RAW10	(2 << 19)
+#define VNDMR_RMODE_RAW12	(3 << 19)
+#define VNDMR_RMODE_RAW14	(4 << 19)
+#define VNDMR_RMODE_RAW20	(5 << 19)
 #define VNDMR_YMODE_Y8		(1 << 12)
 #define VNDMR_YC_THR		(1 << 11)
 #define VNDMR_EXRGB		(1 << 8)
@@ -795,6 +798,14 @@ static int rvin_setup(struct rvin_dev *vin)
 		input_is_yuv = true;
 		break;
 	case MEDIA_BUS_FMT_RGB888_1X24:
+	case MEDIA_BUS_FMT_SBGGR20_1X20:
+	case MEDIA_BUS_FMT_SGBRG20_1X20:
+	case MEDIA_BUS_FMT_SGRBG20_1X20:
+	case MEDIA_BUS_FMT_SRGGB20_1X20:
+	case MEDIA_BUS_FMT_SBGGR24_1X24:
+	case MEDIA_BUS_FMT_SGBRG24_1X24:
+	case MEDIA_BUS_FMT_SGRBG24_1X24:
+	case MEDIA_BUS_FMT_SRGGB24_1X24:
 		vnmc |= VNMC_INF_RGB888;
 		break;
 	case MEDIA_BUS_FMT_UYVY10_2X10:
@@ -820,7 +831,25 @@ static int rvin_setup(struct rvin_dev *vin)
 	case MEDIA_BUS_FMT_SGBRG10_1X10:
 	case MEDIA_BUS_FMT_SGRBG10_1X10:
 	case MEDIA_BUS_FMT_SRGGB10_1X10:
+	case MEDIA_BUS_FMT_SBGGR12_1X12:
+	case MEDIA_BUS_FMT_SGBRG12_1X12:
+	case MEDIA_BUS_FMT_SGRBG12_1X12:
+	case MEDIA_BUS_FMT_SRGGB12_1X12:
+	case MEDIA_BUS_FMT_SBGGR14_1X14:
+	case MEDIA_BUS_FMT_SGBRG14_1X14:
+	case MEDIA_BUS_FMT_SGRBG14_1X14:
+	case MEDIA_BUS_FMT_SRGGB14_1X14:
+	case MEDIA_BUS_FMT_SBGGR16_1X16:
+	case MEDIA_BUS_FMT_SGBRG16_1X16:
+	case MEDIA_BUS_FMT_SGRBG16_1X16:
+	case MEDIA_BUS_FMT_SRGGB16_1X16:
 		vnmc |= VNMC_INF_RGB666;
+		break;
+	case MEDIA_BUS_FMT_SBGGR28_1X28:
+	case MEDIA_BUS_FMT_SGBRG28_1X28:
+	case MEDIA_BUS_FMT_SGRBG28_1X28:
+	case MEDIA_BUS_FMT_SRGGB28_1X28:
+		vnmc |= VNMC_INF_YUV10_BT656;
 		break;
 	default:
 		break;
@@ -897,7 +926,17 @@ static int rvin_setup(struct rvin_dev *vin)
 	case V4L2_PIX_FMT_SGBRG8:
 	case V4L2_PIX_FMT_SGRBG8:
 	case V4L2_PIX_FMT_SRGGB8:
+	case V4L2_PIX_FMT_SBGGR16:
+	case V4L2_PIX_FMT_SGBRG16:
+	case V4L2_PIX_FMT_SGRBG16:
+	case V4L2_PIX_FMT_SRGGB16:
 		dmr = 0;
+		break;
+	case V4L2_PIX_FMT_SBGGR24:
+	case V4L2_PIX_FMT_SGBRG24:
+	case V4L2_PIX_FMT_SGRBG24:
+	case V4L2_PIX_FMT_SRGGB24:
+		dmr = VNDMR_EXRGB;
 		break;
 	case V4L2_PIX_FMT_GREY:
 		if (input_is_yuv) {
@@ -912,6 +951,28 @@ static int rvin_setup(struct rvin_dev *vin)
 	case V4L2_PIX_FMT_SGRBG10:
 	case V4L2_PIX_FMT_SRGGB10:
 		dmr = VNDMR_RMODE_RAW10;
+		break;
+	case V4L2_PIX_FMT_SBGGR12:
+	case V4L2_PIX_FMT_SGBRG12:
+	case V4L2_PIX_FMT_SGRBG12:
+	case V4L2_PIX_FMT_SRGGB12:
+		dmr = VNDMR_RMODE_RAW12;
+		break;
+	case V4L2_PIX_FMT_SBGGR14:
+	case V4L2_PIX_FMT_SGBRG14:
+	case V4L2_PIX_FMT_SGRBG14:
+	case V4L2_PIX_FMT_SRGGB14:
+		dmr = VNDMR_RMODE_RAW14;
+		break;
+	case V4L2_PIX_FMT_SBGGR20:
+	case V4L2_PIX_FMT_SGBRG20:
+	case V4L2_PIX_FMT_SGRBG20:
+	case V4L2_PIX_FMT_SRGGB20:
+	case V4L2_PIX_FMT_SBGGR28:
+	case V4L2_PIX_FMT_SGBRG28:
+	case V4L2_PIX_FMT_SGRBG28:
+	case V4L2_PIX_FMT_SRGGB28:
+		dmr = VNDMR_EXRGB | VNDMR_RMODE_RAW20;
 		break;
 	default:
 		vin_err(vin, "Invalid pixelformat (0x%x)\n",
@@ -1286,6 +1347,102 @@ static int rvin_mc_validate_format(struct rvin_dev *vin, struct v4l2_subdev *sd,
 		break;
 	case MEDIA_BUS_FMT_SRGGB10_1X10:
 		if (vin->format.pixelformat != V4L2_PIX_FMT_SRGGB10)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SBGGR12_1X12:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SBGGR12)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SGBRG12_1X12:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SGBRG12)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SGRBG12_1X12:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SGRBG12)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SRGGB12_1X12:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SRGGB12)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SBGGR14_1X14:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SBGGR14)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SGBRG14_1X14:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SGBRG14)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SGRBG14_1X14:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SGRBG14)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SRGGB14_1X14:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SRGGB14)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SBGGR16_1X16:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SBGGR16)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SGBRG16_1X16:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SGBRG16)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SGRBG16_1X16:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SGRBG16)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SRGGB16_1X16:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SRGGB16)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SBGGR20_1X20:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SBGGR20)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SGBRG20_1X20:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SGBRG20)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SGRBG20_1X20:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SGRBG20)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SRGGB20_1X20:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SRGGB20)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SBGGR24_1X24:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SBGGR24)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SGBRG24_1X24:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SGBRG24)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SGRBG24_1X24:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SGRBG24)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SRGGB24_1X24:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SRGGB24)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SBGGR28_1X28:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SBGGR28)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SGBRG28_1X28:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SGBRG28)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SGRBG28_1X28:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SGRBG28)
+			return -EPIPE;
+		break;
+	case MEDIA_BUS_FMT_SRGGB28_1X28:
+		if (vin->format.pixelformat != V4L2_PIX_FMT_SRGGB28)
 			return -EPIPE;
 		break;
 	default:

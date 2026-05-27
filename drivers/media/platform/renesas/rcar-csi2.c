@@ -775,6 +775,86 @@ static const struct rcar_csi2_format rcar_csi2_formats[] = {
 		.code = MEDIA_BUS_FMT_SRGGB12_1X12,
 		.datatype = MIPI_CSI2_DT_RAW12,
 		.bpp = 12,
+	}, {
+		.code = MEDIA_BUS_FMT_SBGGR14_1X14,
+		.datatype = MIPI_CSI2_DT_RAW14,
+		.bpp = 14,
+	}, {
+		.code = MEDIA_BUS_FMT_SGBRG14_1X14,
+		.datatype = MIPI_CSI2_DT_RAW14,
+		.bpp = 14,
+	}, {
+		.code = MEDIA_BUS_FMT_SGRBG14_1X14,
+		.datatype = MIPI_CSI2_DT_RAW14,
+		.bpp = 14,
+	}, {
+		.code = MEDIA_BUS_FMT_SRGGB14_1X14,
+		.datatype = MIPI_CSI2_DT_RAW14,
+		.bpp = 14,
+	}, {
+		.code = MEDIA_BUS_FMT_SBGGR16_1X16,
+		.datatype = MIPI_CSI2_DT_RAW16,
+		.bpp = 16,
+	}, {
+		.code = MEDIA_BUS_FMT_SGBRG16_1X16,
+		.datatype = MIPI_CSI2_DT_RAW16,
+		.bpp = 16,
+	}, {
+		.code = MEDIA_BUS_FMT_SGRBG16_1X16,
+		.datatype = MIPI_CSI2_DT_RAW16,
+		.bpp = 16,
+	}, {
+		.code = MEDIA_BUS_FMT_SRGGB16_1X16,
+		.datatype = MIPI_CSI2_DT_RAW16,
+		.bpp = 16,
+	}, {
+		.code = MEDIA_BUS_FMT_SBGGR20_1X20,
+		.datatype = MIPI_CSI2_DT_RAW20,
+		.bpp = 20,
+	}, {
+		.code = MEDIA_BUS_FMT_SGBRG20_1X20,
+		.datatype = MIPI_CSI2_DT_RAW20,
+		.bpp = 20,
+	}, {
+		.code = MEDIA_BUS_FMT_SGRBG20_1X20,
+		.datatype = MIPI_CSI2_DT_RAW20,
+		.bpp = 20,
+	}, {
+		.code = MEDIA_BUS_FMT_SRGGB20_1X20,
+		.datatype = MIPI_CSI2_DT_RAW20,
+		.bpp = 20,
+	}, {
+		.code = MEDIA_BUS_FMT_SBGGR24_1X24,
+		.datatype = MIPI_CSI2_DT_RAW24,
+		.bpp = 24,
+	}, {
+		.code = MEDIA_BUS_FMT_SGBRG24_1X24,
+		.datatype = MIPI_CSI2_DT_RAW24,
+		.bpp = 24,
+	}, {
+		.code = MEDIA_BUS_FMT_SGRBG24_1X24,
+		.datatype = MIPI_CSI2_DT_RAW24,
+		.bpp = 24,
+	}, {
+		.code = MEDIA_BUS_FMT_SRGGB24_1X24,
+		.datatype = MIPI_CSI2_DT_RAW24,
+		.bpp = 24,
+	}, {
+		.code = MEDIA_BUS_FMT_SBGGR28_1X28,
+		.datatype = MIPI_CSI2_DT_RAW28,
+		.bpp = 28,
+	}, {
+		.code = MEDIA_BUS_FMT_SGBRG28_1X28,
+		.datatype = MIPI_CSI2_DT_RAW28,
+		.bpp = 28,
+	}, {
+		.code = MEDIA_BUS_FMT_SGRBG28_1X28,
+		.datatype = MIPI_CSI2_DT_RAW28,
+		.bpp = 28,
+	}, {
+		.code = MEDIA_BUS_FMT_SRGGB28_1X28,
+		.datatype = MIPI_CSI2_DT_RAW28,
+		.bpp = 28,
 	},
 };
 
