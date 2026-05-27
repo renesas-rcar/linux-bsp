@@ -480,3 +480,9 @@ config SYS_R9A09G057
 	select SYSC_RZ
 
 endif # SOC_RENESAS
+
+config RCAR_WCRC
+	tristate "Renesas R-Car Gen5 WCRC"
+	default y
+	help
+	  Enable this option to use WCRC in R-Car Gen5.
