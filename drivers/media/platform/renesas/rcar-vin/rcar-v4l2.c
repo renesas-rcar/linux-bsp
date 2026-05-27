@@ -101,6 +101,102 @@ static const struct rvin_video_format rvin_formats[] = {
 		.fourcc			= V4L2_PIX_FMT_SRGGB10,
 		.bpp			= 2,
 	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SBGGR12,
+		.bpp			= 2,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SGBRG12,
+		.bpp			= 2,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SGRBG12,
+		.bpp			= 2,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SRGGB12,
+		.bpp			= 2,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SBGGR14,
+		.bpp			= 2,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SGBRG14,
+		.bpp			= 2,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SGRBG14,
+		.bpp			= 2,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SRGGB14,
+		.bpp			= 2,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SBGGR16,
+		.bpp			= 2,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SGBRG16,
+		.bpp			= 2,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SGRBG16,
+		.bpp			= 2,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SRGGB16,
+		.bpp			= 2,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SBGGR20,
+		.bpp			= 4,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SGBRG20,
+		.bpp			= 4,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SGRBG20,
+		.bpp			= 4,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SRGGB20,
+		.bpp			= 4,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SBGGR24,
+		.bpp			= 4,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SGBRG24,
+		.bpp			= 4,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SGRBG24,
+		.bpp			= 4,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SRGGB24,
+		.bpp			= 4,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SBGGR28,
+		.bpp			= 4,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SGBRG28,
+		.bpp			= 4,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SGRBG28,
+		.bpp			= 4,
+	},
+	{
+		.fourcc			= V4L2_PIX_FMT_SRGGB28,
+		.bpp			= 4,
+	},
 };
 
 const struct rvin_video_format *rvin_format_from_pixel(struct rvin_dev *vin,
@@ -312,6 +408,126 @@ static int rvin_enum_fmt_vid_cap(struct file *file, void *priv,
 		if (f->index)
 			return -EINVAL;
 		f->pixelformat = V4L2_PIX_FMT_SRGGB10;
+		return 0;
+	case MEDIA_BUS_FMT_SBGGR12_1X12:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SBGGR12;
+		return 0;
+	case MEDIA_BUS_FMT_SGBRG12_1X12:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SGBRG12;
+		return 0;
+	case MEDIA_BUS_FMT_SGRBG12_1X12:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SGRBG12;
+		return 0;
+	case MEDIA_BUS_FMT_SRGGB12_1X12:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SRGGB12;
+		return 0;
+	case MEDIA_BUS_FMT_SBGGR14_1X14:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SBGGR14;
+		return 0;
+	case MEDIA_BUS_FMT_SGBRG14_1X14:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SGBRG14;
+		return 0;
+	case MEDIA_BUS_FMT_SGRBG14_1X14:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SGRBG14;
+		return 0;
+	case MEDIA_BUS_FMT_SRGGB14_1X14:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SRGGB14;
+		return 0;
+	case MEDIA_BUS_FMT_SBGGR16_1X16:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SBGGR16;
+		return 0;
+	case MEDIA_BUS_FMT_SGBRG16_1X16:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SGBRG16;
+		return 0;
+	case MEDIA_BUS_FMT_SGRBG16_1X16:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SGRBG16;
+		return 0;
+	case MEDIA_BUS_FMT_SRGGB16_1X16:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SRGGB16;
+		return 0;
+	case MEDIA_BUS_FMT_SBGGR20_1X20:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SBGGR20;
+		return 0;
+	case MEDIA_BUS_FMT_SGBRG20_1X20:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SGBRG20;
+		return 0;
+	case MEDIA_BUS_FMT_SGRBG20_1X20:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SGRBG20;
+		return 0;
+	case MEDIA_BUS_FMT_SRGGB20_1X20:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SRGGB20;
+		return 0;
+	case MEDIA_BUS_FMT_SBGGR24_1X24:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SBGGR24;
+		return 0;
+	case MEDIA_BUS_FMT_SGBRG24_1X24:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SGBRG24;
+		return 0;
+	case MEDIA_BUS_FMT_SGRBG24_1X24:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SGRBG24;
+		return 0;
+	case MEDIA_BUS_FMT_SRGGB24_1X24:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SRGGB24;
+		return 0;
+	case MEDIA_BUS_FMT_SBGGR28_1X28:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SBGGR28;
+		return 0;
+	case MEDIA_BUS_FMT_SGBRG28_1X28:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SGBRG28;
+		return 0;
+	case MEDIA_BUS_FMT_SGRBG28_1X28:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SGRBG28;
+		return 0;
+	case MEDIA_BUS_FMT_SRGGB28_1X28:
+		if (f->index)
+			return -EINVAL;
+		f->pixelformat = V4L2_PIX_FMT_SRGGB28;
 		return 0;
 	default:
 		return -EINVAL;
