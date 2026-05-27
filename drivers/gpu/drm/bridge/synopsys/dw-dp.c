@@ -3,6 +3,7 @@
  * Synopsys DesignWare Cores DisplayPort Transmitter Controller
  *
  * Copyright (c) 2025 Rockchip Electronics Co., Ltd.
+ * Copyright (C) 2025-2026 Renesas Electronics Corporation
  *
  * Author: Andy Yan <andy.yan@rock-chips.com>
  */
@@ -23,6 +24,7 @@
 #include <drm/drm_bridge.h>
 #include <drm/drm_bridge_connector.h>
 #include <drm/display/drm_dp_helper.h>
+#include <drm/display/drm_dp_mst_helper.h>
 #include <drm/drm_edid.h>
 #include <drm/drm_of.h>
 #include <drm/drm_print.h>
@@ -38,6 +40,8 @@
 #define DW_DP_CONFIG_REG3			0x0108
 
 #define DW_DP_CCTL				0x0200
+#define INITIATE_MST_ACT_SEQ			BIT(28)
+#define ENABLE_MST_MODE				BIT(25)
 #define FORCE_HPD				BIT(4)
 #define DEFAULT_FAST_LINK_TRAIN_EN		BIT(2)
 #define ENHANCE_FRAMING_EN			BIT(1)
@@ -50,55 +54,58 @@
 #define PHY_SOFT_RESET				BIT(1)
 #define CONTROLLER_RESET			BIT(0)
 
-#define DW_DP_VSAMPLE_CTRL			0x0300
+#define DW_DP_MST_VCP_TABLE_REG(n)		(0x0210 + (n) * 4)
+
+#define DW_DP_VSAMPLE_CTRL(n)			(0x0300 + (n) * 0x10000)
 #define PIXEL_MODE_SELECT			GENMASK(22, 21)
 #define VIDEO_MAPPING				GENMASK(20, 16)
 #define VIDEO_STREAM_ENABLE			BIT(5)
 
-#define DW_DP_VSAMPLE_STUFF_CTRL1		0x0304
+#define DW_DP_VSAMPLE_STUFF_CTRL1(n)		(0x0304 + (n) * 0x10000)
 
-#define DW_DP_VSAMPLE_STUFF_CTRL2		0x0308
+#define DW_DP_VSAMPLE_STUFF_CTRL2(n)		(0x0308 + (n) * 0x10000)
 
-#define DW_DP_VINPUT_POLARITY_CTRL		0x030c
+#define DW_DP_VINPUT_POLARITY_CTRL(n)		(0x030c + (n) * 0x10000)
 #define DE_IN_POLARITY				BIT(2)
 #define HSYNC_IN_POLARITY			BIT(1)
 #define VSYNC_IN_POLARITY			BIT(0)
 
-#define DW_DP_VIDEO_CONFIG1			0x0310
+#define DW_DP_VIDEO_CONFIG1(n)			(0x0310 + (n) * 0x10000)
 #define HACTIVE					GENMASK(31, 16)
 #define HBLANK					GENMASK(15, 2)
 #define I_P					BIT(1)
 #define R_V_BLANK_IN_OSC			BIT(0)
 
-#define DW_DP_VIDEO_CONFIG2			0x0314
+#define DW_DP_VIDEO_CONFIG2(n)			(0x0314 + (n) * 0x10000)
 #define VBLANK					GENMASK(31, 16)
 #define VACTIVE					GENMASK(15, 0)
 
-#define DW_DP_VIDEO_CONFIG3			0x0318
+#define DW_DP_VIDEO_CONFIG3(n)			(0x0318 + (n) * 0x10000)
 #define H_SYNC_WIDTH				GENMASK(31, 16)
 #define H_FRONT_PORCH				GENMASK(15, 0)
 
-#define DW_DP_VIDEO_CONFIG4			0x031c
+#define DW_DP_VIDEO_CONFIG4(n)			(0x031c + (n) * 0x10000)
 #define V_SYNC_WIDTH				GENMASK(31, 16)
 #define V_FRONT_PORCH				GENMASK(15, 0)
 
-#define DW_DP_VIDEO_CONFIG5			0x0320
+#define DW_DP_VIDEO_CONFIG5(n)			(0x0320 + (n) * 0x10000)
 #define INIT_THRESHOLD_HI			GENMASK(22, 21)
-#define AVERAGE_BYTES_PER_TU_FRAC		GENMASK(19, 16)
+#define AVERAGE_BYTES_PER_TU_FRAC_SST		GENMASK(19, 16)
+#define AVERAGE_BYTES_PER_TU_FRAC_MST		GENMASK(19, 14)
 #define INIT_THRESHOLD				GENMASK(13, 7)
 #define AVERAGE_BYTES_PER_TU			GENMASK(6, 0)
 
-#define DW_DP_VIDEO_MSA1			0x0324
+#define DW_DP_VIDEO_MSA1(n)			(0x0324 + (n) * 0x10000)
 #define VSTART					GENMASK(31, 16)
 #define HSTART					GENMASK(15, 0)
 
-#define DW_DP_VIDEO_MSA2			0x0328
+#define DW_DP_VIDEO_MSA2(n)			(0x0328 + (n) * 0x10000)
 #define MISC0					GENMASK(31, 24)
 
-#define DW_DP_VIDEO_MSA3			0x032c
+#define DW_DP_VIDEO_MSA3(n)			(0x032c + (n) * 0x10000)
 #define MISC1					GENMASK(31, 24)
 
-#define DW_DP_VIDEO_HBLANK_INTERVAL		0x0330
+#define DW_DP_VIDEO_HBLANK_INTERVAL(n)		(0x0330 + (n) * 0x10000)
 #define HBLANK_INTERVAL_EN			BIT(16)
 #define HBLANK_INTERVAL				GENMASK(15, 0)
 
@@ -124,17 +131,17 @@
 #define AUDIO_DATA_IN_EN			GENMASK(4, 1)
 #define AUDIO_INF_SELECT			BIT(0)
 
-#define DW_DP_SDP_VERTICAL_CTRL			0x0500
+#define DW_DP_SDP_VERTICAL_CTRL(n)		(0x0500 + (n) * 0x10000)
 #define EN_VERTICAL_SDP				BIT(2)
 #define EN_AUDIO_STREAM_SDP			BIT(1)
 #define EN_AUDIO_TIMESTAMP_SDP			BIT(0)
-#define DW_DP_SDP_HORIZONTAL_CTRL		0x0504
+#define DW_DP_SDP_HORIZONTAL_CTRL(n)		(0x0504 + (n) * 0x10000)
 #define EN_HORIZONTAL_SDP			BIT(2)
-#define DW_DP_SDP_STATUS_REGISTER		0x0508
-#define DW_DP_SDP_MANUAL_CTRL			0x050c
-#define DW_DP_SDP_STATUS_EN			0x0510
+#define DW_DP_SDP_STATUS_REGISTER(n)		(0x0508 + (n) * 0x10000)
+#define DW_DP_SDP_MANUAL_CTRL(n)		(0x050c + (n) * 0x10000)
+#define DW_DP_SDP_STATUS_EN(n)			(0x0510 + (n) * 0x10000)
 
-#define DW_DP_SDP_REGISTER_BANK			0x0600
+#define DW_DP_SDP_REGISTER_BANK(n)		(0x0600 + (n) * 0x10000)
 #define SDP_REGS				GENMASK(31, 0)
 
 #define DW_DP_PHYIF_CTRL			0x0a00
@@ -270,7 +277,10 @@
 #define DW_DP_HDCP22_GPIOCHNGSTS		0x362c
 #define DW_DP_HDCP_REG_DPK_CRC			0x3630
 
-#define DW_DP_MAX_REGISTER			DW_DP_HDCP_REG_DPK_CRC
+#define DW_DP_MST_MAX_STREAMS			4
+
+#define DW_DP_MAX_REGISTER			(DW_DP_HDCP_REG_DPK_CRC + \
+						(DW_DP_MST_MAX_STREAMS - 1) * 0x10000)
 
 #define SDP_REG_BANK_SIZE			16
 
@@ -326,6 +336,34 @@ struct dw_dp_hotplug {
 	bool long_hpd;
 };
 
+struct dw_dp_mst_connector {
+	struct drm_connector base;
+	struct drm_dp_mst_port *port;
+	struct dw_dp *dp;
+	int stream_id;
+	bool encoder_attached;
+	struct list_head list_node;
+};
+
+struct dw_dp_stream {
+	struct drm_bridge bridge;
+	struct drm_dp_mst_port *port;
+	struct dw_dp *dp;
+	int id;
+	/* SDP register bank is per-stream (base + id * 0x10000) */
+	DECLARE_BITMAP(sdp_reg_bank, SDP_REG_BANK_SIZE);
+};
+
+struct dw_dp_mst {
+	struct drm_dp_mst_topology_mgr mgr;
+	struct dw_dp_stream streams[DW_DP_MST_MAX_STREAMS];
+	bool enabled;
+	DECLARE_BITMAP(stream_used, DW_DP_MST_MAX_STREAMS);
+
+	struct list_head connector_list;
+	struct mutex connector_lock;	/* MST connector lock */
+};
+
 struct dw_dp {
 	struct drm_bridge bridge;
 	struct device *dev;
@@ -349,7 +387,11 @@ struct dw_dp {
 	struct dw_dp_plat_data plat_data;
 	u8 pixel_mode;
 
-	DECLARE_BITMAP(sdp_reg_bank, SDP_REG_BANK_SIZE);
+	struct drm_connector *connector; /* Connector of SST mode */
+
+	struct dw_dp_mst mst;
+
+	bool link_enabled;
 };
 
 enum {
@@ -436,17 +478,29 @@ static const struct dw_dp_output_format *dw_dp_get_output_format(u32 bus_format)
 	return NULL;
 }
 
-static inline struct dw_dp *bridge_to_dp(struct drm_bridge *b)
+static inline struct dw_dp_stream *bridge_to_stream(struct drm_bridge *b)
 {
-	return container_of(b, struct dw_dp, bridge);
+	return container_of(b, struct dw_dp_stream, bridge);
 }
 
-static struct dw_dp_bridge_state *dw_dp_get_bridge_state(struct dw_dp *dp)
+static inline struct dw_dp *mgr_to_dp(struct drm_dp_mst_topology_mgr *mgr)
+{
+	struct dw_dp_mst *mst = container_of(mgr, struct dw_dp_mst, mgr);
+
+	return container_of(mst, struct dw_dp, mst);
+}
+
+static inline struct dw_dp_mst_connector *conn_to_mst_conn(struct drm_connector *c)
+{
+	return container_of(c, struct dw_dp_mst_connector, base);
+}
+
+static struct dw_dp_bridge_state *dw_dp_get_bridge_state(struct dw_dp *dp, int stream_id)
 {
 	struct dw_dp_bridge_state *dw_bridge_state;
 	struct drm_bridge_state *state;
 
-	state = drm_priv_to_bridge_state(dp->bridge.base.state);
+	state = drm_priv_to_bridge_state(dp->mst.streams[stream_id].bridge.base.state);
 	if (!state)
 		return  NULL;
 
@@ -867,6 +921,13 @@ static int dw_dp_link_clock_recovery(struct dw_dp *dp)
 	if (ret)
 		return ret;
 
+	if (dp->mst.enabled)
+		regmap_update_bits(dp->regmap, DW_DP_CCTL, ENABLE_MST_MODE,
+				   FIELD_PREP(ENABLE_MST_MODE, 1));
+	else
+		regmap_update_bits(dp->regmap, DW_DP_CCTL, ENABLE_MST_MODE,
+				   FIELD_PREP(ENABLE_MST_MODE, 0));
+
 	for (;;) {
 		ret = dw_dp_link_train_update_vs_emph(dp);
 		if (ret)
@@ -952,8 +1013,6 @@ static int dw_dp_link_downgrade(struct dw_dp *dp)
 	struct dw_dp_link *link = &dp->link;
 	struct dw_dp_bridge_state *state;
 
-	state = dw_dp_get_bridge_state(dp);
-
 	switch (link->rate) {
 	case 162000:
 		return -EINVAL;
@@ -968,8 +1027,19 @@ static int dw_dp_link_downgrade(struct dw_dp *dp)
 		break;
 	}
 
-	if (!dw_dp_bandwidth_ok(dp, &state->mode, state->bpp, link->lanes,
-				link->rate))
+	/*
+	 * In MST mode, the rate is downgraded only for link training (signal
+	 * integrity) reasons, and the link is shared by all streams. Don't
+	 * abort training if the lower rate can't carry every stream. Bring
+	 * the link up at the best stable rate so at least some streams can be
+	 * shown. Per-stream fit is enforced by drm_dp_mst_atomic_check().
+	 */
+	if (dp->mst.enabled)
+		return 0;
+
+	state = dw_dp_get_bridge_state(dp, 0);
+	if (state && !dw_dp_bandwidth_ok(dp, &state->mode, state->bpp,
+					 link->lanes, link->rate))
 		return -E2BIG;
 
 	return 0;
@@ -1116,19 +1186,20 @@ static int dw_dp_link_train(struct dw_dp *dp)
 	return 0;
 }
 
-static int dw_dp_send_sdp(struct dw_dp *dp, struct dw_dp_sdp *sdp)
+static int dw_dp_send_sdp(struct dw_dp_stream *stream, struct dw_dp_sdp *sdp)
 {
+	struct dw_dp *dp = stream->dp;
 	const u8 *payload = sdp->base.db;
 	u32 reg;
 	int i, nr;
 
-	nr = find_first_zero_bit(dp->sdp_reg_bank, SDP_REG_BANK_SIZE);
+	nr = find_first_zero_bit(stream->sdp_reg_bank, SDP_REG_BANK_SIZE);
 	if (nr < SDP_REG_BANK_SIZE)
-		set_bit(nr, dp->sdp_reg_bank);
+		set_bit(nr, stream->sdp_reg_bank);
 	else
 		return -EBUSY;
 
-	reg = DW_DP_SDP_REGISTER_BANK + nr * 9 * 4;
+	reg = DW_DP_SDP_REGISTER_BANK(stream->id) + nr * 9 * 4;
 
 	/* SDP header */
 	regmap_write(dp->regmap, reg, get_unaligned_le32(&sdp->base.sdp_header));
@@ -1139,25 +1210,26 @@ static int dw_dp_send_sdp(struct dw_dp *dp, struct dw_dp_sdp *sdp)
 			     FIELD_PREP(SDP_REGS, get_unaligned_le32(payload)));
 
 	if (sdp->flags & DW_DP_SDP_VERTICAL_INTERVAL)
-		regmap_update_bits(dp->regmap, DW_DP_SDP_VERTICAL_CTRL,
+		regmap_update_bits(dp->regmap, DW_DP_SDP_VERTICAL_CTRL(stream->id),
 				   EN_VERTICAL_SDP << nr,
 				   EN_VERTICAL_SDP << nr);
 
 	if (sdp->flags & DW_DP_SDP_HORIZONTAL_INTERVAL)
-		regmap_update_bits(dp->regmap, DW_DP_SDP_HORIZONTAL_CTRL,
+		regmap_update_bits(dp->regmap, DW_DP_SDP_HORIZONTAL_CTRL(stream->id),
 				   EN_HORIZONTAL_SDP << nr,
 				   EN_HORIZONTAL_SDP << nr);
 
 	return 0;
 }
 
-static int dw_dp_send_vsc_sdp(struct dw_dp *dp)
+static int dw_dp_send_vsc_sdp(struct dw_dp_stream *stream)
 {
+	struct dw_dp *dp = stream->dp;
 	struct dw_dp_bridge_state *state;
 	struct dw_dp_sdp sdp = {};
 	struct drm_dp_vsc_sdp vsc = {};
 
-	state = dw_dp_get_bridge_state(dp);
+	state = dw_dp_get_bridge_state(dp, stream->id);
 	if (!state)
 		return -EINVAL;
 
@@ -1196,11 +1268,13 @@ static int dw_dp_send_vsc_sdp(struct dw_dp *dp)
 
 	drm_dp_vsc_sdp_pack(&vsc, &sdp.base);
 
-	return dw_dp_send_sdp(dp, &sdp);
+	return dw_dp_send_sdp(stream, &sdp);
 }
 
-static int dw_dp_video_set_pixel_mode(struct dw_dp *dp)
+static int dw_dp_video_set_pixel_mode(struct dw_dp_stream *stream)
 {
+	struct dw_dp *dp = stream->dp;
+
 	switch (dp->pixel_mode) {
 	case DW_DP_MP_SINGLE_PIXEL:
 	case DW_DP_MP_DUAL_PIXEL:
@@ -1210,20 +1284,21 @@ static int dw_dp_video_set_pixel_mode(struct dw_dp *dp)
 		return -EINVAL;
 	}
 
-	regmap_update_bits(dp->regmap, DW_DP_VSAMPLE_CTRL, PIXEL_MODE_SELECT,
+	regmap_update_bits(dp->regmap, DW_DP_VSAMPLE_CTRL(stream->id), PIXEL_MODE_SELECT,
 			   FIELD_PREP(PIXEL_MODE_SELECT, dp->pixel_mode));
 
 	return 0;
 }
 
-static bool dw_dp_video_need_vsc_sdp(struct dw_dp *dp)
+static bool dw_dp_video_need_vsc_sdp(struct dw_dp_stream *stream)
 {
+	struct dw_dp *dp = stream->dp;
 	struct dw_dp_link *link = &dp->link;
 	struct dw_dp_bridge_state *state;
 
-	state = dw_dp_get_bridge_state(dp);
+	state = dw_dp_get_bridge_state(dp, stream->id);
 	if (!state)
-		return -EINVAL;
+		return false;
 
 	if (!link->vsc_sdp_supported)
 		return false;
@@ -1234,13 +1309,14 @@ static bool dw_dp_video_need_vsc_sdp(struct dw_dp *dp)
 	return false;
 }
 
-static int dw_dp_video_set_msa(struct dw_dp *dp, u8 color_format, u8 bpc,
-			       u16 vstart, u16 hstart)
+static int dw_dp_video_set_msa(struct dw_dp_stream *stream, u8 color_format,
+			       u8 bpc, u16 vstart, u16 hstart)
 {
 	u16 misc = 0;
+	struct dw_dp *dp = stream->dp;
 	struct phy_configure_opts_dp_format fmt;
 
-	if (dw_dp_video_need_vsc_sdp(dp))
+	if (dw_dp_video_need_vsc_sdp(stream))
 		misc |= DP_MSA_MISC_COLOR_VSC_SDP;
 
 	switch (color_format) {
@@ -1288,107 +1364,27 @@ static int dw_dp_video_set_msa(struct dw_dp *dp, u8 color_format, u8 bpc,
 		return -EINVAL;
 	}
 
-	regmap_write(dp->regmap, DW_DP_VIDEO_MSA1,
+	regmap_write(dp->regmap, DW_DP_VIDEO_MSA1(stream->id),
 		     FIELD_PREP(VSTART, vstart) | FIELD_PREP(HSTART, hstart));
-	regmap_write(dp->regmap, DW_DP_VIDEO_MSA2, FIELD_PREP(MISC0, misc));
-	regmap_write(dp->regmap, DW_DP_VIDEO_MSA3, FIELD_PREP(MISC1, misc >> 8));
+	regmap_write(dp->regmap, DW_DP_VIDEO_MSA2(stream->id), FIELD_PREP(MISC0, misc));
+	regmap_write(dp->regmap, DW_DP_VIDEO_MSA3(stream->id), FIELD_PREP(MISC1, misc >> 8));
 
 	phy_set_dp_format(dp->phy, &fmt);
 
 	return 0;
 }
 
-static void dw_dp_video_disable(struct dw_dp *dp)
+static int dw_dp_video_set_tu_hbi_sst(struct dw_dp_stream *stream, u8 color_format,
+				      u8 bpc, u8 bpp, u32 pclock, u32 hblank)
 {
-	regmap_update_bits(dp->regmap, DW_DP_VSAMPLE_CTRL, VIDEO_STREAM_ENABLE,
-			   FIELD_PREP(VIDEO_STREAM_ENABLE, 0));
-}
-
-static int dw_dp_video_enable(struct dw_dp *dp)
-{
+	struct dw_dp *dp = stream->dp;
 	struct dw_dp_link *link = &dp->link;
-	struct dw_dp_bridge_state *state;
-	struct drm_display_mode *mode;
-	u8 color_format, bpc, bpp;
-	u8 init_threshold, vic;
-	u32 hstart, hactive, hblank, h_sync_width, h_front_porch;
-	u32 vstart, vactive, vblank, v_sync_width, v_front_porch;
 	u32 peak_stream_bandwidth, link_bandwidth;
 	u32 average_bytes_per_tu, average_bytes_per_tu_frac;
 	u32 ts, hblank_interval;
-	u32 value;
-	int ret;
+	u8 init_threshold;
 
-	state = dw_dp_get_bridge_state(dp);
-	if (!state)
-		return -EINVAL;
-
-	bpc = state->bpc;
-	bpp = state->bpp;
-	color_format = state->color_format;
-	mode = &state->mode;
-
-	vstart = mode->vtotal - mode->vsync_start;
-	hstart = mode->htotal - mode->hsync_start;
-
-	ret = dw_dp_video_set_pixel_mode(dp);
-	if (ret)
-		return ret;
-
-	ret = dw_dp_video_set_msa(dp, color_format, bpc, vstart, hstart);
-	if (ret)
-		return ret;
-
-	regmap_update_bits(dp->regmap, DW_DP_VSAMPLE_CTRL, VIDEO_MAPPING,
-			   FIELD_PREP(VIDEO_MAPPING, state->video_mapping));
-
-	/* Configure DW_DP_VINPUT_POLARITY_CTRL register */
-	value = 0;
-	if (mode->flags & DRM_MODE_FLAG_PHSYNC)
-		value |= FIELD_PREP(HSYNC_IN_POLARITY, 1);
-	if (mode->flags & DRM_MODE_FLAG_PVSYNC)
-		value |= FIELD_PREP(VSYNC_IN_POLARITY, 1);
-	regmap_write(dp->regmap, DW_DP_VINPUT_POLARITY_CTRL, value);
-
-	/* Configure DW_DP_VIDEO_CONFIG1 register */
-	hactive = mode->hdisplay;
-	hblank = mode->htotal - mode->hdisplay;
-	value = FIELD_PREP(HACTIVE, hactive) | FIELD_PREP(HBLANK, hblank);
-	if (mode->flags & DRM_MODE_FLAG_INTERLACE)
-		value |= FIELD_PREP(I_P, 1);
-	vic = drm_match_cea_mode(mode);
-	if (vic == 5 || vic == 6 || vic == 7 ||
-	    vic == 10 || vic == 11 || vic == 20 ||
-	    vic == 21 || vic == 22 || vic == 39 ||
-	    vic == 25 || vic == 26 || vic == 40 ||
-	    vic == 44 || vic == 45 || vic == 46 ||
-	    vic == 50 || vic == 51 || vic == 54 ||
-	    vic == 55 || vic == 58 || vic  == 59)
-		value |= R_V_BLANK_IN_OSC;
-	regmap_write(dp->regmap, DW_DP_VIDEO_CONFIG1, value);
-
-	/* Configure DW_DP_VIDEO_CONFIG2 register */
-	vblank = mode->vtotal - mode->vdisplay;
-	vactive = mode->vdisplay;
-	regmap_write(dp->regmap, DW_DP_VIDEO_CONFIG2,
-		     FIELD_PREP(VBLANK, vblank) | FIELD_PREP(VACTIVE, vactive));
-
-	/* Configure DW_DP_VIDEO_CONFIG3 register */
-	h_sync_width = mode->hsync_end - mode->hsync_start;
-	h_front_porch = mode->hsync_start - mode->hdisplay;
-	regmap_write(dp->regmap, DW_DP_VIDEO_CONFIG3,
-		     FIELD_PREP(H_SYNC_WIDTH, h_sync_width) |
-		     FIELD_PREP(H_FRONT_PORCH, h_front_porch));
-
-	/* Configure DW_DP_VIDEO_CONFIG4 register */
-	v_sync_width = mode->vsync_end - mode->vsync_start;
-	v_front_porch = mode->vsync_start - mode->vdisplay;
-	regmap_write(dp->regmap, DW_DP_VIDEO_CONFIG4,
-		     FIELD_PREP(V_SYNC_WIDTH, v_sync_width) |
-		     FIELD_PREP(V_FRONT_PORCH, v_front_porch));
-
-	/* Configure DW_DP_VIDEO_CONFIG5 register */
-	peak_stream_bandwidth = mode->clock * bpp / 8;
+	peak_stream_bandwidth = pclock * bpp / 8;
 	link_bandwidth = (link->rate / 1000) * link->lanes;
 	ts = peak_stream_bandwidth * 64 / link_bandwidth;
 	average_bytes_per_tu = ts / 1000;
@@ -1447,9 +1443,9 @@ static int dw_dp_video_enable(struct dw_dp *dp)
 		}
 
 		if (color_format == DRM_COLOR_FORMAT_YCBCR420)
-			t2 = (link->rate / 4) * 1000 / (mode->clock / 2);
+			t2 = (link->rate / 4) * 1000 / (pclock / 2);
 		else
-			t2 = (link->rate / 4) * 1000 / mode->clock;
+			t2 = (link->rate / 4) * 1000 / pclock;
 
 		if (average_bytes_per_tu_frac)
 			t3 = average_bytes_per_tu + 1;
@@ -1460,26 +1456,229 @@ static int dw_dp_video_enable(struct dw_dp *dp)
 			init_threshold = 40;
 	}
 
-	regmap_write(dp->regmap, DW_DP_VIDEO_CONFIG5,
+	regmap_write(dp->regmap, DW_DP_VIDEO_CONFIG5(stream->id),
 		     FIELD_PREP(INIT_THRESHOLD_HI, init_threshold >> 6) |
-		     FIELD_PREP(AVERAGE_BYTES_PER_TU_FRAC, average_bytes_per_tu_frac) |
+		     FIELD_PREP(AVERAGE_BYTES_PER_TU_FRAC_SST, average_bytes_per_tu_frac) |
 		     FIELD_PREP(INIT_THRESHOLD, init_threshold) |
 		     FIELD_PREP(AVERAGE_BYTES_PER_TU, average_bytes_per_tu));
 
-	/* Configure DW_DP_VIDEO_HBLANK_INTERVAL register */
-	hblank_interval = hblank * (link->rate / 4) / mode->clock;
-	regmap_write(dp->regmap, DW_DP_VIDEO_HBLANK_INTERVAL,
+	hblank_interval = hblank * (link->rate / 4) / pclock;
+	regmap_write(dp->regmap, DW_DP_VIDEO_HBLANK_INTERVAL(stream->id),
 		     FIELD_PREP(HBLANK_INTERVAL_EN, 1) |
 		     FIELD_PREP(HBLANK_INTERVAL, hblank_interval));
 
-	/* Video stream enable */
-	regmap_update_bits(dp->regmap, DW_DP_VSAMPLE_CTRL, VIDEO_STREAM_ENABLE,
-			   FIELD_PREP(VIDEO_STREAM_ENABLE, 1));
+	return 0;
+}
 
-	if (dw_dp_video_need_vsc_sdp(dp))
-		dw_dp_send_vsc_sdp(dp);
+static int dw_dp_video_set_tu_hbi_mst(struct dw_dp_stream *stream, u8 color_format,
+				      u8 bpc, u8 bpp, u32 pclock, u32 hblank)
+{
+	struct dw_dp *dp = stream->dp;
+	struct dw_dp_link *link = &dp->link;
+	u32 peak_stream_bandwidth, link_bandwidth;
+	u32 average_bytes_per_tu, average_bytes_per_tu_frac;
+	u32 ts, hblank_interval;
+	u8 init_threshold;
+	u32 t1, t2, t3;
+
+	peak_stream_bandwidth = pclock * bpp / 8;
+	link_bandwidth = (link->rate / 1000) * link->lanes;
+	ts = peak_stream_bandwidth * 64 / link_bandwidth;
+	average_bytes_per_tu      = ts / 1000;
+	average_bytes_per_tu_frac = ((ts % 1000) * 64 + 500) / 1000;
+
+	t1 = 8 * 1000 * 4 / bpp;
+	t2 = (link->rate / 4) * 1000 / pclock;
+
+	if (average_bytes_per_tu_frac)
+		t3 = average_bytes_per_tu + 1;
+	else
+		t3 = average_bytes_per_tu;
+
+	init_threshold = t1 * t2 * (t3 + 8) / (1000 * 1000);
+
+	regmap_write(dp->regmap, DW_DP_VIDEO_CONFIG5(stream->id),
+		     FIELD_PREP(INIT_THRESHOLD_HI, init_threshold >> 6) |
+		     FIELD_PREP(AVERAGE_BYTES_PER_TU_FRAC_MST, average_bytes_per_tu_frac) |
+		     FIELD_PREP(INIT_THRESHOLD, init_threshold) |
+		     FIELD_PREP(AVERAGE_BYTES_PER_TU, average_bytes_per_tu));
+
+	hblank_interval = hblank * (link->rate / 4) * average_bytes_per_tu
+			  * link->lanes / pclock / 16;
+	regmap_write(dp->regmap, DW_DP_VIDEO_HBLANK_INTERVAL(stream->id),
+		     FIELD_PREP(HBLANK_INTERVAL_EN, 1) |
+		     FIELD_PREP(HBLANK_INTERVAL, hblank_interval));
 
 	return 0;
+}
+
+static int dw_dp_video_set_tu_hbi(struct dw_dp_stream *stream, u8 color_format,
+				  u8 bpc, u8 bpp, u32 pclock, u32 hblank)
+{
+	if (stream->dp->mst.enabled)
+		return dw_dp_video_set_tu_hbi_mst(stream, color_format, bpc, bpp,
+						  pclock, hblank);
+	else
+		return dw_dp_video_set_tu_hbi_sst(stream, color_format, bpc, bpp,
+						  pclock, hblank);
+}
+
+static void dw_dp_video_disable(struct dw_dp_stream *stream)
+{
+	struct dw_dp *dp = stream->dp;
+
+	regmap_update_bits(dp->regmap, DW_DP_VSAMPLE_CTRL(stream->id), VIDEO_STREAM_ENABLE,
+			   FIELD_PREP(VIDEO_STREAM_ENABLE, 0));
+}
+
+static void dw_dp_video_enable(struct dw_dp_stream *stream)
+{
+	struct dw_dp *dp = stream->dp;
+
+	regmap_update_bits(dp->regmap, DW_DP_VSAMPLE_CTRL(stream->id), VIDEO_STREAM_ENABLE,
+			   FIELD_PREP(VIDEO_STREAM_ENABLE, 1));
+}
+
+static int dw_dp_video_setup(struct dw_dp_stream *stream)
+{
+	struct dw_dp *dp = stream->dp;
+	struct dw_dp_bridge_state *state;
+	struct drm_display_mode *mode;
+	u8 color_format, bpc, bpp, vic;
+	u32 hstart, hactive, hblank, h_sync_width, h_front_porch;
+	u32 vstart, vactive, vblank, v_sync_width, v_front_porch;
+	u32 value;
+	int ret;
+
+	state = dw_dp_get_bridge_state(dp, stream->id);
+	if (!state)
+		return -EINVAL;
+
+	bpc = state->bpc;
+	bpp = state->bpp;
+	color_format = state->color_format;
+	mode = &state->mode;
+
+	vstart = mode->vtotal - mode->vsync_start;
+	hstart = mode->htotal - mode->hsync_start;
+
+	ret = dw_dp_video_set_pixel_mode(stream);
+	if (ret)
+		return ret;
+
+	ret = dw_dp_video_set_msa(stream, color_format, bpc, vstart, hstart);
+	if (ret)
+		return ret;
+
+	regmap_update_bits(dp->regmap, DW_DP_VSAMPLE_CTRL(stream->id), VIDEO_MAPPING,
+			   FIELD_PREP(VIDEO_MAPPING, state->video_mapping));
+
+	/* Configure DW_DP_VINPUT_POLARITY_CTRL register */
+	value = 0;
+	if (mode->flags & DRM_MODE_FLAG_PHSYNC)
+		value |= FIELD_PREP(HSYNC_IN_POLARITY, 1);
+	if (mode->flags & DRM_MODE_FLAG_PVSYNC)
+		value |= FIELD_PREP(VSYNC_IN_POLARITY, 1);
+	regmap_write(dp->regmap, DW_DP_VINPUT_POLARITY_CTRL(stream->id), value);
+
+	/* Configure DW_DP_VIDEO_CONFIG1 register */
+	hactive = mode->hdisplay;
+	hblank = mode->htotal - mode->hdisplay;
+	value = FIELD_PREP(HACTIVE, hactive) | FIELD_PREP(HBLANK, hblank);
+	if (mode->flags & DRM_MODE_FLAG_INTERLACE)
+		value |= FIELD_PREP(I_P, 1);
+	vic = drm_match_cea_mode(mode);
+	if (vic == 5 || vic == 6 || vic == 7 ||
+	    vic == 10 || vic == 11 || vic == 20 ||
+	    vic == 21 || vic == 22 || vic == 39 ||
+	    vic == 25 || vic == 26 || vic == 40 ||
+	    vic == 44 || vic == 45 || vic == 46 ||
+	    vic == 50 || vic == 51 || vic == 54 ||
+	    vic == 55 || vic == 58 || vic  == 59)
+		value |= R_V_BLANK_IN_OSC;
+	regmap_write(dp->regmap, DW_DP_VIDEO_CONFIG1(stream->id), value);
+
+	/* Configure DW_DP_VIDEO_CONFIG2 register */
+	vblank = mode->vtotal - mode->vdisplay;
+	vactive = mode->vdisplay;
+	regmap_write(dp->regmap, DW_DP_VIDEO_CONFIG2(stream->id),
+		     FIELD_PREP(VBLANK, vblank) | FIELD_PREP(VACTIVE, vactive));
+
+	/* Configure DW_DP_VIDEO_CONFIG3 register */
+	h_sync_width = mode->hsync_end - mode->hsync_start;
+	h_front_porch = mode->hsync_start - mode->hdisplay;
+	regmap_write(dp->regmap, DW_DP_VIDEO_CONFIG3(stream->id),
+		     FIELD_PREP(H_SYNC_WIDTH, h_sync_width) |
+		     FIELD_PREP(H_FRONT_PORCH, h_front_porch));
+
+	/* Configure DW_DP_VIDEO_CONFIG4 register */
+	v_sync_width = mode->vsync_end - mode->vsync_start;
+	v_front_porch = mode->vsync_start - mode->vdisplay;
+	regmap_write(dp->regmap, DW_DP_VIDEO_CONFIG4(stream->id),
+		     FIELD_PREP(V_SYNC_WIDTH, v_sync_width) |
+		     FIELD_PREP(V_FRONT_PORCH, v_front_porch));
+
+	/* Configure DW_DP_VIDEO_CONFIG5 and HBLANK_INTERVAL registers */
+	ret = dw_dp_video_set_tu_hbi(stream, color_format, bpc, bpp, mode->clock, hblank);
+	if (ret)
+		return ret;
+
+	if (dw_dp_video_need_vsc_sdp(stream))
+		dw_dp_send_vsc_sdp(stream);
+
+	return 0;
+}
+
+static void dw_dp_backup_vcp_table(struct dw_dp *dp, u32 *vcp_table)
+{
+	int i;
+
+	for (i = 0; i < 8; i++)
+		regmap_read(dp->regmap, DW_DP_MST_VCP_TABLE_REG(i), &vcp_table[i]);
+}
+
+static void dw_dp_restore_vcp_table(struct dw_dp *dp, u32 *vcp_table)
+{
+	int i;
+
+	for (i = 0; i < 8; i++)
+		regmap_write(dp->regmap, DW_DP_MST_VCP_TABLE_REG(i), vcp_table[i]);
+}
+
+static void dw_dp_update_vcp_table(struct dw_dp *dp, struct drm_dp_mst_topology_state *mst_state)
+{
+	u32 vcp_table[8] = {0};
+	int i;
+
+	for (i = 0; i < DW_DP_MST_MAX_STREAMS; i++) {
+		struct dw_dp_stream *stream = &dp->mst.streams[i];
+		struct drm_dp_mst_atomic_payload *payload;
+		int slot, end_slot;
+
+		if (!test_bit(i, dp->mst.stream_used))
+			continue;
+
+		payload = drm_atomic_get_mst_payload_state(mst_state, stream->port);
+		if (!payload || payload->vcpi == 0 || payload->vc_start_slot < 1)
+			continue;
+
+		end_slot = payload->vc_start_slot + payload->time_slots;
+		if (end_slot > 64)
+			end_slot = 64;
+
+		for (slot = payload->vc_start_slot; slot < end_slot; slot++) {
+			int reg_idx  = slot / 8;
+			int bit_idx  = (slot % 8) * 4;
+
+			if (reg_idx >= ARRAY_SIZE(vcp_table))
+				break;
+
+			vcp_table[reg_idx] |= ((stream->id + 1) << bit_idx);
+		}
+	}
+
+	for (i = 0; i < ARRAY_SIZE(vcp_table); i++)
+		regmap_write(dp->regmap, DW_DP_MST_VCP_TABLE_REG(i), vcp_table[i]);
 }
 
 static void dw_dp_hpd_init(struct dw_dp *dp)
@@ -1607,6 +1806,68 @@ static ssize_t dw_dp_aux_transfer(struct drm_dp_aux *aux,
 	return ret;
 }
 
+static int dw_dp_mst_atomic_check(struct drm_bridge *bridge, struct drm_bridge_state *bridge_state,
+				  struct drm_display_mode *adjusted_mode,
+				  const struct dw_dp_output_format *fmt)
+{
+	struct dw_dp_stream *stream = bridge_to_stream(bridge);
+	struct dw_dp *dp = stream->dp;
+	struct drm_dp_mst_topology_state *mst_state;
+	struct drm_atomic_state *state = bridge_state->base.state;
+	struct drm_connector_state *new_conn_state = NULL;
+	struct dw_dp_mst_connector *mst_conn;
+	int ret, pbn;
+
+	mutex_lock(&dp->mst.connector_lock);
+	list_for_each_entry(mst_conn, &dp->mst.connector_list, list_node) {
+		if (mst_conn->stream_id == stream->id) {
+			new_conn_state = drm_atomic_get_new_connector_state(state,
+									    &mst_conn->base);
+			break;
+		}
+	}
+	mutex_unlock(&dp->mst.connector_lock);
+
+	if (!new_conn_state)
+		return 0;
+
+	if (!new_conn_state->crtc)
+		return 0;
+
+	mst_state = drm_atomic_get_mst_topology_state(state, &dp->mst.mgr);
+	if (IS_ERR(mst_state))
+		return PTR_ERR(mst_state);
+
+	mst_state->pbn_div = drm_dp_get_vc_payload_bw(&dp->mst.mgr, dp->link.rate, dp->link.lanes);
+
+	pbn = drm_dp_calc_pbn_mode(adjusted_mode->clock, fmt->bpp << 4);
+
+	ret = drm_dp_atomic_find_time_slots(state, &dp->mst.mgr, stream->port, pbn);
+	if (ret < 0) {
+		drm_err(bridge->dev,
+			"MST [CONNECTOR:%d:%s]: cannot allocate time slots for %dx%d@%d (%d PBN): %d. Choose a lower resolution/refresh rate.\n",
+			new_conn_state->connector->base.id,
+			new_conn_state->connector->name,
+			adjusted_mode->hdisplay, adjusted_mode->vdisplay,
+			drm_mode_vrefresh(adjusted_mode), pbn, ret);
+		return ret;
+	}
+
+	ret = drm_dp_mst_atomic_check(state);
+	if (ret) {
+		if (ret == -ENOSPC)
+			drm_err(bridge->dev,
+				"MST [CONNECTOR:%d:%s]: not enough link bandwidth for %dx%d@%d (%d PBN). Choose a lower resolution/refresh rate.\n",
+				new_conn_state->connector->base.id,
+				new_conn_state->connector->name,
+				adjusted_mode->hdisplay, adjusted_mode->vdisplay,
+				drm_mode_vrefresh(adjusted_mode), pbn);
+		return ret;
+	}
+
+	return 0;
+}
+
 /*
  * Limits for the video timing for DP:
  * 1. the hfp should be 2 pixels aligned;
@@ -1619,12 +1880,14 @@ static int dw_dp_bridge_atomic_check(struct drm_bridge *bridge,
 				     struct drm_connector_state *conn_state)
 {
 	struct drm_display_mode *adjusted_mode = &crtc_state->adjusted_mode;
-	struct dw_dp *dp = bridge_to_dp(bridge);
+	struct dw_dp_stream *stream = bridge_to_stream(bridge);
+	struct dw_dp *dp = stream->dp;
 	struct dw_dp_bridge_state *state;
 	const struct dw_dp_output_format *fmt;
 	struct drm_display_mode *mode;
 	int min_hbp = 16;
 	int min_hsync = 9;
+	int ret = 0;
 
 	state = to_dw_dp_bridge_state(bridge_state);
 	mode = &state->mode;
@@ -1655,14 +1918,18 @@ static int dw_dp_bridge_atomic_check(struct drm_bridge *bridge,
 
 	drm_mode_copy(mode, adjusted_mode);
 
-	return 0;
+	if (dp->mst.enabled)
+		ret = dw_dp_mst_atomic_check(bridge, bridge_state, adjusted_mode, fmt);
+
+	return ret;
 }
 
 static enum drm_mode_status dw_dp_bridge_mode_valid(struct drm_bridge *bridge,
 						    const struct drm_display_info *info,
 						    const struct drm_display_mode *mode)
 {
-	struct dw_dp *dp = bridge_to_dp(bridge);
+	struct dw_dp_stream *stream = bridge_to_stream(bridge);
+	struct dw_dp *dp = stream->dp;
 	struct dw_dp_link *link = &dp->link;
 	u32 min_bpp;
 
@@ -1706,12 +1973,16 @@ static void dw_dp_link_disable(struct dw_dp *dp)
 {
 	struct dw_dp_link *link = &dp->link;
 
+	if (!dp->link_enabled)
+		return;
+
 	if (dw_dp_hpd_detect(dp))
 		drm_dp_link_power_down(&dp->aux, dp->link.revision);
 
 	dw_dp_phy_xmit_enable(dp, 0);
 
 	phy_power_off(dp->phy);
+	dp->link_enabled = false;
 
 	link->train.clock_recovered = false;
 	link->train.channel_equalized = false;
@@ -1721,18 +1992,27 @@ static int dw_dp_link_enable(struct dw_dp *dp)
 {
 	int ret;
 
+	if (dp->link_enabled)
+		return 0;
+
 	ret = phy_power_on(dp->phy);
 	if (ret)
 		return ret;
+
+	dp->link_enabled = true;
 
 	ret = drm_dp_link_power_up(&dp->aux, dp->link.revision);
 	if (ret < 0)
 		return ret;
 
-	/* Clear the MST state if any */
-	ret = drm_dp_dpcd_writeb(&dp->aux, DP_MSTM_CTRL, 0);
-	if (ret < 0)
-		return ret;
+	/* Clear the MST state, if any in the SST mode,
+	 * to avoid redundant mode setting on the sink device
+	 */
+	if (!dp->mst.enabled) {
+		ret = drm_dp_dpcd_writeb(&dp->aux, DP_MSTM_CTRL, 0);
+		if (ret < 0)
+			return ret;
+	}
 
 	ret = dw_dp_link_train(dp);
 
@@ -1780,11 +2060,230 @@ err:
 	return ret;
 }
 
+static int dw_dp_mst_trigger_act(struct dw_dp *dp)
+{
+	u32 val;
+	int ret;
+
+	ret = regmap_read_poll_timeout(dp->regmap, DW_DP_CCTL, val,
+				       !FIELD_GET(INITIATE_MST_ACT_SEQ, val), 100, 100000);
+	if (ret) {
+		ret = -EBUSY;
+		goto err;
+	}
+
+	regmap_update_bits(dp->regmap, DW_DP_CCTL, INITIATE_MST_ACT_SEQ,
+			   FIELD_PREP(INITIATE_MST_ACT_SEQ, 1));
+
+	ret = drm_dp_check_act_status(&dp->mst.mgr);
+	if (ret)
+		goto err;
+
+	return 0;
+
+err:
+	dev_err(dp->dev, "ACT failed: %d\n", ret);
+	return ret;
+}
+
+static void dw_dp_mst_conn_destroy(struct drm_connector *connector)
+{
+	struct dw_dp_mst_connector *mst_conn = conn_to_mst_conn(connector);
+	struct dw_dp *dp = mst_conn->dp;
+
+	mutex_lock(&dp->mst.connector_lock);
+	list_del(&mst_conn->list_node);
+	mutex_unlock(&dp->mst.connector_lock);
+
+	if (mst_conn->stream_id >= 0 &&
+	    dp->mst.streams[mst_conn->stream_id].port == mst_conn->port) {
+		clear_bit(mst_conn->stream_id, dp->mst.stream_used);
+		dp->mst.streams[mst_conn->stream_id].port = NULL;
+	}
+
+	drm_dp_mst_put_port_malloc(mst_conn->port);
+	drm_connector_cleanup(connector);
+	kfree(mst_conn);
+}
+
+static const struct drm_connector_funcs dw_dp_conn_funcs = {
+	.fill_modes		= drm_helper_probe_single_connector_modes,
+	.reset			= drm_atomic_helper_connector_reset,
+	.destroy		= dw_dp_mst_conn_destroy,
+	.atomic_duplicate_state	= drm_atomic_helper_connector_duplicate_state,
+	.atomic_destroy_state	= drm_atomic_helper_connector_destroy_state,
+};
+
+static int dw_dp_mst_get_modes(struct drm_connector *connector)
+{
+	struct dw_dp_mst_connector *mst_conn = conn_to_mst_conn(connector);
+	struct dw_dp *dp = mst_conn->dp;
+	struct edid *edid;
+	int ret = 0;
+	int i;
+
+	edid = drm_dp_mst_get_edid(connector, &dp->mst.mgr, mst_conn->port);
+	drm_connector_update_edid_property(connector, edid);
+
+	if (edid) {
+		drm_add_edid_modes(connector, edid);
+
+		if (!mst_conn->encoder_attached) {
+			for (i = 0; i < DW_DP_MST_MAX_STREAMS; i++) {
+				struct drm_encoder *encoder = dp->mst.streams[i].bridge.encoder;
+
+				if (!encoder)
+					continue;
+
+				ret = drm_connector_attach_encoder(connector, encoder);
+				if (ret) {
+					dev_err(dp->dev, "Failed attach encoder %d port=%d\n",
+						i, mst_conn->port->port_num);
+					break;
+				}
+			}
+			mst_conn->encoder_attached = true;
+		}
+	}
+
+	kfree(edid);
+
+	return ret;
+}
+
+static int dw_dp_mst_detect(struct drm_connector *connector,
+			    struct drm_modeset_acquire_ctx *ctx, bool force)
+{
+	struct dw_dp_mst_connector *mst_conn = conn_to_mst_conn(connector);
+	struct dw_dp *dp = mst_conn->dp;
+	enum drm_connector_status status;
+
+	status = drm_dp_mst_detect_port(connector, ctx, &dp->mst.mgr, mst_conn->port);
+
+	return status;
+}
+
+static struct drm_encoder *dw_dp_mst_atomic_best_encoder(struct drm_connector *connector,
+							 struct drm_atomic_state *state)
+{
+	struct dw_dp_mst_connector *mst_conn = conn_to_mst_conn(connector);
+	struct dw_dp *dp = mst_conn->dp;
+	struct drm_connector_state *conn_state;
+	int stream_id;
+
+	conn_state = drm_atomic_get_new_connector_state(state, connector);
+
+	if (!conn_state || !conn_state->crtc)
+		return NULL;
+
+	if (mst_conn->stream_id >= 0)
+		return dp->mst.streams[mst_conn->stream_id].bridge.encoder;
+
+	for (stream_id = 0; stream_id < DW_DP_MST_MAX_STREAMS; stream_id++) {
+		if (!dp->mst.streams[stream_id].bridge.encoder)
+			continue;
+		if (!test_bit(stream_id, dp->mst.stream_used))
+			break;
+	}
+	if (stream_id >= DW_DP_MST_MAX_STREAMS) {
+		dev_warn(dp->dev, "No free stream for port %d\n", mst_conn->port->port_num);
+		return NULL;
+	}
+
+	set_bit(stream_id, dp->mst.stream_used);
+	mst_conn->stream_id = stream_id;
+	dp->mst.streams[stream_id].port = mst_conn->port;
+
+	return dp->mst.streams[stream_id].bridge.encoder;
+}
+
+static int dw_dp_mst_conn_atomic_check(struct drm_connector *connector,
+				       struct drm_atomic_state *state)
+{
+	struct dw_dp_mst_connector *mst_conn = conn_to_mst_conn(connector);
+	struct dw_dp *dp = mst_conn->dp;
+
+	return drm_dp_atomic_release_time_slots(state, &dp->mst.mgr, mst_conn->port);
+}
+
+static const struct drm_connector_helper_funcs dw_dp_conn_helper_funcs = {
+	.get_modes	= dw_dp_mst_get_modes,
+	.detect_ctx	= dw_dp_mst_detect,
+	.atomic_best_encoder = dw_dp_mst_atomic_best_encoder,
+	.atomic_check	= dw_dp_mst_conn_atomic_check,
+};
+
+static struct drm_connector *dw_dp_mst_add_connector(struct drm_dp_mst_topology_mgr *mgr,
+						     struct drm_dp_mst_port *port,
+						     const char *pathprop)
+{
+	struct dw_dp *dp = mgr_to_dp(mgr);
+	struct dw_dp_mst_connector *mst_conn;
+	struct drm_connector *connector;
+	int ret;
+
+	mst_conn = kzalloc(sizeof(*mst_conn), GFP_KERNEL);
+	if (!mst_conn)
+		return NULL;
+
+	mst_conn->dp = dp;
+	mst_conn->port = port;
+	mst_conn->stream_id = -1;
+
+	connector = &mst_conn->base;
+
+	ret = drm_connector_init(dp->mst.streams[0].bridge.dev,
+				 connector,
+				 &dw_dp_conn_funcs,
+				 DRM_MODE_CONNECTOR_DisplayPort);
+	if (ret) {
+		kfree(mst_conn);
+		return NULL;
+	}
+
+	drm_connector_helper_add(connector, &dw_dp_conn_helper_funcs);
+	connector->funcs->reset(connector);
+
+	mutex_lock(&dp->mst.connector_lock);
+	list_add_tail(&mst_conn->list_node, &dp->mst.connector_list);
+	mutex_unlock(&dp->mst.connector_lock);
+
+	drm_dp_mst_get_port_malloc(port);
+
+	return connector;
+}
+
+static const struct drm_dp_mst_topology_cbs dw_dp_mst_topology_cbs = {
+	.add_connector = dw_dp_mst_add_connector,
+};
+
 static int dw_dp_bridge_attach(struct drm_bridge *bridge, enum drm_bridge_attach_flags flags)
 {
-	struct dw_dp *dp = bridge_to_dp(bridge);
+	struct dw_dp_stream *stream = bridge_to_stream(bridge);
 	struct drm_encoder *encoder = bridge->encoder;
+	struct dw_dp *dp = stream->dp;
 	int ret;
+
+	if (stream->id)
+		return 0;
+
+	dp->connector = drm_bridge_connector_init(bridge->dev, bridge->encoder);
+	if (IS_ERR(dp->connector))
+		return PTR_ERR(dp->connector);
+
+	INIT_LIST_HEAD(&dp->mst.connector_list);
+	mutex_init(&dp->mst.connector_lock);
+
+	ret = drm_dp_mst_topology_mgr_init(&dp->mst.mgr, bridge->dev, &dp->aux, 16,
+					   DW_DP_MST_MAX_STREAMS, dp->connector->index);
+	if (ret)
+		return ret;
+
+	dp->mst.mgr.cbs = &dw_dp_mst_topology_cbs;
+
+	ret = drm_connector_attach_encoder(dp->connector, encoder);
+	if (ret)
+		return ret;
 
 	dp->aux.drm_dev = encoder->dev;
 	dp->aux.name = dev_name(dp->dev);
@@ -1804,11 +2303,107 @@ static int dw_dp_bridge_attach(struct drm_bridge *bridge, enum drm_bridge_attach
 	return 0;
 }
 
-static void dw_dp_bridge_atomic_enable(struct drm_bridge *bridge,
-				       struct drm_bridge_state *old_state)
+static void dw_dp_mst_payload_sync(struct dw_dp *dp, struct drm_dp_mst_topology_state *mst_state)
+{
+	struct drm_dp_mst_atomic_payload *p;
+	u8 count = 0, slots = 0;
+	int i;
+
+	list_for_each_entry(p, &mst_state->payloads, next) {
+		bool owned = false;
+
+		if (p->delete ||
+		    p->payload_allocation_status == DRM_DP_MST_PAYLOAD_ALLOCATION_NONE)
+			continue;
+
+		for (i = 0; i < DW_DP_MST_MAX_STREAMS; i++) {
+			if (test_bit(i, dp->mst.stream_used) &&
+			    dp->mst.streams[i].port == p->port) {
+				owned = true;
+				break;
+			}
+		}
+		if (!owned)
+			continue;
+
+		count++;
+		slots += p->time_slots;
+	}
+
+	if (dp->mst.mgr.payload_count == count &&
+	    dp->mst.mgr.next_start_slot == mst_state->start_slot + slots)
+		return;
+
+	dp->mst.mgr.payload_count = count;
+	dp->mst.mgr.next_start_slot = mst_state->start_slot + slots;
+}
+
+static void dw_dp_bridge_atomic_enable_mst(struct drm_bridge *bridge,
+					   struct drm_bridge_state *old_state)
 {
 	struct drm_atomic_state *state = old_state->base.state;
-	struct dw_dp *dp = bridge_to_dp(bridge);
+	struct dw_dp_stream *stream = bridge_to_stream(bridge);
+	struct dw_dp *dp = stream->dp;
+	struct drm_dp_mst_topology_state *mst_state;
+	struct drm_dp_mst_atomic_payload *payload;
+	int ret;
+
+	if (!drm_atomic_get_new_connector_for_encoder(state, bridge->encoder)) {
+		dev_err(dp->dev, "failed to get connector\n");
+		return;
+	}
+
+	set_bit(0, stream->sdp_reg_bank);
+
+	mst_state = drm_atomic_get_new_mst_topology_state(state, &dp->mst.mgr);
+	if (!mst_state)
+		return;
+
+	dw_dp_mst_payload_sync(dp, mst_state);
+
+	if (dp->mst.mgr.payload_count == 0) {
+		ret = dw_dp_link_enable(dp);
+		if (ret < 0) {
+			dev_err(dp->dev, "failed to enable link: %d\n", ret);
+			return;
+		}
+	}
+
+	ret = dw_dp_video_setup(stream);
+	if (ret < 0) {
+		dev_err(dp->dev, "failed to setup video: %d\n", ret);
+		return;
+	}
+
+	payload = drm_atomic_get_mst_payload_state(mst_state, stream->port);
+	if (!payload || payload->vcpi == 0)
+		return;
+
+	if (payload->payload_allocation_status == DRM_DP_MST_PAYLOAD_ALLOCATION_NONE) {
+		drm_dp_add_payload_part1(&dp->mst.mgr, mst_state, payload);
+		dw_dp_update_vcp_table(dp, mst_state);
+
+		ret = dw_dp_mst_trigger_act(dp);
+		if (ret)
+			return;
+
+		ret = drm_dp_add_payload_part2(&dp->mst.mgr, payload);
+		if (ret < 0) {
+			dev_err(dp->dev, "stream %d add_payload_part2 failed: %d\n",
+				stream->id, ret);
+			return;
+		}
+	}
+
+	dw_dp_video_enable(stream);
+}
+
+static void dw_dp_bridge_atomic_enable_sst(struct drm_bridge *bridge,
+					   struct drm_bridge_state *old_state)
+{
+	struct drm_atomic_state *state = old_state->base.state;
+	struct dw_dp_stream *stream = bridge_to_stream(bridge);
+	struct dw_dp *dp = stream->dp;
 	struct drm_connector *connector;
 	struct drm_connector_state *conn_state;
 	int ret;
@@ -1825,7 +2420,7 @@ static void dw_dp_bridge_atomic_enable(struct drm_bridge *bridge,
 		return;
 	}
 
-	set_bit(0, dp->sdp_reg_bank);
+	set_bit(0, stream->sdp_reg_bank);
 
 	ret = dw_dp_link_enable(dp);
 	if (ret < 0) {
@@ -1833,11 +2428,25 @@ static void dw_dp_bridge_atomic_enable(struct drm_bridge *bridge,
 		return;
 	}
 
-	ret = dw_dp_video_enable(dp);
+	ret = dw_dp_video_setup(stream);
 	if (ret < 0) {
-		dev_err(dp->dev, "failed to enable video: %d\n", ret);
+		dev_err(dp->dev, "failed to setup video: %d\n", ret);
 		return;
 	}
+
+	dw_dp_video_enable(stream);
+}
+
+static void dw_dp_bridge_atomic_enable(struct drm_bridge *bridge,
+				       struct drm_bridge_state *old_state)
+{
+	struct dw_dp_stream *stream = bridge_to_stream(bridge);
+	struct dw_dp *dp = stream->dp;
+
+	if (dp->mst.enabled)
+		dw_dp_bridge_atomic_enable_mst(bridge, old_state);
+	else
+		dw_dp_bridge_atomic_enable_sst(bridge, old_state);
 }
 
 static void dw_dp_reset(struct dw_dp *dp)
@@ -1860,15 +2469,130 @@ static void dw_dp_reset(struct dw_dp *dp)
 	enable_irq(dp->irq);
 }
 
+static void dw_dp_mst_reset_preserve(struct dw_dp *dp, int changing_id)
+{
+	u32 vcp_table[8];
+	int i, ret;
+
+	dw_dp_backup_vcp_table(dp, vcp_table);
+
+	dw_dp_link_disable(dp);
+	dw_dp_reset(dp);
+
+	ret = dw_dp_link_enable(dp);
+	if (ret < 0) {
+		dev_err(dp->dev, "failed to re-enable link after reset: %d\n", ret);
+		return;
+	}
+
+	dw_dp_restore_vcp_table(dp, vcp_table);
+
+	for (i = 0; i < DW_DP_MST_MAX_STREAMS; i++) {
+		struct dw_dp_stream *stream = &dp->mst.streams[i];
+
+		if (i == changing_id || !test_bit(i, dp->mst.stream_used))
+			continue;
+		if (dw_dp_video_setup(stream) < 0)
+			continue;
+		dw_dp_video_enable(stream);
+	}
+
+	dw_dp_mst_trigger_act(dp);
+}
+
+static void dw_dp_bridge_atomic_disable_sst(struct drm_bridge *bridge,
+					    struct drm_bridge_state *old_state)
+{
+	struct dw_dp_stream *stream = bridge_to_stream(bridge);
+	struct dw_dp *dp = stream->dp;
+
+	dw_dp_video_disable(stream);
+	dw_dp_link_disable(dp);
+	bitmap_zero(stream->sdp_reg_bank, SDP_REG_BANK_SIZE);
+	dw_dp_reset(dp);
+}
+
+static void dw_dp_bridge_atomic_disable_mst(struct drm_bridge *bridge,
+					    struct drm_bridge_state *old_state)
+{
+	struct dw_dp_stream *stream = bridge_to_stream(bridge);
+	struct dw_dp *dp = stream->dp;
+	struct drm_atomic_state *state = old_state->base.state;
+	struct drm_dp_mst_topology_state *new_mst_state, *old_mst_state;
+	struct drm_dp_mst_atomic_payload *new_payload, *old_payload;
+	struct drm_connector *old_conn;
+	struct drm_dp_mst_port *port;
+	bool release_slot = false;
+
+	old_conn = drm_atomic_get_old_connector_for_encoder(state, bridge->encoder);
+	if (old_conn && old_conn->funcs == &dw_dp_conn_funcs)
+		port = conn_to_mst_conn(old_conn)->port;
+	else
+		port = stream->port;
+
+	old_mst_state = drm_atomic_get_old_mst_topology_state(state, &dp->mst.mgr);
+	new_mst_state = drm_atomic_get_new_mst_topology_state(state, &dp->mst.mgr);
+	if (old_mst_state && new_mst_state) {
+		old_payload = drm_atomic_get_mst_payload_state(old_mst_state, port);
+		new_payload = drm_atomic_get_mst_payload_state(new_mst_state, port);
+
+		if (old_payload && new_payload) {
+			release_slot = new_payload->delete;
+
+			drm_dp_remove_payload_part1(&dp->mst.mgr, new_mst_state, new_payload);
+			drm_dp_remove_payload_part2(&dp->mst.mgr, new_mst_state,
+						    old_payload, new_payload);
+			dw_dp_update_vcp_table(dp, new_mst_state);
+
+			dw_dp_mst_trigger_act(dp);
+		}
+	}
+
+	if (release_slot) {
+		struct dw_dp_mst_connector *mst_conn;
+
+		mutex_lock(&dp->mst.connector_lock);
+		list_for_each_entry(mst_conn, &dp->mst.connector_list, list_node) {
+			if (mst_conn->stream_id == stream->id) {
+				mst_conn->stream_id = -1;
+				break;
+			}
+		}
+		mutex_unlock(&dp->mst.connector_lock);
+
+		clear_bit(stream->id, dp->mst.stream_used);
+		stream->port = NULL;
+	}
+
+	dw_dp_video_disable(stream);
+	bitmap_zero(stream->sdp_reg_bank, SDP_REG_BANK_SIZE);
+
+	/*
+	 * During testing, switching between two modes with a large gap in
+	 * init_threshold may cause the stream not to be displayed on the monitor.
+	 * As a workaround, reset the controller to reapply the settings for the new mode.
+	 */
+	if (dp->mst.mgr.payload_count > 0) {
+		if (!release_slot)
+			dw_dp_mst_reset_preserve(dp, stream->id);
+		return;
+	}
+
+	dw_dp_link_disable(dp);
+	if (!release_slot)
+		dw_dp_reset(dp);
+}
+
 static void dw_dp_bridge_atomic_disable(struct drm_bridge *bridge,
 					struct drm_bridge_state *old_state)
 {
-	struct dw_dp *dp = bridge_to_dp(bridge);
+	struct dw_dp_stream *stream = bridge_to_stream(bridge);
+	struct dw_dp *dp = stream->dp;
 
-	dw_dp_video_disable(dp);
-	dw_dp_link_disable(dp);
-	bitmap_zero(dp->sdp_reg_bank, SDP_REG_BANK_SIZE);
-	dw_dp_reset(dp);
+	if (dp->mst.enabled)
+		dw_dp_bridge_atomic_disable_mst(bridge, old_state);
+	else
+		dw_dp_bridge_atomic_disable_sst(bridge, old_state);
 }
 
 static bool dw_dp_hpd_detect_link(struct dw_dp *dp)
@@ -1884,15 +2608,46 @@ static bool dw_dp_hpd_detect_link(struct dw_dp *dp)
 	return !ret;
 }
 
+static int dw_dp_mst_enadis(struct dw_dp *dp, bool enable)
+{
+	struct dw_dp_mst *mst = &dp->mst;
+	int ret;
+
+	if (mst->enabled == enable)
+		return 0;
+
+	ret = drm_dp_mst_topology_mgr_set_mst(&mst->mgr, enable);
+	if (ret)
+		return ret;
+
+	mst->enabled = enable;
+
+	return 0;
+}
+
 static enum drm_connector_status dw_dp_bridge_detect(struct drm_bridge *bridge)
 {
-	struct dw_dp *dp = bridge_to_dp(bridge);
+	struct dw_dp_stream *stream = bridge_to_stream(bridge);
+	struct dw_dp *dp = stream->dp;
 
-	if (!dw_dp_hpd_detect(dp))
+	if (stream->id)
 		return connector_status_disconnected;
 
-	if (!dw_dp_hpd_detect_link(dp))
+	if (!dw_dp_hpd_detect(dp) || !dw_dp_hpd_detect_link(dp)) {
+		if (dp->mst.enabled)
+			dw_dp_mst_enadis(dp, false);
 		return connector_status_disconnected;
+	}
+
+	if (drm_dp_read_mst_cap(&dp->aux, dp->link.dpcd)) {
+		if (!dp->mst.enabled)
+			dw_dp_mst_enadis(dp, true);
+
+		return connector_status_disconnected;
+	} else {
+		if (dp->mst.enabled)
+			dw_dp_mst_enadis(dp, false);
+	}
 
 	return connector_status_connected;
 }
@@ -1900,7 +2655,8 @@ static enum drm_connector_status dw_dp_bridge_detect(struct drm_bridge *bridge)
 static const struct drm_edid *dw_dp_bridge_edid_read(struct drm_bridge *bridge,
 						     struct drm_connector *connector)
 {
-	struct dw_dp *dp = bridge_to_dp(bridge);
+	struct dw_dp_stream *stream = bridge_to_stream(bridge);
+	struct dw_dp *dp = stream->dp;
 	const struct drm_edid *edid;
 	int ret;
 
@@ -1921,7 +2677,8 @@ static u32 *dw_dp_bridge_atomic_get_output_bus_fmts(struct drm_bridge *bridge,
 						    struct drm_connector_state *conn_state,
 						    unsigned int *num_output_fmts)
 {
-	struct dw_dp *dp = bridge_to_dp(bridge);
+	struct dw_dp_stream *stream = bridge_to_stream(bridge);
+	struct dw_dp *dp = stream->dp;
 	struct dw_dp_link *link = &dp->link;
 	struct drm_display_info *di = &conn_state->connector->display_info;
 	struct drm_display_mode mode = crtc_state->mode;
@@ -1993,9 +2750,12 @@ static const struct drm_bridge_funcs dw_dp_bridge_funcs = {
 
 static int dw_dp_link_retrain(struct dw_dp *dp)
 {
-	struct drm_device *dev = dp->bridge.dev;
+	struct drm_device *dev = dp->mst.streams[0].bridge.dev;
 	struct drm_modeset_acquire_ctx ctx;
 	int ret;
+
+	if (!dev)
+		return 0;
 
 	if (!dw_dp_needs_link_retrain(dp))
 		return 0;
@@ -2020,6 +2780,32 @@ static int dw_dp_link_retrain(struct dw_dp *dp)
 	return ret;
 }
 
+static void dw_dp_mst_poll_hpd_irq(struct drm_dp_mst_topology_mgr *mgr)
+{
+	struct dw_dp *dp = mgr_to_dp(mgr);
+	u8 esi[8] = {};
+	bool handled = true;
+	int rc;
+
+	while (handled) {
+		u8 ack[8] = {};
+
+		rc = drm_dp_dpcd_read(&dp->aux, DP_SINK_COUNT_ESI, esi, 8);
+		if (rc != 8)
+			break;
+
+		drm_dp_mst_hpd_irq_handle_event(&dp->mst.mgr, esi, ack, &handled);
+		if (!handled)
+			break;
+
+		rc = drm_dp_dpcd_writeb(&dp->aux, DP_SINK_COUNT_ESI + 1, ack[1]);
+		if (rc != 1)
+			break;
+	}
+
+	drm_dp_mst_hpd_irq_send_new_request(&dp->mst.mgr);
+}
+
 static void dw_dp_hpd_work(struct work_struct *work)
 {
 	struct dw_dp *dp = container_of(work, struct dw_dp, hpd_work);
@@ -2038,8 +2824,10 @@ static void dw_dp_hpd_work(struct work_struct *work)
 			if (ret)
 				dev_warn(dp->dev, "Retrain link failed\n");
 		}
+		if (dp->mst.enabled)
+			dw_dp_mst_poll_hpd_irq(&dp->mst.mgr);
 	} else {
-		drm_helper_hpd_irq_event(dp->bridge.dev);
+		drm_helper_hpd_irq_event(dp->mst.streams[0].bridge.dev);
 	}
 }
 
@@ -2095,10 +2883,16 @@ static irqreturn_t dw_dp_irq(int irq, void *data)
 static const struct regmap_range dw_dp_readable_ranges[] = {
 	regmap_reg_range(DW_DP_VERSION_NUMBER, DW_DP_ID),
 	regmap_reg_range(DW_DP_CONFIG_REG1, DW_DP_CONFIG_REG3),
-	regmap_reg_range(DW_DP_CCTL, DW_DP_SOFT_RESET_CTRL),
-	regmap_reg_range(DW_DP_VSAMPLE_CTRL, DW_DP_VIDEO_HBLANK_INTERVAL),
+	regmap_reg_range(DW_DP_CCTL, DW_DP_MST_VCP_TABLE_REG(7)),
+	regmap_reg_range(DW_DP_VSAMPLE_CTRL(0), DW_DP_VIDEO_HBLANK_INTERVAL(0)),
+	regmap_reg_range(DW_DP_VSAMPLE_CTRL(1), DW_DP_VIDEO_HBLANK_INTERVAL(1)),
+	regmap_reg_range(DW_DP_VSAMPLE_CTRL(2), DW_DP_VIDEO_HBLANK_INTERVAL(2)),
+	regmap_reg_range(DW_DP_VSAMPLE_CTRL(3), DW_DP_VIDEO_HBLANK_INTERVAL(3)),
 	regmap_reg_range(DW_DP_AUD_CONFIG1, DW_DP_AUD_CONFIG1),
-	regmap_reg_range(DW_DP_SDP_VERTICAL_CTRL, DW_DP_SDP_STATUS_EN),
+	regmap_reg_range(DW_DP_SDP_VERTICAL_CTRL(0), DW_DP_SDP_STATUS_EN(0)),
+	regmap_reg_range(DW_DP_SDP_VERTICAL_CTRL(1), DW_DP_SDP_STATUS_EN(1)),
+	regmap_reg_range(DW_DP_SDP_VERTICAL_CTRL(2), DW_DP_SDP_STATUS_EN(2)),
+	regmap_reg_range(DW_DP_SDP_VERTICAL_CTRL(3), DW_DP_SDP_STATUS_EN(3)),
 	regmap_reg_range(DW_DP_PHYIF_CTRL, DW_DP_PHYIF_PWRDOWN_CTRL),
 	regmap_reg_range(DW_DP_AUX_CMD, DW_DP_AUX_DATA3),
 	regmap_reg_range(DW_DP_GENERAL_INTERRUPT, DW_DP_HPD_INTERRUPT_ENABLE),
@@ -2133,7 +2927,7 @@ struct dw_dp *dw_dp_bind(struct device *dev, struct drm_encoder *encoder,
 	struct drm_bridge *bridge;
 	struct device_node *pnode;
 	void __iomem *res;
-	int ret;
+	int i, ret;
 
 	dp = devm_kzalloc(dev, sizeof(*dp), GFP_KERNEL);
 	if (!dp)
@@ -2168,17 +2962,23 @@ struct dw_dp *dw_dp_bind(struct device *dev, struct drm_encoder *encoder,
 		dp->phy = phy;
 	}
 
-	pnode = of_graph_get_port_by_id(pdev->dev.of_node, 0);
-	if (!pnode)
-		return ERR_PTR(-ENODEV);
+	for (i = 0; i < DW_DP_MST_MAX_STREAMS; i++) {
+		dp->mst.streams[i].dp = dp;
+		dp->mst.streams[i].id = i;
+		bridge = &dp->mst.streams[i].bridge;
 
-	bridge->of_node = pnode;
-	bridge->funcs = &dw_dp_bridge_funcs;
-	bridge->ops = DRM_BRIDGE_OP_DETECT | DRM_BRIDGE_OP_EDID | DRM_BRIDGE_OP_HPD;
-	bridge->type = DRM_MODE_CONNECTOR_DisplayPort;
+		pnode = of_graph_get_port_by_id(pdev->dev.of_node, i);
+		if (!pnode)
+			continue;
 
-	of_node_put(pnode);
-	drm_bridge_add(bridge);
+		bridge->of_node = pnode;
+		bridge->funcs = &dw_dp_bridge_funcs;
+		bridge->ops = DRM_BRIDGE_OP_DETECT | DRM_BRIDGE_OP_EDID | DRM_BRIDGE_OP_HPD;
+		bridge->type = DRM_MODE_CONNECTOR_DisplayPort;
+
+		of_node_put(pnode);
+		drm_bridge_add(bridge);
+	}
 
 	ret = devm_add_action_or_reset(dev, dw_dp_phy_exit, dp);
 	if (ret)
