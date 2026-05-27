@@ -712,11 +712,20 @@ static int ucie_dummy_probe(struct platform_device *pdev)
 	 *   echo 'PHYS PHYS SIZE' > mapping_control
 	 * that would otherwise be required before the first transfer.
 	 */
+	for (int index = 0; index < IATU_RGN_CH_MAX ; index++)
 	{
+		dev_info(dev,"UCIe shared-mem mapping iatu channel: %d\n", index);
 		struct device_node *shm_np;
 		u32 reg[4];
+		struct ucie_dummy_host iatu_ch_host;
+		struct ucie_dummy iatu_ch_ucie;
 
-		shm_np = of_parse_phandle(dev->of_node, "shared-region", 0);
+		iatu_ch_host = *host; 
+		iatu_ch_ucie = host->ucie;
+		iatu_ch_ucie.base = host->ucie.base + (index * IATU_RGN_OFFSET);
+		iatu_ch_host.ucie = iatu_ch_ucie;
+
+		shm_np = of_parse_phandle(dev->of_node, "shared-region", index);
 		if (shm_np) {
 			if (of_property_read_u32_array(shm_np, "reg", reg,
 						       ARRAY_SIZE(reg)) == 0) {
@@ -724,17 +733,17 @@ static int ucie_dummy_probe(struct platform_device *pdev)
 					((phys_addr_t)reg[0] << 32) | reg[1];
 				u32 shm_size = reg[3]; /* raw bytes, same unit user passes */
 
-				ucie_write_reg(ucie, lower_32_bits(shm_phys),
+				ucie_write_reg(&iatu_ch_ucie, lower_32_bits(shm_phys),
 					       UCIE_LOWER_SRC_ADDR);
-				ucie_write_reg(ucie, upper_32_bits(shm_phys),
+				ucie_write_reg(&iatu_ch_ucie, upper_32_bits(shm_phys),
 					       UCIE_UPPER_SRC_ADDR);
-				ucie_write_reg(ucie, lower_32_bits(shm_phys),
+				ucie_write_reg(&iatu_ch_ucie, lower_32_bits(shm_phys),
 					       UCIE_LOWER_DST_ADDR);
-				ucie_write_reg(ucie, upper_32_bits(shm_phys),
+				ucie_write_reg(&iatu_ch_ucie, upper_32_bits(shm_phys),
 					       UCIE_UPPER_DST_ADDR);
-				ucie_write_reg(ucie, shm_size, UCIE_MAPPING_SIZE);
+				ucie_write_reg(&iatu_ch_ucie, shm_size, UCIE_MAPPING_SIZE);
 				/* Use host wrapper so mapping_active state is updated */
-				ucie_host_write_reg(host,
+				ucie_host_write_reg(&iatu_ch_host,
 						    MAPPING_FILE_EN | MAPPING_EN,
 						    UCIE_MAPPING_EN);
 				dev_info(dev,
@@ -745,6 +754,10 @@ static int ucie_dummy_probe(struct platform_device *pdev)
 					 "shared-region: failed to read reg property\n");
 			}
 			of_node_put(shm_np);
+		}
+		else
+		{
+			break;
 		}
 	}
 

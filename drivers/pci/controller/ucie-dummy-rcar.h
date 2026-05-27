@@ -70,6 +70,9 @@
 #define UCIE_MAPPING_BUSY	1
 #define UCIE_MAPPING_ERROR	2
 
+#define IATU_RGN_OFFSET         0x80000
+#define IATU_RGN_CH_MAX        	32
+
 /* Structure representing the UCIe controller (common base) */
 struct ucie_dummy {
 	struct device		*dev;
