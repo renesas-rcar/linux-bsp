@@ -1458,7 +1458,11 @@ void rvin_stop_streaming(struct rvin_dev *vin)
 		}
 
 		spin_unlock_irqrestore(&vin->qlock, flags);
+#ifdef CONFIG_VIDEO_RCAR_VIN_VDK
+		msleep(1);
+#else
 		msleep(RVIN_TIMEOUT_MS);
+#endif
 		spin_lock_irqsave(&vin->qlock, flags);
 	}
 
