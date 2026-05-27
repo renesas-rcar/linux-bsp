@@ -152,6 +152,11 @@
 		reg = <0x0 0x90000000 0x0 0x201000>;
 		no-map;
 		};
+
+		ucie_shared1: ucie_shared1@92000000 {
+			no-map;
+			reg = <0x0 0x92000000 0x0 0x200000>;
+		};
 	};
 
 	ucie_ldr_map_dev: ucie_ldr_map {
@@ -1115,7 +1120,7 @@
 &ucie_dummy0 {
 	status = "okay";
 	/* Auto-enable UCIe mapping at probe for shared memory at 0x90000000 */
-	shared-region = <&ucie_shared>;
+	shared-region = <&ucie_shared &ucie_shared1>;
 };
 
 &canxl0 {
