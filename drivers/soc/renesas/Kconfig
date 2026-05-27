@@ -483,3 +483,9 @@ config SYS_R9A09G057
 config RCAR_SCP_FIXUP
 	bool "Reset Controller support for R-Car" if COMPILE_TEST
 endif # SOC_RENESAS
+
+config RCAR_WCRC
+	tristate "Renesas R-Car Gen5 WCRC"
+	default y
+	help
+	  Enable this option to use WCRC in R-Car Gen5.
