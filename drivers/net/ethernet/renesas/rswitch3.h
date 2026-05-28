@@ -14,6 +14,10 @@
 
 #define RSWITCH3_MAX_NUM_QUEUES		128
 
+#define MII_ADDR_C45		BIT(30)
+#define MII_DEVADDR_C45_SHIFT	16
+#define MII_DEVADDR_C45_MASK	GENMASK(20, 16)
+#define MII_REGADDR_C45_MASK	GENMASK(15, 0)
 /*
  * Non-MACsec ports: 0 to 7
  * MACsec ports: 8 to 12
