@@ -56,6 +56,332 @@
 
 #define v4l2_dev_to_vin(d)	container_of(d, struct rvin_dev, v4l2_dev)
 
+/* Hardcoded for enable module clock */
+#define MDLC_BASE		0xC5000000
+#define RCAR_VIN_PDID		(0)
+#define RCAR_VIN_CLK_MASK(n)	GENMASK((n) + 1, n)
+#define RCAR_VIN_CLK_SHIFT(n)	(n)
+
+#define MDLC_PKCPROT0		(MDLC_BASE + 0x0cf0)
+#define MDLC_PKCPROT1		(MDLC_BASE + 0x0cf4)
+
+#define _MDLC_MPDG(k)		(MDLC_BASE + 0x0200 + (k) * 4)
+#define _MDLC_MPDGS(k)		(MDLC_BASE + 0x0300 + (k) * 4)
+#define MDLC_MPIER0		(MDLC_BASE + 0x0110)
+#define MDLC_MPIMR0		(MDLC_BASE + 0x0120)
+
+#define MDLC_MPDG		_MDLC_MPDG(RCAR_VIN_PDID)
+#define MDLC_MPDGS		_MDLC_MPDGS(RCAR_VIN_PDID)
+
+#define MDLC_MSRES(i)		(MDLC_BASE + 0x0900 + (i) * 4)
+#define MDLC_MSRESS(i)	(	MDLC_BASE + 0x0960 + (i) * 4)
+
+/* MDLC hardcode - helper APIs */
+void rcar_vin_module_power_reset(void);
+void rcar_vin_module_power_run(void);
+
+static void rcar_vin_module_power_gating_set(u8 pdid, u8 mode)
+{
+	void __iomem *unlock = ioremap(MDLC_PKCPROT0, 4);
+	void __iomem *mpdg = ioremap(_MDLC_MPDG(pdid), 4);
+	void __iomem *mpdgs = ioremap(_MDLC_MPDGS(pdid), 4);
+	void __iomem *mpier0 = ioremap(MDLC_MPIER0, 4);
+	void __iomem *mpimr0 = ioremap(MDLC_MPIMR0, 4);
+
+	writel(0xA5A5A501, unlock);
+
+	if ((readl(mpdgs) & 0x3) == mode)
+			goto unmap;
+
+	while (readl(mpdgs) != readl(mpdg))
+			udelay(1000);
+
+	writel(0, mpier0);
+	writel(0x1, mpimr0);
+
+	writel(0x1, mpdg);
+
+	while (readl(mpdgs) != readl(mpdg))
+			udelay(1000);
+
+	writel(mode, mpdg);
+
+	while (readl(mpdgs) != readl(mpdg))
+			udelay(1000);
+
+unmap:
+	iounmap(unlock);
+	iounmap(mpdg);
+	iounmap(mpdgs);
+	iounmap(mpier0);
+	iounmap(mpimr0);
+}
+
+static void rcar_vin_module_standy_set(u8 clk_reg_no, u8 pos, u8 mode)
+{
+	void __iomem *unlock = ioremap(MDLC_PKCPROT1, 4);
+	void __iomem *msress = ioremap(MDLC_MSRESS(clk_reg_no), 4);
+	void __iomem *msres = ioremap(MDLC_MSRES(clk_reg_no), 4);
+	u32 val;
+
+	writel(0xA5A5A501, unlock);
+
+	if ((readl(msress) & RCAR_VIN_CLK_MASK(pos)) == (mode << RCAR_VIN_CLK_SHIFT(pos)))
+			goto unmap;
+
+	while ((readl(msress) & RCAR_VIN_CLK_MASK(pos)) != (readl(msres) & RCAR_VIN_CLK_MASK(pos)))
+			udelay(1000);
+
+	val = readl(msres);
+	val &= ~RCAR_VIN_CLK_MASK(pos);
+	val |= mode << RCAR_VIN_CLK_SHIFT(pos);
+	writel(val, msres);
+
+	while ((readl(msress) & RCAR_VIN_CLK_MASK(pos)) != (readl(msres) & RCAR_VIN_CLK_MASK(pos)))
+			udelay(1000);
+
+unmap:
+	iounmap(unlock);
+	iounmap(msress);
+	iounmap(msres);
+}
+
+void rcar_vin_module_power_reset(void)
+{
+	rcar_vin_module_power_gating_set(0, 0x01);
+	rcar_vin_module_power_gating_set(1, 0x01);
+	rcar_vin_module_power_gating_set(2, 0x01);
+	rcar_vin_module_power_gating_set(3, 0x01);
+
+	rcar_vin_module_standy_set(8, 28, 0x01);
+	rcar_vin_module_standy_set(8, 30, 0x01);
+	rcar_vin_module_standy_set(9, 0, 0x01);
+	rcar_vin_module_standy_set(9, 2, 0x01);
+	rcar_vin_module_standy_set(9, 4, 0x01);
+	rcar_vin_module_standy_set(9, 6, 0x01);
+	rcar_vin_module_standy_set(9, 8, 0x01);
+	rcar_vin_module_standy_set(9, 10, 0x01);
+	rcar_vin_module_standy_set(9, 12, 0x01);
+	rcar_vin_module_standy_set(9, 14, 0x01);
+	rcar_vin_module_standy_set(9, 16, 0x01);
+	rcar_vin_module_standy_set(9, 18, 0x01);
+	rcar_vin_module_standy_set(9, 20, 0x01);
+	rcar_vin_module_standy_set(9, 22, 0x01);
+	rcar_vin_module_standy_set(9, 24, 0x01);
+	rcar_vin_module_standy_set(9, 26, 0x01);
+	rcar_vin_module_standy_set(9, 28, 0x01);
+	rcar_vin_module_standy_set(9, 30, 0x01);
+	rcar_vin_module_standy_set(10, 0, 0x01);
+	rcar_vin_module_standy_set(10, 2, 0x01);
+	rcar_vin_module_standy_set(10, 4, 0x01);
+	rcar_vin_module_standy_set(10, 6, 0x01);
+	rcar_vin_module_standy_set(10, 8, 0x01);
+	rcar_vin_module_standy_set(10, 10, 0x01);
+	rcar_vin_module_standy_set(10, 12, 0x01);
+	rcar_vin_module_standy_set(10, 14, 0x01);
+	rcar_vin_module_standy_set(10, 16, 0x01);
+	rcar_vin_module_standy_set(10, 18, 0x01);
+	rcar_vin_module_standy_set(10, 20, 0x01);
+	rcar_vin_module_standy_set(10, 22, 0x01);
+	rcar_vin_module_standy_set(10, 24, 0x01);
+	rcar_vin_module_standy_set(10, 26, 0x01);
+	rcar_vin_module_standy_set(10, 28, 0x01);
+	rcar_vin_module_standy_set(10, 30, 0x01);
+	rcar_vin_module_standy_set(11, 0, 0x01);
+	rcar_vin_module_standy_set(11, 2, 0x01);
+	rcar_vin_module_standy_set(11, 4, 0x01);
+	rcar_vin_module_standy_set(11, 6, 0x01);
+	rcar_vin_module_standy_set(11, 8, 0x01);
+	rcar_vin_module_standy_set(11, 10, 0x01);
+	rcar_vin_module_standy_set(11, 12, 0x01);
+	rcar_vin_module_standy_set(11, 14, 0x01);
+	rcar_vin_module_standy_set(11, 16, 0x01);
+	rcar_vin_module_standy_set(11, 18, 0x01);
+	rcar_vin_module_standy_set(11, 20, 0x01);
+	rcar_vin_module_standy_set(11, 22, 0x01);
+	rcar_vin_module_standy_set(11, 24, 0x01);
+	rcar_vin_module_standy_set(11, 26, 0x01);
+	rcar_vin_module_standy_set(11, 28, 0x01);
+	rcar_vin_module_standy_set(11, 30, 0x01);
+	rcar_vin_module_standy_set(12, 0, 0x01);
+	rcar_vin_module_standy_set(12, 2, 0x01);
+	rcar_vin_module_standy_set(12, 4, 0x01);
+	rcar_vin_module_standy_set(12, 6, 0x01);
+	rcar_vin_module_standy_set(12, 8, 0x01);
+	rcar_vin_module_standy_set(12, 10, 0x01);
+	rcar_vin_module_standy_set(12, 12, 0x01);
+	rcar_vin_module_standy_set(12, 14, 0x01);
+	rcar_vin_module_standy_set(12, 16, 0x01);
+	rcar_vin_module_standy_set(12, 18, 0x01);
+	rcar_vin_module_standy_set(12, 20, 0x01);
+	rcar_vin_module_standy_set(12, 22, 0x01);
+	rcar_vin_module_standy_set(12, 24, 0x01);
+	rcar_vin_module_standy_set(12, 26, 0x01);
+	rcar_vin_module_standy_set(12, 28, 0x01);
+	rcar_vin_module_standy_set(12, 30, 0x01);
+	rcar_vin_module_standy_set(13, 0, 0x01);
+	rcar_vin_module_standy_set(13, 2, 0x01);
+	rcar_vin_module_standy_set(13, 4, 0x01);
+	rcar_vin_module_standy_set(13, 6, 0x01);
+	rcar_vin_module_standy_set(13, 8, 0x01);
+	rcar_vin_module_standy_set(13, 10, 0x01);
+	rcar_vin_module_standy_set(13, 12, 0x01);
+	rcar_vin_module_standy_set(13, 14, 0x01);
+	rcar_vin_module_standy_set(13, 16, 0x01);
+	rcar_vin_module_standy_set(13, 18, 0x01);
+	rcar_vin_module_standy_set(13, 20, 0x01);
+	rcar_vin_module_standy_set(13, 22, 0x01);
+	rcar_vin_module_standy_set(13, 24, 0x01);
+	rcar_vin_module_standy_set(13, 26, 0x01);
+	rcar_vin_module_standy_set(13, 28, 0x01);
+	rcar_vin_module_standy_set(13, 30, 0x01);
+	rcar_vin_module_standy_set(14, 0, 0x01);
+	rcar_vin_module_standy_set(14, 2, 0x01);
+	rcar_vin_module_standy_set(14, 4, 0x01);
+	rcar_vin_module_standy_set(14, 6, 0x01);
+	rcar_vin_module_standy_set(14, 8, 0x01);
+	rcar_vin_module_standy_set(14, 10, 0x01);
+	rcar_vin_module_standy_set(14, 12, 0x01);
+	rcar_vin_module_standy_set(14, 14, 0x01);
+	rcar_vin_module_standy_set(14, 16, 0x01);
+	rcar_vin_module_standy_set(14, 18, 0x01);
+	rcar_vin_module_standy_set(14, 20, 0x01);
+	rcar_vin_module_standy_set(14, 22, 0x01);
+	rcar_vin_module_standy_set(14, 24, 0x01);
+	rcar_vin_module_standy_set(14, 26, 0x01);
+	rcar_vin_module_standy_set(16, 22, 0x01);
+	rcar_vin_module_standy_set(16, 24, 0x01);
+	rcar_vin_module_standy_set(16, 26, 0x01);
+	rcar_vin_module_standy_set(16, 28, 0x01);
+	rcar_vin_module_standy_set(16, 30, 0x01);
+	rcar_vin_module_standy_set(17, 0, 0x01);
+	rcar_vin_module_standy_set(17, 2, 0x01);
+	rcar_vin_module_standy_set(17, 4, 0x01);
+	rcar_vin_module_standy_set(17, 6, 0x01);
+	rcar_vin_module_standy_set(17, 8, 0x01);
+	rcar_vin_module_standy_set(17, 10, 0x01);
+	rcar_vin_module_standy_set(17, 12, 0x01);
+}
+
+
+void rcar_vin_module_power_run(void)
+{
+	rcar_vin_module_power_gating_set(0, 0x03);
+	rcar_vin_module_power_gating_set(1, 0x03);
+	rcar_vin_module_power_gating_set(2, 0x03);
+	rcar_vin_module_power_gating_set(3, 0x03);
+
+	rcar_vin_module_standy_set(8, 28, 0x03);
+	rcar_vin_module_standy_set(8, 30, 0x03);
+	rcar_vin_module_standy_set(9, 0, 0x03);
+	rcar_vin_module_standy_set(9, 2, 0x03);
+	rcar_vin_module_standy_set(9, 4, 0x03);
+	rcar_vin_module_standy_set(9, 6, 0x03);
+	rcar_vin_module_standy_set(9, 8, 0x03);
+	rcar_vin_module_standy_set(9, 10, 0x03);
+	rcar_vin_module_standy_set(9, 12, 0x03);
+	rcar_vin_module_standy_set(9, 14, 0x03);
+	rcar_vin_module_standy_set(9, 16, 0x03);
+	rcar_vin_module_standy_set(9, 18, 0x03);
+	rcar_vin_module_standy_set(9, 20, 0x03);
+	rcar_vin_module_standy_set(9, 22, 0x03);
+	rcar_vin_module_standy_set(9, 24, 0x03);
+	rcar_vin_module_standy_set(9, 26, 0x03);
+	rcar_vin_module_standy_set(9, 28, 0x03);
+	rcar_vin_module_standy_set(9, 30, 0x03);
+	rcar_vin_module_standy_set(10, 0, 0x03);
+	rcar_vin_module_standy_set(10, 2, 0x03);
+	rcar_vin_module_standy_set(10, 4, 0x03);
+	rcar_vin_module_standy_set(10, 6, 0x03);
+	rcar_vin_module_standy_set(10, 8, 0x03);
+	rcar_vin_module_standy_set(10, 10, 0x03);
+	rcar_vin_module_standy_set(10, 12, 0x03);
+	rcar_vin_module_standy_set(10, 14, 0x03);
+	rcar_vin_module_standy_set(10, 16, 0x03);
+	rcar_vin_module_standy_set(10, 18, 0x03);
+	rcar_vin_module_standy_set(10, 20, 0x03);
+	rcar_vin_module_standy_set(10, 22, 0x03);
+	rcar_vin_module_standy_set(10, 24, 0x03);
+	rcar_vin_module_standy_set(10, 26, 0x03);
+	rcar_vin_module_standy_set(10, 28, 0x03);
+	rcar_vin_module_standy_set(10, 30, 0x03);
+	rcar_vin_module_standy_set(11, 0, 0x03);
+	rcar_vin_module_standy_set(11, 2, 0x03);
+	rcar_vin_module_standy_set(11, 4, 0x03);
+	rcar_vin_module_standy_set(11, 6, 0x03);
+	rcar_vin_module_standy_set(11, 8, 0x03);
+	rcar_vin_module_standy_set(11, 10, 0x03);
+	rcar_vin_module_standy_set(11, 12, 0x03);
+	rcar_vin_module_standy_set(11, 14, 0x03);
+	rcar_vin_module_standy_set(11, 16, 0x03);
+	rcar_vin_module_standy_set(11, 18, 0x03);
+	rcar_vin_module_standy_set(11, 20, 0x03);
+	rcar_vin_module_standy_set(11, 22, 0x03);
+	rcar_vin_module_standy_set(11, 24, 0x03);
+	rcar_vin_module_standy_set(11, 26, 0x03);
+	rcar_vin_module_standy_set(11, 28, 0x03);
+	rcar_vin_module_standy_set(11, 30, 0x03);
+	rcar_vin_module_standy_set(12, 0, 0x03);
+	rcar_vin_module_standy_set(12, 2, 0x03);
+	rcar_vin_module_standy_set(12, 4, 0x03);
+	rcar_vin_module_standy_set(12, 6, 0x03);
+	rcar_vin_module_standy_set(12, 8, 0x03);
+	rcar_vin_module_standy_set(12, 10, 0x03);
+	rcar_vin_module_standy_set(12, 12, 0x03);
+	rcar_vin_module_standy_set(12, 14, 0x03);
+	rcar_vin_module_standy_set(12, 16, 0x03);
+	rcar_vin_module_standy_set(12, 18, 0x03);
+	rcar_vin_module_standy_set(12, 20, 0x03);
+	rcar_vin_module_standy_set(12, 22, 0x03);
+	rcar_vin_module_standy_set(12, 24, 0x03);
+	rcar_vin_module_standy_set(12, 26, 0x03);
+	rcar_vin_module_standy_set(12, 28, 0x03);
+	rcar_vin_module_standy_set(12, 30, 0x03);
+	rcar_vin_module_standy_set(13, 0, 0x03);
+	rcar_vin_module_standy_set(13, 2, 0x03);
+	rcar_vin_module_standy_set(13, 4, 0x03);
+	rcar_vin_module_standy_set(13, 6, 0x03);
+	rcar_vin_module_standy_set(13, 8, 0x03);
+	rcar_vin_module_standy_set(13, 10, 0x03);
+	rcar_vin_module_standy_set(13, 12, 0x03);
+	rcar_vin_module_standy_set(13, 14, 0x03);
+	rcar_vin_module_standy_set(13, 16, 0x03);
+	rcar_vin_module_standy_set(13, 18, 0x03);
+	rcar_vin_module_standy_set(13, 20, 0x03);
+	rcar_vin_module_standy_set(13, 22, 0x03);
+	rcar_vin_module_standy_set(13, 24, 0x03);
+	rcar_vin_module_standy_set(13, 26, 0x03);
+	rcar_vin_module_standy_set(13, 28, 0x03);
+	rcar_vin_module_standy_set(13, 30, 0x03);
+	rcar_vin_module_standy_set(14, 0, 0x03);
+	rcar_vin_module_standy_set(14, 2, 0x03);
+	rcar_vin_module_standy_set(14, 4, 0x03);
+	rcar_vin_module_standy_set(14, 6, 0x03);
+	rcar_vin_module_standy_set(14, 8, 0x03);
+	rcar_vin_module_standy_set(14, 10, 0x03);
+	rcar_vin_module_standy_set(14, 12, 0x03);
+	rcar_vin_module_standy_set(14, 14, 0x03);
+	rcar_vin_module_standy_set(14, 16, 0x03);
+	rcar_vin_module_standy_set(14, 18, 0x03);
+	rcar_vin_module_standy_set(14, 20, 0x03);
+	rcar_vin_module_standy_set(14, 22, 0x03);
+	rcar_vin_module_standy_set(14, 24, 0x03);
+	rcar_vin_module_standy_set(14, 26, 0x03);
+	rcar_vin_module_standy_set(16, 22, 0x03);
+	rcar_vin_module_standy_set(16, 24, 0x03);
+	rcar_vin_module_standy_set(16, 26, 0x03);
+	rcar_vin_module_standy_set(16, 28, 0x03);
+	rcar_vin_module_standy_set(16, 30, 0x03);
+	rcar_vin_module_standy_set(17, 0, 0x03);
+	rcar_vin_module_standy_set(17, 2, 0x03);
+	rcar_vin_module_standy_set(17, 4, 0x03);
+	rcar_vin_module_standy_set(17, 6, 0x03);
+	rcar_vin_module_standy_set(17, 8, 0x03);
+	rcar_vin_module_standy_set(17, 10, 0x03);
+	rcar_vin_module_standy_set(17, 12, 0x03);
+}
+/* end */
+
 /* -----------------------------------------------------------------------------
  * Gen3 Group Allocator
  */
@@ -1233,7 +1559,17 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	if (IS_ERR(vin->base))
 		return PTR_ERR(vin->base);
 
-#ifndef CONFIG_VIDEO_RCAR_VIN_VDK
+	vin->clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(vin->clk)) {
+		dev_err(&pdev->dev, "failed to get clock%s\n",
+			dev_name(vin->dev));
+		return PTR_ERR(vin->clk);
+	}
+
+#ifdef MDL_CLK_WA
+	rcar_vin_module_power_reset();
+	rcar_vin_module_power_run();
+#elif !defined(CONFIG_VIDEO_RCAR_VIN_VDK)
 	vin->rstc = devm_reset_control_get(&pdev->dev, NULL);
 	if (IS_ERR(vin->rstc)) {
 		dev_err(&pdev->dev, "failed to get cpg reset %s\n",
@@ -1241,13 +1577,6 @@ static int rcar_vin_probe(struct platform_device *pdev)
 		return PTR_ERR(vin->rstc);
 	}
 #endif
-
-	vin->clk = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(vin->clk)) {
-		dev_err(&pdev->dev, "failed to get clock%s\n",
-			dev_name(vin->dev));
-		return PTR_ERR(vin->clk);
-	}
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0)
@@ -1303,6 +1632,13 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	pm_suspend_ignore_children(&pdev->dev, true);
 	pm_runtime_enable(&pdev->dev);
 
+	ret = clk_prepare_enable(vin->clk);
+	if (ret) {
+		dev_err(&pdev->dev, "clock prepare failed for clock: %s\n",
+			dev_name(vin->dev));
+		return ret;
+	}
+
 	return 0;
 
 err_ctrl:
@@ -1318,6 +1654,8 @@ err_dma:
 static void rcar_vin_remove(struct platform_device *pdev)
 {
 	struct rvin_dev *vin = platform_get_drvdata(pdev);
+
+	clk_disable_unprepare(vin->clk);
 
 	pm_runtime_disable(&pdev->dev);
 
