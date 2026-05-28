@@ -282,6 +282,149 @@ struct rcar_csi2;
 #define UNMASK_LINE_BOUNDARY_ERR_IRQ		BIT(0)
 /**  **/
 
+/* Hardcoded for enable module clock */
+#define MDLC_BASE		0xC5000000
+#define RCAR_VIN_PDID		(0)
+#define RCAR_VIN_CLK_MASK(n)	GENMASK((n) + 1, n)
+#define RCAR_VIN_CLK_SHIFT(n)	(n)
+
+#define MDLC_PKCPROT0		(MDLC_BASE + 0x0cf0)
+#define MDLC_PKCPROT1		(MDLC_BASE + 0x0cf4)
+
+#define _MDLC_MPDG(k)		(MDLC_BASE + 0x0200 + (k) * 4)
+#define _MDLC_MPDGS(k)		(MDLC_BASE + 0x0300 + (k) * 4)
+#define MDLC_MPIER0		(MDLC_BASE + 0x0110)
+#define MDLC_MPIMR0		(MDLC_BASE + 0x0120)
+
+#define MDLC_MPDG		_MDLC_MPDG(RCAR_VIN_PDID)
+#define MDLC_MPDGS		_MDLC_MPDGS(RCAR_VIN_PDID)
+
+#define MDLC_MSRES(i)		(MDLC_BASE + 0x0900 + (i) * 4)
+#define MDLC_MSRESS(i)		(MDLC_BASE + 0x0960 + (i) * 4)
+
+#define SYSSS_TOP_BASE                          0xC6480000
+#define CLK_CSICKCR                             (SYSSS_TOP_BASE + 0x100C)
+#define CLKTOPPKCPROT0                          (SYSSS_TOP_BASE + 0x1370)
+
+
+/* MDLC hardcode - helper APIs */
+void rcar_csi2_module_power_reset(void);
+void rcar_csi2_module_power_run(void);
+
+static void rcar_csi2_module_power_gating_set(u8 pdid, u8 mode)
+{
+	void __iomem *unlock = ioremap(MDLC_PKCPROT0, 4);
+	void __iomem *mpdg = ioremap(_MDLC_MPDG(pdid), 4);
+	void __iomem *mpdgs = ioremap(_MDLC_MPDGS(pdid), 4);
+	void __iomem *mpier0 = ioremap(MDLC_MPIER0, 4);
+	void __iomem *mpimr0 = ioremap(MDLC_MPIMR0, 4);
+
+	writel(0xA5A5A501, unlock);
+
+	if ((readl(mpdgs) & 0x3) == mode)
+			goto unmap;
+
+	while (readl(mpdgs) != readl(mpdg))
+			udelay(1000);
+
+	writel(0, mpier0);
+	writel(0x1, mpimr0);
+
+	writel(0x1, mpdg);
+
+	while (readl(mpdgs) != readl(mpdg))
+			udelay(1000);
+
+	writel(mode, mpdg);
+
+	while (readl(mpdgs) != readl(mpdg))
+			udelay(1000);
+
+unmap:
+	iounmap(unlock);
+	iounmap(mpdg);
+	iounmap(mpdgs);
+	iounmap(mpier0);
+	iounmap(mpimr0);
+}
+
+static void rcar_csi2_module_standy_set(u8 clk_reg_no, u8 pos, u8 mode)
+{
+	void __iomem *unlock = ioremap(MDLC_PKCPROT1, 4);
+	void __iomem *msress = ioremap(MDLC_MSRESS(clk_reg_no), 4);
+	void __iomem *msres = ioremap(MDLC_MSRES(clk_reg_no), 4);
+	u32 val;
+
+	writel(0xA5A5A501, unlock);
+
+	if ((readl(msress) & RCAR_VIN_CLK_MASK(pos)) == (mode << RCAR_VIN_CLK_SHIFT(pos)))
+			goto unmap;
+
+	while ((readl(msress) & RCAR_VIN_CLK_MASK(pos)) != (readl(msres) & RCAR_VIN_CLK_MASK(pos)))
+			udelay(1000);
+
+	val = readl(msres);
+	val &= ~RCAR_VIN_CLK_MASK(pos);
+	val |= mode << RCAR_VIN_CLK_SHIFT(pos);
+	writel(val, msres);
+
+	while ((readl(msress) & RCAR_VIN_CLK_MASK(pos)) != (readl(msres) & RCAR_VIN_CLK_MASK(pos)))
+			udelay(1000);
+
+unmap:
+	iounmap(unlock);
+	iounmap(msress);
+	iounmap(msres);
+}
+
+static void InitClockCsi(void)
+{
+	void __iomem *unlock = ioremap(CLKTOPPKCPROT0, 4);
+	void __iomem *csi_clk = ioremap(CLK_CSICKCR, 4);
+	u32 val;
+
+	val = 0x00000100; // [8]:CKSTP (stop) + [5:0]:DIV = 0 (3200 MHz x 1/2 x 1/2 x 1/1 = 800 MHz)
+	writel(0xA5A5A501, unlock);
+	writel(val, csi_clk);
+
+	val &= ~BIT(8);	//[8]:CKSTP (supplies)
+
+	writel(0xA5A5A501, unlock);
+	writel(val, csi_clk);
+
+	iounmap(unlock);
+	iounmap(csi_clk);
+}
+
+void rcar_csi2_module_power_reset(void)
+{
+	InitClockCsi();
+
+	rcar_csi2_module_power_gating_set(0, 0x01);
+	rcar_csi2_module_power_gating_set(1, 0x01);
+	rcar_csi2_module_power_gating_set(2, 0x01);
+	rcar_csi2_module_power_gating_set(3, 0x01);
+
+	rcar_csi2_module_standy_set(6, 0, 0x01);
+	rcar_csi2_module_standy_set(6, 2, 0x01);
+	rcar_csi2_module_standy_set(6, 4, 0x01);
+	rcar_csi2_module_standy_set(6, 6, 0x01);
+}
+
+void rcar_csi2_module_power_run(void)
+{
+	rcar_csi2_module_power_gating_set(0, 0x03);
+	rcar_csi2_module_power_gating_set(1, 0x03);
+	rcar_csi2_module_power_gating_set(2, 0x03);
+	rcar_csi2_module_power_gating_set(3, 0x03);
+
+	rcar_csi2_module_standy_set(6, 0, 0x03);
+	rcar_csi2_module_standy_set(6, 2, 0x03);
+	rcar_csi2_module_standy_set(6, 4, 0x03);
+	rcar_csi2_module_standy_set(6, 6, 0x03);
+}
+/* end */
+
 struct rcsi2_cphy_setting {
 	u16 msps;
 	u16 rx2;
@@ -919,6 +1062,7 @@ struct rcar_csi2 {
 	void __iomem *base;
 	const struct rcar_csi2_info *info;
 	struct reset_control *rstc;
+	struct clk *clk;
 
 	struct v4l2_subdev subdev;
 	struct media_pad pads[NR_OF_RCAR_CSI2_PAD];
@@ -1075,7 +1219,11 @@ static void rcsi2_enter_standby(struct rcar_csi2 *priv)
 	if (priv->info->enter_standby)
 		priv->info->enter_standby(priv);
 
-#ifndef CONFIG_VIDEO_RCAR_VIN_VDK
+	clk_disable_unprepare(priv->clk);
+
+#ifdef MDL_CLK_WA
+	;
+#elif !defined(CONFIG_VIDEO_RCAR_VIN_VDK)
 	reset_control_assert(priv->rstc);
 	usleep_range(100, 150);
 #endif
@@ -1090,7 +1238,16 @@ static int rcsi2_exit_standby(struct rcar_csi2 *priv)
 	if (ret < 0)
 		return ret;
 
-#ifndef CONFIG_VIDEO_RCAR_VIN_VDK
+	ret = clk_prepare_enable(priv->clk);
+	if (ret) {
+		dev_err(priv->dev, "clock prepare failed for clock: %s\n",
+			dev_name(priv->dev));
+		return ret;
+	}
+
+#ifdef MDL_CLK_WA
+	;
+#elif !defined(CONFIG_VIDEO_RCAR_VIN_VDK)
 	reset_control_deassert(priv->rstc);
 #endif
 
@@ -2314,7 +2471,7 @@ static int rcsi2_parse_v4l2(struct rcar_csi2 *priv,
 			return -EINVAL;
 		}
 
-		if (priv->lanes != 3) {
+		if (priv->lanes < 3) {
 			dev_err(priv->dev,
 				"Unsupported number of data-lanes for C-PHY: %u\n",
 				priv->lanes);
@@ -2626,7 +2783,17 @@ static int rcsi2_probe_resources(struct rcar_csi2 *priv,
 	if (ret)
 		return ret;
 
-#ifndef CONFIG_VIDEO_RCAR_VIN_VDK
+	priv->clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(priv->clk)) {
+		dev_err(priv->dev, "failed to get clock: %s\n",
+			dev_name(priv->dev));
+		return -EPROBE_DEFER;
+	}
+
+#ifdef MDL_CLK_WA
+	rcar_csi2_module_power_reset();
+	rcar_csi2_module_power_run();
+#elif !defined(CONFIG_VIDEO_RCAR_VIN_VDK)
 	priv->rstc = devm_reset_control_get(&pdev->dev, NULL);
 
 	return PTR_ERR_OR_ZERO(priv->rstc);
