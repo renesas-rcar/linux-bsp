@@ -1,0 +1,120 @@
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/net/renesas,r8a78000-ethertsn.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Renesas R-Car Gen5 Ethernet TSN End Station Controller
+
+properties:
+  compatible:
+    const: renesas,r8a78000-ethertsn
+
+  reg:
+    maxItems: 2
+
+  reg-names:
+    items:
+      - const: tsnes
+      - const: gptp
+
+  interrupts:
+    maxItems: 5
+
+  interrupt-names:
+    items:
+      - const: status
+      - const: tx
+      - const: rx
+      - const: ts
+      - const: error
+
+  power-domains:
+    maxItems: 1
+
+  clocks:
+    maxItems: 2
+
+  clock-names:
+    items:
+      - const: rsw3tsn
+      - const: tsnes
+
+  renesas,gptp-domain:
+    description: GPTP domain identifier.
+    $ref: /schemas/types.yaml#/definitions/string
+
+  phy-mode:
+    const: gmii
+
+  max-speed:
+    const: 2500
+
+  renesas,tsnes-id:
+    description: TSN-ES instance ID.
+    $ref: /schemas/types.yaml#/definitions/uint32
+
+  renesas,rswitch:
+    description: Phandle to the R-Switch3 controller.
+    $ref: /schemas/types.yaml#/definitions/phandle
+
+  renesas,rswitch-if:
+    description: R-Switch3 internal interface index connected to this TSN-ES.
+    $ref: /schemas/types.yaml#/definitions/uint32
+
+  renesas,rswitch-forward-ports:
+    description: R-Switch3 external forwarding port bitmap or port index.
+    $ref: /schemas/types.yaml#/definitions/uint32
+
+  fixed-link:
+    $ref: ethernet-controller.yaml#/properties/fixed-link
+
+required:
+  - compatible
+  - reg
+  - reg-names
+  - interrupts
+  - interrupt-names
+  - power-domains
+  - clocks
+  - clock-names
+  - phy-mode
+  - max-speed
+  - renesas,tsnes-id
+  - renesas,rswitch
+  - renesas,rswitch-if
+  - fixed-link
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/interrupt-controller/arm-gic.h>
+
+    ethernet@c9c6c000 {
+        compatible = "renesas,r8a78000-ethertsn";
+        reg = <0 0xc9c6c000 0 0x4000>,
+              <0 0xc9ca3000 0 0x800>;
+        reg-names = "tsnes", "gptp";
+        interrupts = <GIC_SPI 853 IRQ_TYPE_LEVEL_HIGH>,
+                     <GIC_SPI 854 IRQ_TYPE_LEVEL_HIGH>,
+                     <GIC_SPI 855 IRQ_TYPE_LEVEL_HIGH>,
+                     <GIC_SPI 856 IRQ_TYPE_LEVEL_HIGH>,
+                     <GIC_SPI 857 IRQ_TYPE_LEVEL_HIGH>;
+        interrupt-names = "status", "tx", "rx", "ts", "error";
+        power-domains = <&scmi_devpd 0>;
+        clocks = <&scmi_clk 0>, <&scmi_clk 1>;
+        clock-names = "rsw3tsn", "tsnes";
+        renesas,gptp-domain = "a";
+        phy-mode = "gmii";
+        max-speed = <2500>;
+        renesas,tsnes-id = <3>;
+        renesas,rswitch = <&rswitch3>;
+        renesas,rswitch-if = <8>;
+        renesas,rswitch-forward-ports = <4>;
+        fixed-link {
+            speed = <2500>;
+            full-duplex;
+        };
+    };
+...
