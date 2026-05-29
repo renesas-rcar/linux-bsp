@@ -2588,6 +2588,7 @@ static int rcsi2_startup_sequence_x5h(struct rcar_csi2 *priv, int msps)
 		// In order to accommodate instantaneous cycle to cycle clock jitter,
 		// CPHY max frequency clock is divided by 6.25 when HM is set to 16-bit, and divided by 12.5 when HM is set to 32-bit.
 		rcsi2_write(priv, X5H_RDWIDTH_REG, 0x01010101); // divided by 12.5
+		rcsi2_write(priv, X5H_RDWIDTH_REG, 0x02020202); // divided by 6.25
 	}
 
 	rcsi2_write(priv, X5H_PHY_REGMODE_REG, 0x00000001);
