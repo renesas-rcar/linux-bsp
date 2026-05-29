@@ -1387,6 +1387,10 @@
 	};
 };
 
+&tsnes3 {
+	status = "okay";
+};
+
 &usb30 {
 	status = "okay";
 	pinctrl-0 = <&usb30_pins>;

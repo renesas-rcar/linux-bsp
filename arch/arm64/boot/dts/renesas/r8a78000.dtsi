@@ -5024,6 +5024,35 @@
 			status = "disabled";
 		};
 
+		tsnes3: ethernet@c9c6c000 {
+			compatible = "renesas,r8a78000-ethertsn";
+			reg = <0 0xc9c6c000 0 0x4000>,
+				  <0 0xc9ca3000 0 0x800>;
+			reg-names = "tsnes", "gptp";
+			interrupts = <GIC_SPI 853 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 854 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 855 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 856 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 857 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "status", "tx", "rx", "ts", "error";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_RSW>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_RSW3TSN>,
+				<&scmi_clk X5H_CLOCK_ID_RSW3TSNTES3>;
+			clock-names = "rsw3tsn", "tsnes";
+			renesas,gptp-domain = "a";
+			phy-mode = "gmii";
+			max-speed = <2500>;
+			renesas,tsnes-id = <3>;
+			renesas,rswitch = <&rswitch3>;
+			renesas,rswitch-if = <8>;
+			renesas,rswitch-forward-ports = <4>;
+			status = "disabled";
+			fixed-link {
+				speed = <2500>;
+				full-duplex;
+			};
+		};
+
 		msiof0: spi@c1700000 {
 			compatible = "renesas,msiof-r8a78000",
 				     "renesas,rcar-gen5-msiof";
