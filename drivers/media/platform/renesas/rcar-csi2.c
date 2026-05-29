@@ -132,11 +132,33 @@ struct rcar_csi2;
 #define PHTW_CWEN			BIT(8)
 #define PHTW_TESTDIN_CODE(n)		((n & 0xff))
 
+/* PHY Test Interface Clear */
+#define PHTC_REG			0x58
+#define PHTC_TESTCLR			BIT(0)
+
 #define PHYFRX_REG			0x64
 #define PHYFRX_FORCERX_MODE_3		BIT(3)
 #define PHYFRX_FORCERX_MODE_2		BIT(2)
 #define PHYFRX_FORCERX_MODE_1		BIT(1)
 #define PHYFRX_FORCERX_MODE_0		BIT(0)
+
+/* PHY Frequency Control */
+#define PHYPLL_REG			0x68
+#define PHYPLL_HSFREQRANGE(n)		((n) << 16)
+
+/* PHY ESC Error Monitor */
+#define PHEERM_REG			0x74
+
+/* PHY Clock Lane Monitor */
+#define PHCLM_REG			0x78
+#define PHCLM_STOPSTATECKL		BIT(0)
+
+/* PHY Data Lane Monitor */
+#define PHDLM_REG			0x7c
+
+/* CSI0CLK Frequency Configuration Preset Register */
+#define CSI0CLKFCPR_REG			0x260
+#define CSI0CLKFREQRANGE(n)		((n & 0x3f) << 16)
 
 /* V4H BASE registers */
 #define V4H_N_LANES_REG					0x0004
@@ -182,7 +204,6 @@ struct rcar_csi2;
 #define V4H_PPI_RW_OFFSETCAL_CFG_0_REG			0x21ca0
 
 /* V4H CORE registers */
-
 #define V4H_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_2_REG(l, n) (0x22040 + ((l) * 0x400) + ((n) * 2))
 #define V4H_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_3_REG(l, n) (0x22060 + ((l) * 0x400) + ((n) * 2))
 #define V4H_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_4_REG(l, n) (0x22080 + ((l) * 0x400) + ((n) * 2))
@@ -212,6 +233,25 @@ struct rcar_csi2;
 #define V4H_CORE_DIG_CLANE_2_RW_CFG_0_REG		0x2a800
 #define V4H_CORE_DIG_CLANE_2_RW_LP_0_REG		0x2a880
 #define V4H_CORE_DIG_CLANE_2_RW_HS_RX_REG(n)		(0x2a900 + ((n) * 2)) /* n = 0 - 6 */
+
+/* V4M registers */
+#define V4M_OVR1_REG					0x0848
+#define V4M_OVR1_FORCERXMODE_3				BIT(12)
+#define V4M_OVR1_FORCERXMODE_2				BIT(11)
+#define V4M_OVR1_FORCERXMODE_1				BIT(10)
+#define V4M_OVR1_FORCERXMODE_0				BIT(9)
+
+#define V4M_FRXM_REG					0x2004
+#define V4M_FRXM_FORCERXMODE_3				BIT(3)
+#define V4M_FRXM_FORCERXMODE_2				BIT(2)
+#define V4M_FRXM_FORCERXMODE_1				BIT(1)
+#define V4M_FRXM_FORCERXMODE_0				BIT(0)
+
+#define V4M_PHYPLL_REG					0x02050
+#define V4M_CSI0CLKFCPR_REG				0x02054
+#define V4M_PHTW_REG					0x02060
+#define V4M_PHTR_REG					0x02064
+#define V4M_PHTC_REG					0x02068
 
 /** SNPS CSI-2 v4.0 **/
 /* MAIN registers */
@@ -305,7 +345,6 @@ struct rcar_csi2;
 #define SYSSS_TOP_BASE                          0xC6480000
 #define CLK_CSICKCR                             (SYSSS_TOP_BASE + 0x100C)
 #define CLKTOPPKCPROT0                          (SYSSS_TOP_BASE + 0x1370)
-
 
 /* MDLC hardcode - helper APIs */
 void rcar_csi2_module_power_reset(void);
@@ -475,25 +514,6 @@ static const struct rcsi2_cphy_setting cphy_setting_table_r8a779g0[] = {
 	{ /* sentinel */ },
 };
 
-/* V4M registers */
-#define V4M_OVR1_REG					0x0848
-#define V4M_OVR1_FORCERXMODE_3				BIT(12)
-#define V4M_OVR1_FORCERXMODE_2				BIT(11)
-#define V4M_OVR1_FORCERXMODE_1				BIT(10)
-#define V4M_OVR1_FORCERXMODE_0				BIT(9)
-
-#define V4M_FRXM_REG					0x2004
-#define V4M_FRXM_FORCERXMODE_3				BIT(3)
-#define V4M_FRXM_FORCERXMODE_2				BIT(2)
-#define V4M_FRXM_FORCERXMODE_1				BIT(1)
-#define V4M_FRXM_FORCERXMODE_0				BIT(0)
-
-#define V4M_PHYPLL_REG					0x02050
-#define V4M_CSI0CLKFCPR_REG				0x02054
-#define V4M_PHTW_REG					0x02060
-#define V4M_PHTR_REG					0x02064
-#define V4M_PHTC_REG					0x02068
-
 struct phtw_value {
 	u8 data;
 	u8 code;
@@ -585,14 +605,6 @@ static const struct rcsi2_mbps_info phtw_mbps_v3m_e3[] = {
 	{ .mbps = 1125, .reg = 0x16 },
 	{ /* sentinel */ },
 };
-
-/* PHY Test Interface Clear */
-#define PHTC_REG			0x58
-#define PHTC_TESTCLR			BIT(0)
-
-/* PHY Frequency Control */
-#define PHYPLL_REG			0x68
-#define PHYPLL_HSFREQRANGE(n)		((n) << 16)
 
 static const struct rcsi2_mbps_info hsfreqrange_v3u[] = {
 	{ .mbps =   80, .reg = 0x00 },
@@ -820,20 +832,6 @@ static const struct rcsi2_mbps_info hsfreqrange_v4m[] = {
 	{ .mbps = 2500, .reg = 0x49, .osc_freq = 0x01a9 },
 	{ /* sentinel */ },
 };
-
-/* PHY ESC Error Monitor */
-#define PHEERM_REG			0x74
-
-/* PHY Clock Lane Monitor */
-#define PHCLM_REG			0x78
-#define PHCLM_STOPSTATECKL		BIT(0)
-
-/* PHY Data Lane Monitor */
-#define PHDLM_REG			0x7c
-
-/* CSI0CLK Frequency Configuration Preset Register */
-#define CSI0CLKFCPR_REG			0x260
-#define CSI0CLKFREQRANGE(n)		((n & 0x3f) << 16)
 
 struct rcar_csi2_format {
 	u32 code;
