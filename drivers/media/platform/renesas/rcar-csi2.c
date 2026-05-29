@@ -3038,12 +3038,12 @@ static int rcsi2_start(struct rcar_csi2 *priv, struct v4l2_subdev_state *state)
 
 static void rcsi2_stop(struct rcar_csi2 *priv)
 {
-	rcsi2_enter_standby(priv);
 #ifdef CONFIG_VIDEO_SNPS_CSI2_CAMERA
 	csi2cam_stop(priv->cam);
 #else
 	v4l2_subdev_disable_streams(priv->remote, priv->remote_pad, BIT_ULL(0));
 #endif
+	rcsi2_enter_standby(priv);
 }
 
 static int rcsi2_enable_streams(struct v4l2_subdev *sd,
