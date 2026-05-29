@@ -2960,6 +2960,10 @@ static int rcsi2_start_receiver_x5h(struct rcar_csi2 *priv, struct v4l2_subdev_s
 	if (msps < 0)
 		return msps;
 
+	ret = clk_set_rate(priv->clks[0].clk, 800000000); // CSIφ frequency is 800MHz
+	if (ret)
+		dev_err(priv->dev, "Failed to set CSIφ frequency to 800MHz");
+
 	/* 1. Set the csi_hard_rstn signal low and then high to reset the CSI-2 v4 controller. */
 	rcsi2_modify(priv, PWR_UP, 0x0, PWR_UP_BIT);
 
