@@ -3588,7 +3588,10 @@ static int rcsi2_probe_resources(struct rcar_csi2 *priv,
 #elif !defined(CONFIG_VIDEO_RCAR_VIN_VDK)
 	priv->rstc = devm_reset_control_get(&pdev->dev, NULL);
 
-	return PTR_ERR_OR_ZERO(priv->rstc);
+	if (IS_ERR(priv->rstc)) {
+		dev_err(&pdev->dev, "Failed to get reset\n");
+		return -EPROBE_DEFER;
+	}
 #endif
 
 	return 0;

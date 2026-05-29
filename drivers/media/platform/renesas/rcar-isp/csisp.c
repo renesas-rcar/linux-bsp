@@ -835,7 +835,11 @@ static int risp_probe_resources(struct rcar_isp *isp,
 #elif !defined(CONFIG_VIDEO_RCAR_VIN_VDK)
 	isp->rstc = devm_reset_control_get(&pdev->dev, NULL);
 
-	return PTR_ERR_OR_ZERO(isp->rstc);
+	if (IS_ERR(isp->rstc)) {
+		dev_err(isp->dev, "failed to get reset \n"
+			);
+		return -EPROBE_DEFER;
+	}
 #endif
 
 	return 0;
