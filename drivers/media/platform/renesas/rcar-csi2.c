@@ -322,6 +322,395 @@ struct rcar_csi2;
 #define UNMASK_LINE_BOUNDARY_ERR_IRQ		BIT(0)
 /**  **/
 
+/* CD-PHY registers */
+#define X5H_FLDC_REG				0x0804
+#define X5H_FLDD_REG				0x0808
+#define X5H_SDIC_REG				0x0810
+#define X5H_CFGCLKSET_REG			0x0814
+#define X5H_CFG_CLK_CKEN			BIT(8)
+#define X5H_CFG_CLK_PERIOD			GENMASK(5, 0)
+#define X5H_TXCLKESCSET_REG			0x0818
+#define X5H_PHY_CTRL_REG			0x2004
+#define X5H_PHY_ENABLE_DCK_PHY1		BIT(13)
+#define X5H_PHY_ENABLE_DCK			BIT(12)
+#define X5H_PHY_ENABLE_3			BIT(11)
+#define X5H_PHY_ENABLE_2			BIT(10)
+#define X5H_PHY_ENABLE_1			BIT(9)
+#define X5H_PHY_ENABLE_0			BIT(8)
+#define X5H_PHY_SHUTDOWNZ_PHY1		BIT(5)
+#define X5H_PHY_SHUTDOWNZ			BIT(4)
+#define X5H_PHY_RSTZ_PHY1			BIT(1)
+#define X5H_PHY_RSTZ				BIT(0)
+#define X5H_FORCEPHYMODE_REG		0x2008
+#define X5H_FORCERXMODE_DCK_PHY1	BIT(21)
+#define X5H_FORCERXMODE_DCK			BIT(20)
+#define X5H_FORCERXMODE_3			BIT(19)
+#define X5H_FORCERXMODE_2			BIT(18)
+#define X5H_FORCERXMODE_1			BIT(17)
+#define X5H_FORCERXMODE_0			BIT(16)
+#define X5H_PHYSET_REG				0x200C
+#define X5H_PHY_MODE_IP				BIT(6)
+#define X5H_PRESET_N_PHY1			BIT(3)
+#define X5H_PRESET_N				BIT(2)
+#define X5H_PHY_EN_REG				0x2010
+#define X5H_REG_RXDATAWIDTHHS_3_OVR_EN			BIT(11)
+#define X5H_REG_RXDATAWIDTHHS_2_OVR_EN			BIT(10)
+#define X5H_REG_RXDATAWIDTHHS_1_OVR_EN			BIT(9)
+#define X5H_REG_RXDATAWIDTHHS_0_OVR_EN			BIT(8)
+#define X5H_PHY_MODE_OVR_EN						BIT(6)
+#define X5H_PRESETN_PHY1_OVR_EN					BIT(3)
+#define X5H_PRESETN_OVR_EN						BIT(2)
+#define X5H_RDWIDTH_REG				0x201C
+#define X5H_PHY_REGMODE_REG			0x2100
+#define X5H_ST_PHYST_REG			0x2804
+#define X5H_ST_STOPSTATE_DCK_PHY1		BIT(13)
+#define X5H_ST_STOPSTATE_DCK			BIT(12)
+#define X5H_ST_STOPSTATE_3				BIT(11)
+#define X5H_ST_STOPSTATE_2				BIT(10)
+#define X5H_ST_STOPSTATE_1				BIT(9)
+#define X5H_ST_STOPSTATE_0				BIT(8)
+#define X5H_ST_PHY_READY				BIT(0)
+#define X5H_PHY_MODE_CFG_REG		0x00100
+#define X5H_PPI_WIDTH			GENMASK(17, 16)
+#define X5H_PHY_L3_DISABLE		BIT(11)
+#define X5H_PHY_L2_DISABLE		BIT(10)
+#define X5H_PHY_L1_DISABLE		BIT(9)
+#define X5H_PHY_L0_DISABLE		BIT(8)
+#define X5H_PHY_MODE			BIT(0)
+#define X5H_PHY_DESKEW_CFG_REG		0x00104
+#define X5H_CSI2_GENERAL_CFG_REG	0x00200
+
+#define X5H_SDI_CFG_REG				0x00400
+#define X5H_SDI_FILTER_CFG_REG		0x00404
+
+#define X5H_PHY0_PPI_STARTUP_RW_COMMON_STARTUP_1_1_REG		0x41822
+#define X5H_PHY_READY_DLY					GENMASK(11, 0)
+
+#define X5H_PHY0_PPI_STARTUP_RW_COMMON_STARTUP_1_2_REG		0x41824
+
+#define X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_0_REG		0x41840
+#define X5H_PHY0_PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_1_REG		0x41842
+#define X5H_PHY0_PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_2_REG		0x41844
+#define X5H_PHY0_PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_3_REG		0x41846
+#define X5H_PHY0_PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_4_REG		0x41848
+#define X5H_PHY0_PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_5_REG		0x4184A
+#define X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_BG_0_REG				0x4184C
+#define X5H_BG_MAX_COUNTER										GENMASK(8, 0)
+#define X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_7_REG		0x4184E
+#define X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_1_REG		0x41856
+#define X5H_PHY0_PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_6_REG		0x41858
+#define X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_2_REG		0x4185A
+#define X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_3_REG		0x4185C
+#define X5H_DDL_VT_CAL_EN										BIT(4)
+#define X5H_PHY0_PPI_CALIBCTRL_R_COMMON_CALIBCTRL_2_7_REG		0x4185E
+
+#define X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(n)				(0x41860 + ((n) * 2)) /* n = 0 - 5 */
+#define X5H_HS_CDR_FEEDBACK_ENABLED_REG							BIT(1)
+#define X5H_HS_CDR_UPDATE_SETTINGS_REG							BIT(0)
+#define X5H_HS_CDR_TIMEBASE_TARGET_REG						GENMASK(15, 0)
+#define X5H_HS_CDR_COARSE_TARGET_REG						GENMASK(15, 0)
+#define X5H_HS_CDR_STUCK_THRESH_REG							GENMASK(15, 0)
+#define X5H_HS_CDR_INIT_WAIT_TARGET_REG						GENMASK(15, 0)
+
+#define X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_REG(n)		(0x418A0 + ((n) * 2)) /* n = 0 - 3 */
+#define X5H_ARBT_CAL_PRIOTITY							GENMASK(7, 0)
+#define X5H_ARBT_CAL_LOCK								GENMASK(7, 0)
+#define X5H_ARBT_CALIB_OP_DELTA							GENMASK(15, 8)
+#define X5H_ARBT_CALIB_WRITE_DELTA						GENMASK(7, 4)
+#define X5H_ARBT_CALIB_READ_DELTA						GENMASK(3, 0)
+
+#define X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(n)		(0x41800 + ((n) * 2)) /* n (hex) = 0 - 16 */
+#define X5H_PHY1_PPI_STARTUP_RW_COMMON_DPHY_REG(n)		(0x61800 + ((n) * 2)) /* n (hex) = 0 - 16 */
+#define X5H_DPHY_DDL_CAL_addr							GENMASK(7, 0)
+#define X5H_CPHY_DDL_CAL_addr							GENMASK(7, 0)
+#define X5H_PHY_READY_addr								GENMASK(7, 0)
+#define X5H_RCAL_addr									GENMASK(7, 0)
+#define X5H_LP_DCO_CAL_addr								GENMASK(7, 0)
+#define X5H_HIBERNATE_addr								GENMASK(7, 0)
+
+#define X5H_PHY0_PPI_RW_LPDCOCAL_TIMEBASE_REG				0x41C02
+#define X5H_LPCDCOCAL_TIMEBASE								GENMASK(9, 0)
+#define X5H_PHY0_PPI_RW_LPDCOCAL_NREF_REG					0x41C04
+#define X5H_LPCDCOCAL_NREF									GENMASK(10, 0)
+#define X5H_PHY0_PPI_RW_LPDCOCAL_NREF_RANGE_REG				0x41C06
+#define X5H_LPCDCOCAL_NREF_RANGE							GENMASK(4, 0)
+#define X5H_PHY0_PPI_RW_LPDCOCAL_TWAIT_CONFIG_REG			0x41C0A
+#define X5H_LPCDCOCAL_TWAIT_PON								GENMASK(15, 9)
+#define X5H_LPCDCOCAL_TWAIT_COARSE							GENMASK(8, 0)
+#define X5H_PHY0_PPI_RW_LPDCOCAL_VT_CONFIG_REG				0x41C0C
+#define X5H_LPCDCOCAL_TWAIT_FINE			GENMASK(15, 7)
+#define X5H_LPCDCOCAL_VT_NREF_RANGE			GENMASK(6, 2)
+#define X5H_LPCDCOCAL_USE_IDEAL_NREF		BIT(1)
+#define X5H_LPCDCOCAL_VT_TRACKING_EN		BIT(0)
+#define X5H_PHY0_PPI_RW_LPDCOCAL_COARSE_CFG_REG				0x41C10
+#define X5H_NCOARSE_START						GENMASK(1, 0)
+#define X5H_PHY0_PPI_RW_DDLCAL_CFG_REG(n)					(0x41C40 + ((n) * 2)) /* n (hex) = 0 - 9 */
+
+#define X5H_PHY0_PPI_RW_CDRCAL_CFG_0_REG					0x41C58
+#define X5H_CDRCAL_WAIT									  GENMASK(10, 7)
+#define X5H_CDRCAL_START_DELAY							  GENMASK(6, 0)
+
+#define X5H_PHY0_PPI_RW_COMMON_CFG_REG						0x41C6C
+#define X5H_GEN2_SEL										BIT(3)
+#define X5H_DPHY_HS_IDLE_EN									BIT(2)
+#define X5H_CFG_CLK_DIV_FACTOR								GENMASK(1, 0)
+#define X5H_PHY0_PPI_RW_TERMCAL_CFG_0_REG					0x41C80
+#define X5H_TERMCAL_TIMER									GENMASK(6, 0)
+#define X5H_PHY0_PPI_RW_OFFSETCAL_CFG_0_REG					0x41CA0
+#define X5H_OFFSETCAL_CALIB_MODE							BIT(5)
+#define X5H_OFFSETCAL_WAIT_THRESH							GENMASK(4, 0)
+
+#define X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(l, n)	(0x42080 + ((l) * 0x400) + ((n) * 2)) /* l = 0 - 2; n = 0 - 26 */
+#define X5H_OA_LANEl_HSTX_LOWCAP_EN_OVR_EN					BIT(12)
+#define X5H_OA_LANEl_SHORT_LB_EN							BIT(11)
+#define X5H_OA_LANEl_SPARE_IN								GENMASK(10, 0)
+#define X5H_OA_LANEl_HSRX_CDPHY_SEL_FAST_OVR_EN				BIT(12)
+#define X5H_OA_LANEl_HSRX_DPHY_DDL_EN_OVR_EN				BIT(11)
+#define X5H_OA_LANEl_HSTX_TERM_EN_OVR_VAL					GENMASK(10, 9)
+#define X5H_OA_LANEl_HSTX_DATA_CA_OVR_EN					BIT(8)
+#define X5H_OA_LANEl_HSTX_DATA_BC_OVR_EN					BIT(7)
+#define X5H_OA_LANEl_HSTX_DIV_EN_OVR_VAL					BIT(6)
+#define X5H_OA_LANEl_HSTX_LOWCAP_EN_OVR_VAL					GENMASK(5, 4)
+#define X5H_OA_LANEl_HSRX_DPHY_DDL_PON_OVR_VAL				BIT(3)
+#define X5H_OA_LANEl_HSRX_TERM_EN200OHMS					BIT(2)
+#define X5H_OA_LANEl_HSRX_CPHY_CDR_FBK_FAST_LOCK_EN_OVR_EN	BIT(1)
+#define X5H_OA_LANEl_SEL_LANE_CFG							BIT(0)
+#define X5H_OA_LANEl_HSRX_CPHY_DELAY_OVR_VAL					GENMASK(14, 10)
+#define X5H_OA_LANEl_HSRX_CPHY_CDR_DIV							GENMASK(9, 7)
+#define X5H_OA_LANEl_HSRX_SEL_GATED_POLARITY					BIT(6)
+#define X5H_OA_LANEl_HSRX_HS_CLK_DIV							GENMASK(5, 3)
+#define X5H_OA_LANEl_HSRX_EQUALIZER_OVR_VAL						GENMASK(2, 0)
+#define X5H_OA_LANEl_HSRX_EQUALIZER_OVR_EN						BIT(14)
+#define X5H_OA_LANEl_HSRX_DPHY_DLL_FBK_OVR_EN					BIT(13)
+#define X5H_OA_LANEl_HSRX_DPHY_DDL_TUNE_MODE_OVR_EN				BIT(12)
+#define X5H_OA_LANEl_HSRX_DPHY_DDL_COARSE_BANK_OVR_EN			BIT(11)
+#define X5H_OA_LANEl_HSRX_DPHY_DDL_BIAS_OVR_EN					BIT(10)
+#define X5H_OA_LANEl_HSRX_DPHY_DATA_DELAY_OVR_VAL				GENMASK(9, 6)
+#define X5H_OA_LANEl_HSRX_DPHY_DDL_VT_COMP_EN_OVR_EN			BIT(5)
+#define X5H_OA_LANEl_HSRX_DPHY_PREAMBLE_CAL_EN_OVR_EN			BIT(4)
+#define X5H_OA_LANEl_HSRX_DPHY_DLL_EN_OVR_EN					BIT(3)
+#define X5H_OA_LANEl_HSRX_DPHY_DDL_PHASE_CHANGE_OVR_EN			BIT(2)
+#define X5H_OA_LANEl_HSRX_DPHY_DDL_BYPASS_EN_OVR_EN				BIT(1)
+#define X5H_OA_LANEl_HSRX_DPHY_DDL_BIAS_BYPASS_EN_OVR_EN		BIT(0)
+
+#define X5H_A_LANEl_HSRX_CPHY_CDR_FBK_CAP_PROG					GENMASK(13, 10)
+#define X5H_A_LANEl_HSRX_GMODE									GENMASK(15, 14)
+#define X5H_OA_LANEl_HSRX_GMODE									GENMASK(15, 14)
+#define X5H_OA_LANEl_HSRX_CPHY_CDR_FBK_CAP_PROG					GENMASK(13, 10)
+
+#define X5H_PHY0_CORE_DIG_RW_TRIO0_REG(n)					(0x42100 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_POST_RECEIVED_RESET_THRESH							GENMASK(15, 9)
+#define X5H_DESERIALIZER_DIV_EN_DELAY_DEASS_THRESH				GENMASK(8 ,6)
+#define X5H_DESERIALIZER_DIV_EN_DELAY_THRESH					GENMASK(5 ,3)
+#define X5H_DESERIALIZER_DATA_EN_DELAY_THRESH					GENMASK(2 ,0)
+#define X5H_POST_DET_DELAY_THRESH								GENMASK(15 ,0)
+#define X5H_DESERIALIZER_EN_DELAY_DEASS_THRESH					GENMASK(7 ,0)
+
+#define X5H_PHY0_CORE_DIG_RW_TRIO1_REG(n)					(0x42500 + ((n) * 2)) /* n = 0 - 2 */
+
+#define X5H_PHY1_CORE_DIG_RW_TRIO0_REG(n)					(0x62100 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY1_CORE_DIG_RW_TRIO1_REG(n)					(0x62500 + ((n) * 2)) /* n = 0 - 2 */
+
+#define X5H_PHY0_CORE_DIG_RW_COMMON_REG(n)					(0x43880 + ((n) * 2)) /* n = 0 - 15 */
+#define X5H_GEN2_SEL_CORE_DIG					BIT(14)
+#define X5H_HSRX_DPHY_DLL_EN_DLY				GENMASK(13, 2)
+#define X5H_DPHY_RX_CLK_AG_EN					BIT(1)
+#define X5H_DPHY_PREAMBLE_EN_REG				BIT(0)
+#define X5H_LANE2_CLK_EN_SYNC_BYPASS_REG			BIT(8)
+#define X5H_LANE1_CLK_EN_SYNC_BYPASS_REG			BIT(7)
+#define X5H_LANE0_CLK_EN_SYNC_BYPASS_REG			BIT(6)
+#define X5H_LANE2_HSRX_WORD_CLK_SEL_GATING_REG		GENMASK(5, 4)
+#define X5H_LANE1_HSRX_WORD_CLK_SEL_GATING_REG		GENMASK(3, 2)
+#define X5H_LANE0_HSRX_WORD_CLK_SEL_GATING_REG		GENMASK(1, 0)
+#define X5H_POST_DELAY_REG							BIT(7)
+#define X5H_HIGHDATARATE_POST_REG					BIT(6)
+#define X5H_DESERIALIZER_EN_DEASS_COUNT_THRESH_D	BIT(5, 3)
+#define X5H_DESERIALIZER_DIV_EN_DELAY_THRESH_D		BIT(2, 0)
+
+#define X5H_PHY1_CORE_DIG_RW_COMMON_REG(n)					(0x63880 + ((n) * 2)) /* n = 0 - 15 */
+
+#define X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(n)		(0x43840 + ((n) * 2)) /* n = 0 - 11 */
+#define X5H_OA_CB_HSTXLB_DCO_CLK90_EN_OVR_VAL				BIT(15)
+#define X5H_OA_CB_ATB_SEL_DAC_OVR_EN						BIT(14)
+#define X5H_OA_CB_VPCLK_REG_PON_OVR_VAL						BIT(13)
+#define X5H_OA_CB_AMP1200_PON_OVR_VAL						BIT(12)
+#define X5H_OA_CB_IBIAS_PON_OVR_VAL							BIT(11)
+#define X5H_OA_CB_HSTX_VCOMM_REG_PON_OVR_VAL				BIT(10)
+#define X5H_OA_CB_SEL_45OHM_50OHM						  BIT(8)
+#define X5H_OA_CB_REXT_IOCONT_EN_OVR_EN							BIT(15)
+#define X5H_OA_CB_HSTXLB_DCO_TUNE_CLKDIG_EN_OVR_EN				BIT(14)
+#define X5H_OA_CB_HSTXLB_DCO_EN_OVR_EN							BIT(13)
+#define X5H_OA_CB_HSTXLB_DCO_PON_OVR_EN							BIT(12)
+#define X5H_OA_CB_HSTXLB_DCO_FWORD_OVR_EN						BIT(11)
+#define X5H_OA_CB_LP_DCO_FWORD_OVR_VAL							GENMASK(10, 4)
+#define X5H_OA_CB_LP_DCO_FWORD_CHANGE_OVR_VAL					BIT(3)
+#define X5H_OA_CB_LP_DCO_CLK_EN_OVR_VAL							BIT(2)
+#define X5H_OA_CB_LP_DCO_EN_OVR_VAL								BIT(1)
+#define X5H_OA_CB_LP_DCO_PON_OVR_VAL							BIT(0)
+#define X5H_OA_CB_DSK_CLK_MODE_OVR_EN							BIT(15)
+#define X5H_OA_SETRB_OVR_EN										BIT(14)
+#define X5H_OA_SETRA_OVR_EN										BIT(13)
+#define X5H_OA_SETR_CALIB_OVR_EN								BIT(12)
+#define X5H_OA_SETR_OVR_EN										BIT(11)
+#define X5H_OA_CB_HSTXLB_DCO_TUNE_CLKDIG_EN_OVR_VAL				BIT(10)
+#define X5H_OA_CB_HSTXLB_DCO_EN_OVR_VAL							BIT(9)
+#define X5H_OA_CB_HSTXLB_DCO_PON_OVR_VAL						BIT(8)
+#define X5H_OA_CB_HSTXLB_DCO_FWORD_OVR_VAL						GENMASK(7, 5)
+#define X5H_OA_CB_LP_DCO_FWORD_OVR_EN							BIT(4)
+#define X5H_OA_CB_LP_DCO_FWORD_CHANGE_OVR_EN					BIT(3)
+#define X5H_OA_CB_LP_DCO_CLK_EN_OVR_EN							BIT(2)
+#define X5H_OA_CB_LP_DCO_EN_OVR_EN								BIT(1)
+#define X5H_OA_CB_LP_DCO_PON_OVR_EN								BIT(0)
+#define X5H_OA_CB_HSTXLB_DCO_CLK90_EN_OVR_EN				BIT(9)
+#define X5H_OA_CB_HSTXLB_DCO_CLK0_EN_OVR_EN					BIT(8)
+#define X5H_OA_CB_SEL_HSTXLB_DCO_VREF						BIT(7)
+#define X5H_OA_CB_HSTXLB_DCO_CLK0_EN_OVR_VAL					BIT(15)
+#define X5H_OA_CB_ATB_SEL_OVR_EN								BIT(14)
+#define X5H_OA_CB_VPCLK_REG_PON_OVR_EN							BIT(13)
+#define X5H_OA_CB_AMP1200_PON_OVR_EN							BIT(12)
+#define X5H_OA_CB_IBIAS_PON_OVR_EN								BIT(11)
+#define X5H_OA_CB_HSTX_VCOMM_REG_PON_OVR_EN						BIT(10)
+#define X5H_OA_CB_ATB_COMP_PON_OVR_EN							BIT(9)
+#define X5H_OA_CB_CAL_DOWN_EN_OVR_EN							BIT(8)
+#define X5H_OA_CB_CAL_UP_EN_OVR_EN								BIT(7)
+#define X5H_OA_CB_CAL_PON_OVR_EN								BIT(6)
+#define X5H_OA_CB_BG_PON_OVR_EN									BIT(5)
+#define X5H_OA_CB_PON_OVR_EN									BIT(4)
+#define X5H_OA_CB_CHOP_CLK_EN_OVR_EN							BIT(3)
+#define X5H_OA_CB_CHOP_CLK_OVR_EN								BIT(2)
+#define X5H_OA_CB_ATB_CLK_OVR_EN								BIT(1)
+#define X5H_OA_SEL_CPHY_DPHY_OVR_EN								BIT(0)
+#define X5H_OA_CB_ATB_COMP_PON_OVR_VAL						BIT(9)
+#define X5H_OA_CB_CAL_DOWN_EN_OVR_VAL						BIT(8)
+#define X5H_OA_CB_CAL_UP_EN_OVR_VAL							BIT(7)
+#define X5H_OA_CB_CAL_PON_OVR_VAL							BIT(6)
+#define X5H_OA_CB_BG_PON_OVR_VAL							BIT(5)
+#define X5H_OA_CB_PON_OVR_VAL								BIT(4)
+#define X5H_OA_CB_CHOP_CLK_EN_OVR_VAL						BIT(3)
+#define X5H_OA_CB_CHOP_CLK_OVR_VAL							BIT(2)
+#define X5H_OA_CB_ATB_CLK_OVR_VAL							BIT(1)
+#define X5H_OA_SEL_CPHY_DPHY_OVR_VAL						BIT(0)
+#define X5H_OA_A2D_16_BUS_EN							BIT(3)
+#define X5H_OA_CB_VP2_PROG								GENMASK(2, 0)
+#define X5H_OA_CB_CAL_SINK_EN_OVR_EN						BIT(15)
+#define X5H_OA_CB_SEL_EXT_INT_CHOP_CLK						BIT(14)
+#define X5H_OA_CB_DSK_CLK_CHANNEL							GENMASK(13, 12)
+#define X5H_OA_CB_VPCLK_REG_MODE							GENMASK(11, 10)
+#define X5H_OA_CB_REXT_IOCONT_EN_OVR_VAL					BIT(9)
+#define X5H_OA_CB_SEL_45OHM_50OHM							BIT(8)
+#define X5H_OA_SETR_CALIB_VT								GENMASK(7, 4)
+#define X5H_OA_CB_SPARE_IN									GENMASK(3, 0)
+#define X5H_OA_CB_HSTX_VCOMM_REG_STBON				BIT(15)
+#define X5H_OA_CB_HSTX_BOOST_PROG					GENMASK(14, 12)
+#define X5H_OA_CB_HSTXLB_DCO_SEL_DIV				GENMASK(11, 10)
+#define X5H_OA_CB_HSTXLB_DCO_CLK90_EN_OVR_EN		BIT(9)
+#define X5H_OA_CB_HSTXLB_DCO_CLK0_EN_OVR_EN			BIT(8)
+#define X5H_OA_CB_SEL_HSTXLB_DCO_VREF				BIT(7)
+#define X5H_OA_CB_SEL_MPLL_REG_VREF                 GENMASK(6, 4)
+#define X5H_OA_SEL_LPTX_PROG						GENMASK(3, 1)
+#define X5H_OA_CB_SEL_LPTX_VREF						BIT(0)
+#define X5H_OA_CB_CAL_SINK_EN_OVR_VAL				BIT(15)
+#define X5H_OA_CB_VCOMM_UNTERM_MODE					BIT(14)
+#define X5H_OA_CB_SEL_VCOMM_PROG					GENMASK(13, 11)
+#define X5H_OA_CB_SEL_HSRX_CM_DET_VREF				GENMASK(10, 9)
+#define X5H_OA_CB_SEL_TRIO2_ALP_VREF				GENMASK(8, 6)
+#define X5H_OA_CB_SEL_TRIO1_ALP_VREF				GENMASK(5, 3)
+#define X5H_OA_CB_SEL_TRIO0_ALP_VREF				GENMASK(2, 0)
+
+#define X5H_PHY1_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(n)		(0x63840 + ((n) * 2)) /* n = 0 - 11 */
+
+#define X5H_PHY0_CORE_DIG_CLANE_0_RW_CFG_REG(n)				(0x4A000 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY0_CORE_DIG_CLANE_1_RW_CFG_REG(n)				(0x4A400 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY0_CORE_DIG_CLANE_2_RW_CFG_REG(n)				(0x4A800 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_LOOPBACK_MODE_EN						BIT(10)
+#define X5H_CFG_0_SWAP_ENCODE_REG					BIT(9)
+#define X5H_CFG_0_ALP_ENABLE_REG					BIT(8)
+#define X5H_CFG_0_HS_SYNC_DET_SWAP_REG				BIT(7)
+#define X5H_CFG_0_HS_ALIGNER_SWAP_REG				BIT(6)
+#define X5H_CFG_0_HS_DECODE_SWAP_REG				BIT(5)
+#define X5H_CFG_0_HS_ORDER_SWAP_REG					BIT(4)
+#define X5H_CFG_0_HS_PIN_SWAP_REG					BIT(3)
+#define X5H_CFG_0_LP_PIN_SWAP_REG					GENMASK(2, 0)
+#define X5H_CFG_2_SPARE								GENMASK(15, 0)
+
+#define X5H_PHY1_CORE_DIG_CLANE_0_RW_CFG_REG(n)				(0x6A000 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY1_CORE_DIG_CLANE_1_RW_CFG_REG(n)				(0x6A400 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY1_CORE_DIG_CLANE_2_RW_CFG_REG(n)				(0x6A800 + ((n) * 2)) /* n = 0 - 2 */
+
+#define X5H_PHY0_CORE_DIG_CLANE_0_RW_LP_REG(n)				(0x4A080 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_LP_0_ITMINRX_REG						GENMASK(15, 12)
+#define X5H_LP_0_TTAGO_REG							GENMASK(11, 8)
+#define X5H_LP_0_TTASURE_REG						GENMASK(7, 4)
+#define X5H_LP_0_TTAGET_REG							GENMASK(3, 0)
+#define X5H_LP_2_FILTER_INPUT_SAMPLING_REG			BIT(0)
+
+#define X5H_PHY0_CORE_DIG_CLANE_1_RW_LP_REG(n)				(0x4A480 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY1_CORE_DIG_CLANE_0_RW_LP_REG(n)				(0x6A080 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY1_CORE_DIG_CLANE_1_RW_LP_REG(n)				(0x6A480 + ((n) * 2)) /* n = 0 - 2 */
+
+#define X5H_PHY0_CORE_DIG_CLANE_0_RW_HS_RX_REG(n)			(0x4A100 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_PHY0_CORE_DIG_CLANE_1_RW_HS_RX_REG(n)			(0x4A500 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_PHY0_CORE_DIG_CLANE_2_RW_HS_RX_REG(n)			(0x4A900 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_HSRX_CPHY_CDR_FBK_EN_DLY_REG			GENMASK(7, 5)
+#define X5H_HSACTIVERX_DLY_REG						GENMASK(4, 0)
+#define X5H_HSRX_CPHY_CDR_FBK_FAST_LOCK_EN_DLY_REG	GENMASK(6, 1)
+#define X5H_HSRX_CPHY_CDR_FBK_FAST_LOCK_EN_REG		BIT(0)
+
+#define X5H_PHY1_CORE_DIG_CLANE_0_RW_HS_RX_REG(n)			(0x6A100 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_PHY1_CORE_DIG_CLANE_1_RW_HS_RX_REG(n)			(0x6A500 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_PHY1_CORE_DIG_CLANE_2_RW_HS_RX_REG(n)			(0x6A900 + ((n) * 2)) /* n = 0 - 1 */
+
+#define X5H_PHY0_CORE_DIG_CLANE_0_RW_HS_TX_REG(n)			(0x4A200 + ((n) * 2)) /* n = 0 - 13 */
+#define X5H_PHY0_CORE_DIG_CLANE_1_RW_HS_TX_REG(n)			(0x4A600 + ((n) * 2)) /* n = 0 - 13 */
+#define X5H_PHY0_CORE_DIG_CLANE_2_RW_HS_TX_REG(n)			(0x4AA00 + ((n) * 2)) /* n = 0 - 13 */
+#define X5H_HS_TX_6_PIN_SWAP_REG							GENMASK(14, 12)
+#define X5H_HS_TX_6_PROGSEQSYMB13_REG						GENMASK(11, 9)
+#define X5H_HS_TX_6_PROGSEQSYMB12_REG						GENMASK(8, 6)
+#define X5H_HS_TX_6_PROGSEQSYMB11_REG						GENMASK(5, 3)
+#define X5H_HS_TX_6_PROGSEQSYMB10_REG						GENMASK(2, 0)
+
+#define X5H_PHY1_CORE_DIG_CLANE_0_RW_HS_TX_REG(n)			(0x6A200 + ((n) * 2)) /* n = 0 - 13 */
+#define X5H_PHY1_CORE_DIG_CLANE_1_RW_HS_TX_REG(n)			(0x6A600 + ((n) * 2)) /* n = 0 - 13 */
+
+#define X5H_PHY0_CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_REG(n)	(0x439E0 + ((n) * 2)) /* n = 0 - 3 */
+#define X5H_CB_CHOP_CLK_DIV_SEL			GENMASK(15, 14)
+#define X5H_CB_LP_DCO_CLK_EN_DLY		GENMASK(13, 8)
+#define X5H_CB_LP_DCO_EN_DLY			GENMASK(7, 2)
+#define X5H_CB_DSK_CLK_MODE_CFG			GENMASK(1, 0)
+
+#define X5H_PHY1_CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_REG(n)	(0x639E0 + ((n) * 2)) /* n = 0 - 3 */
+
+#define X5H_PHY0_CORE_DIG_DLANE_0_RW_CFG_REG(n)				(0x46000 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY0_CORE_DIG_DLANE_1_RW_CFG_REG(n)				(0x46400 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY0_CORE_DIG_DLANE_2_RW_CFG_REG(n)				(0x46800 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY1_CORE_DIG_DLANE_0_RW_CFG_REG(n)				(0x66000 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY1_CORE_DIG_DLANE_1_RW_CFG_REG(n)				(0x66400 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY1_CORE_DIG_DLANE_2_RW_CFG_REG(n)				(0x66800 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY0_CORE_DIG_DLANE_0_RW_LP_REG(n)				(0x46080 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY0_CORE_DIG_DLANE_1_RW_LP_REG(n)				(0x46480 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY1_CORE_DIG_DLANE_0_RW_LP_REG(n)				(0x66080 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY1_CORE_DIG_DLANE_1_RW_LP_REG(n)				(0x66480 + ((n) * 2)) /* n = 0 - 2 */
+#define X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_RX_REG(n)			(0x46100 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_RX_REG(n)			(0x46500 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_PHY0_CORE_DIG_DLANE_2_RW_HS_RX_REG(n)			(0x46900 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_PHY1_CORE_DIG_DLANE_0_RW_HS_RX_REG(n)			(0x66100 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_PHY1_CORE_DIG_DLANE_1_RW_HS_RX_REG(n)			(0x66500 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_PHY1_CORE_DIG_DLANE_2_RW_HS_RX_REG(n)			(0x66900 + ((n) * 2)) /* n = 0 - 1 */
+#define X5H_PHY0_CORE_DIG_DLANE_0_RW_HS_TX_REG(n)			(0x46200 + ((n) * 2)) /* n = 0 - 13 */
+#define X5H_PHY0_CORE_DIG_DLANE_1_RW_HS_TX_REG(n)			(0x46600 + ((n) * 2)) /* n = 0 - 13 */
+#define X5H_PHY0_CORE_DIG_DLANE_2_RW_HS_TX_REG(n)			(0x46A00 + ((n) * 2)) /* n = 0 - 13 */
+#define X5H_PHY0_CORE_DIG_DLANE_CLK_RW_LP_REG(n)			(0x47080 + ((n) * 2)) /* n = 0 - 3 */
+#define X5H_PHY0_CORE_DIG_DLANE_CLK_RW_HS_RX_REG(n)			(0x47100 + ((n) * 2)) /* n = 0 - 12 */
+#define X5H_PHY1_CORE_DIG_IOCTRL_RW_AFE_LANE0_CTRL_REG(n)	(0x62080 + ((n) * 2)) /* n = 0 - 26 */
+#define X5H_PHY1_CORE_DIG_IOCTRL_RW_AFE_LANE1_CTRL_REG(n)	(0x62480 + ((n) * 2)) /* n = 0 - 26 */
+#define X5H_PHY1_CORE_DIG_IOCTRL_RW_AFE_LANE2_CTRL_REG(n)	(0x62880 + ((n) * 2)) /* n = 0 - 26 */
+#define X5H_PHY1_CORE_DIG_DLANE_0_RW_HS_TX_REG(n)			(0x66200 + ((n) * 2)) /* n = 0 - 13 */
+#define X5H_PHY1_CORE_DIG_DLANE_1_RW_HS_TX_REG(n)			(0x66600 + ((n) * 2)) /* n = 0 - 13 */
+
+#define X5H_INT_ST_CSEMC_REG								0x0054C
+#define X5H_INT_ST_TO_REG									0x00528
+/**  **/
+
 /* Hardcoded for enable module clock */
 #define MDLC_BASE		0xC5000000
 #define RCAR_VIN_PDID		(0)
@@ -833,6 +1222,50 @@ static const struct rcsi2_mbps_info hsfreqrange_v4m[] = {
 	{ /* sentinel */ },
 };
 
+struct rcsi2_msps_lut {
+	u16 msps;
+	u16 coarse;
+	u16 en_delay_deass;
+	u16 det_delay;
+	u16 equal_ovr;
+	u16 gmode;
+	u16 fbk_cap;
+};
+
+static const struct rcsi2_msps_lut rcsi2_msps_cphy_spec_lut_r8a78000[] = {
+	{ .msps = 80  ,	.coarse = 56 , .en_delay_deass = 106, .det_delay = 360 },
+	{ .msps = 100 ,	.coarse = 56 , .en_delay_deass = 85,  .det_delay = 287 },
+	{ .msps = 200 ,	.coarse = 56 , .en_delay_deass = 43,  .det_delay = 140 },
+	{ .msps = 300 ,	.coarse = 56 , .en_delay_deass = 29,  .det_delay = 91  },
+	{ .msps = 400 ,	.coarse = 56 , .en_delay_deass = 22,  .det_delay = 66  },
+	{ .msps = 900 ,	.coarse = 56 , .en_delay_deass = 10,  .det_delay = 22  },
+	{ .msps = 1000,	.coarse = 95 , .en_delay_deass = 10,  .det_delay = 22  },
+	{ .msps = 1500,	.coarse = 93 , .en_delay_deass = 4,   .det_delay = 7   },
+	{ .msps = 2000,	.coarse = 124, .en_delay_deass = 4,   .det_delay = 7   },
+	{ .msps = 2500,	.coarse = 156, .en_delay_deass = 4,   .det_delay = 1   },
+	{ .msps = 3500,	.coarse = 218, .en_delay_deass = 4,   .det_delay = 1   },
+	{ .msps = 4500,	.coarse = 404, .en_delay_deass = 4,   .det_delay = 1   },
+	{ .msps = 6500,	.coarse = 406, .en_delay_deass = 4,   .det_delay = 1   },
+	{ /* sentinel */ },
+};
+
+static const struct rcsi2_msps_lut rcsi2_msps_hsrx_lut_r8a78000[] = {
+	{ .msps = 80,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
+	{ .msps = 100,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
+	{ .msps = 200,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
+	{ .msps = 300,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
+	{ .msps = 400,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
+	{ .msps = 900,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
+	{ .msps = 1000,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 0 },
+	{ .msps = 1500,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 2 },
+	{ .msps = 2000,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 2 },
+	{ .msps = 2500,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 2 },
+	{ .msps = 3500,	.equal_ovr = 4, .gmode = 0, .fbk_cap = 11 },
+	{ .msps = 4500,	.equal_ovr = 2, .gmode = 2, .fbk_cap = 14 },
+	{ .msps = 6500,	.equal_ovr = 2, .gmode = 2, .fbk_cap = 15 },
+	{ /* sentinel */ },
+};
+
 struct rcar_csi2_format {
 	u32 code;
 	unsigned int datatype;
@@ -1013,16 +1446,26 @@ static const struct rcar_csi2_format *rcsi2_code_to_fmt(unsigned int code)
 struct rcsi2_cphy_line_order {
 	enum v4l2_mbus_csi2_cphy_line_orders_type order;
 	u16 cfg;
-	u16 ctrl29;
+	u16 ctrl;	// ctrl29 (v4h); ctrl1 (x5h)
+	u32 tx;		// x5h only
 };
 
 static const struct rcsi2_cphy_line_order rcsi2_cphy_line_orders[] = {
-	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_ABC, .cfg = 0x0, .ctrl29 = 0x0 },
-	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_ACB, .cfg = 0xa, .ctrl29 = 0x1 },
-	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_BAC, .cfg = 0xc, .ctrl29 = 0x1 },
-	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_BCA, .cfg = 0x5, .ctrl29 = 0x0 },
-	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_CAB, .cfg = 0x3, .ctrl29 = 0x0 },
-	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_CBA, .cfg = 0x9, .ctrl29 = 0x1 }
+	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_ABC, .cfg = 0x0, .ctrl = 0x0 },
+	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_ACB, .cfg = 0xa, .ctrl = 0x1 },
+	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_BAC, .cfg = 0xc, .ctrl = 0x1 },
+	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_BCA, .cfg = 0x5, .ctrl = 0x0 },
+	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_CAB, .cfg = 0x3, .ctrl = 0x0 },
+	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_CBA, .cfg = 0x9, .ctrl = 0x1 }
+};
+
+static const struct rcsi2_cphy_line_order rcsi2_cphy_line_orders_x5h_cphy[] = {
+	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_ABC, .cfg = 0x0, .ctrl = 0x0, .tx = 0x0, },
+	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_ACB, .cfg = 0x2, .ctrl = 0x1, .tx = 0x2, },
+	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_BAC, .cfg = 0xc, .ctrl = 0x1, .tx = 0x4, },
+	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_BCA, .cfg = 0x5, .ctrl = 0x0, .tx = 0x3, },
+	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_CAB, .cfg = 0x3, .ctrl = 0x0, .tx = 0x5, },
+	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_CBA, .cfg = 0x9, .ctrl = 0x1, .tx = 0x1, }
 };
 
 enum rcar_csi2_pads {
@@ -1523,7 +1966,28 @@ static void rsci2_set_line_order(struct rcar_csi2 *priv,
 		return;
 
 	rcsi2_modify16(priv, cfgreg, info->cfg, 0x000f);
-	rcsi2_modify16(priv, ctrlreg, info->ctrl29, 0x0100);
+	rcsi2_modify16(priv, ctrlreg, info->ctrl, 0x0100);
+}
+
+static void rsci2_set_line_order_x5h(struct rcar_csi2 *priv,
+				 enum v4l2_mbus_csi2_cphy_line_orders_type order,
+				 unsigned int cfgreg, unsigned int ctrlreg, unsigned int rxreg)
+{
+	const struct rcsi2_cphy_line_order *info = NULL;
+
+	for (unsigned int i = 0; i < ARRAY_SIZE(rcsi2_cphy_line_orders_x5h_cphy); i++) {
+		if (rcsi2_cphy_line_orders_x5h_cphy[i].order == order) {
+			info = &rcsi2_cphy_line_orders_x5h_cphy[i];
+			break;
+		}
+	}
+
+	if (!info)
+		return;
+
+	rcsi2_modify16(priv, cfgreg, info->cfg, 0x000f);
+	rcsi2_modify16(priv, ctrlreg, info->ctrl, 0x0040);
+	rcsi2_modify16(priv, rxreg, info->tx, 0x7000);
 }
 
 static int rcsi2_wait_phy_start_v4h(struct rcar_csi2 *priv, u32 match)
@@ -1533,6 +1997,22 @@ static int rcsi2_wait_phy_start_v4h(struct rcar_csi2 *priv, u32 match)
 
 	for (timeout = 0; timeout <= 10; timeout++) {
 		status = rcsi2_read(priv, V4H_ST_PHYST_REG);
+		if ((status & match) == match)
+			return 0;
+
+		usleep_range(1000, 2000);
+	}
+
+	return -ETIMEDOUT;
+}
+
+static int rcsi2_wait_phy_start_x5h(struct rcar_csi2 *priv, u32 match)
+{
+	unsigned int timeout;
+	u32 status;
+
+	for (timeout = 0; timeout <= 100; timeout++) {
+		status = rcsi2_read(priv, X5H_ST_PHYST_REG);
 		if ((status & match) == match)
 			return 0;
 
@@ -1973,6 +2453,309 @@ static int rcsi2_d_phy_setting_v4m(struct rcar_csi2 *priv, int mbps)
 	return 0;
 }
 
+static int rcsi2_c_phy_setting_x5h(struct rcar_csi2 *priv, int msps)
+{
+	const struct rcsi2_msps_lut *conf;
+	for (conf = rcsi2_msps_cphy_spec_lut_r8a78000; conf->msps != 0; conf++) {
+		if (conf->msps > msps)
+			break;
+	}
+
+	/* C-PHY specific */
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(7), 0x15,
+		X5H_LANE2_HSRX_WORD_CLK_SEL_GATING_REG |
+		X5H_LANE1_HSRX_WORD_CLK_SEL_GATING_REG |
+		X5H_LANE0_HSRX_WORD_CLK_SEL_GATING_REG);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(7), 0x0068, X5H_DPHY_DDL_CAL_addr);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(8), 0x0010, X5H_CPHY_DDL_CAL_addr);
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_CLANE_0_RW_LP_REG(0), (6 << 8), X5H_LP_0_TTAGO_REG);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_CLANE_1_RW_LP_REG(0), (6 << 8), X5H_LP_0_TTAGO_REG);
+
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_CDRCAL_CFG_0_REG, (4 << 7), X5H_CDRCAL_WAIT);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_CDRCAL_CFG_0_REG, 9, X5H_CDRCAL_START_DELAY); // 20.0MHz
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(0), 1, X5H_HS_CDR_UPDATE_SETTINGS_REG);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(0), 0, X5H_HS_CDR_FEEDBACK_ENABLED_REG);
+
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(1), 0x0013, X5H_HS_CDR_TIMEBASE_TARGET_REG); // 20.0MHz
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(5), 0x0013, X5H_HS_CDR_INIT_WAIT_TARGET_REG); // 20.0MHz
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(3), 0x000A, X5H_HS_CDR_STUCK_THRESH_REG);
+
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_HS_RX_REG(2), conf->coarse, X5H_HS_CDR_COARSE_TARGET_REG); // LUT
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(0, 2), 1, X5H_OA_LANEl_SEL_LANE_CFG);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(1, 2), 0, X5H_OA_LANEl_SEL_LANE_CFG);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(2, 2), 1, X5H_OA_LANEl_SEL_LANE_CFG);
+
+	if ((rcsi2_read16(priv, X5H_PHY0_PPI_RW_COMMON_CFG_REG) & X5H_GEN2_SEL) != 0) {
+		// gen2sel=1 set to 7
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(0), (7 << 6), X5H_DESERIALIZER_DIV_EN_DELAY_DEASS_THRESH);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(0), (7 << 6), X5H_DESERIALIZER_DIV_EN_DELAY_DEASS_THRESH);
+	} else {
+		if ((rcsi2_read16(priv, X5H_PHY_MODE_CFG_REG) & X5H_PPI_WIDTH) == BIT(17)) {
+			// gen2sel=0 and 32bit set to 7
+			rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(0), (7 << 6), X5H_DESERIALIZER_DIV_EN_DELAY_DEASS_THRESH);
+			rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(0), (7 << 6), X5H_DESERIALIZER_DIV_EN_DELAY_DEASS_THRESH);
+		} else {
+			// Otherwise set to 3.
+			rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(0), (3 << 6), X5H_DESERIALIZER_DIV_EN_DELAY_DEASS_THRESH);
+			rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(0), (3 << 6), X5H_DESERIALIZER_DIV_EN_DELAY_DEASS_THRESH);
+		}
+	}
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(0), (1 << 3), X5H_DESERIALIZER_DIV_EN_DELAY_THRESH);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(0), (1 << 3), X5H_DESERIALIZER_DIV_EN_DELAY_THRESH);
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(2), conf->en_delay_deass, X5H_DESERIALIZER_EN_DELAY_DEASS_THRESH);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(2), conf->en_delay_deass, X5H_DESERIALIZER_EN_DELAY_DEASS_THRESH);
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(0), 2, X5H_DESERIALIZER_DATA_EN_DELAY_THRESH);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(0), 2, X5H_DESERIALIZER_DATA_EN_DELAY_THRESH);
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(1), conf->det_delay, X5H_POST_DET_DELAY_THRESH);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(1), conf->det_delay, X5H_POST_DET_DELAY_THRESH);
+
+	if ((rcsi2_read16(priv, X5H_PHY0_PPI_RW_COMMON_CFG_REG) & X5H_GEN2_SEL) != 0) {
+		// gen2sel=1 set to 7
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(0), (7 << 9), X5H_POST_RECEIVED_RESET_THRESH);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(0), (7 << 9), X5H_POST_RECEIVED_RESET_THRESH);
+	} else {
+		if ((rcsi2_read16(priv, X5H_PHY_MODE_CFG_REG) & X5H_PPI_WIDTH) == BIT(17)) {
+			// gen2sel=0 and 32bit set to 7
+			rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(0), (6 << 9), X5H_POST_RECEIVED_RESET_THRESH);
+			rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(0), (6 << 9), X5H_POST_RECEIVED_RESET_THRESH);
+		} else {
+			// Otherwise set to 1.
+			rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO0_REG(0), (4 << 9), X5H_POST_RECEIVED_RESET_THRESH);
+			rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_TRIO1_REG(0), (4 << 9), X5H_POST_RECEIVED_RESET_THRESH);
+		}
+	}
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_CLANE_0_RW_LP_REG(0), (1 << 12), X5H_LP_0_ITMINRX_REG);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_CLANE_1_RW_LP_REG(0), (1 << 12), X5H_LP_0_ITMINRX_REG);
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_CLANE_0_RW_LP_REG(2), 0, X5H_LP_2_FILTER_INPUT_SAMPLING_REG);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_CLANE_1_RW_LP_REG(2), 0, X5H_LP_2_FILTER_INPUT_SAMPLING_REG);
+
+	if (msps >= 3500) {
+		// Write 5'd6 if Gen2 Datarates
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_CLANE_0_RW_HS_RX_REG(0), 6, X5H_HSACTIVERX_DLY_REG);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_CLANE_1_RW_HS_RX_REG(0), 6, X5H_HSACTIVERX_DLY_REG);
+	} else {
+		// Write 5'd12 if Gen1 Datarates
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_CLANE_0_RW_HS_RX_REG(0), 12, X5H_HSACTIVERX_DLY_REG);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_CLANE_1_RW_HS_RX_REG(0), 12, X5H_HSACTIVERX_DLY_REG);
+	}
+
+	if (msps <= 3500) {
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(6), 0, X5H_HIGHDATARATE_POST_REG);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(7), 0, X5H_LANE2_HSRX_WORD_CLK_SEL_GATING_REG);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(7), 0, X5H_LANE1_HSRX_WORD_CLK_SEL_GATING_REG);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(7), 0, X5H_LANE0_HSRX_WORD_CLK_SEL_GATING_REG);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(6), 0, X5H_POST_DELAY_REG);
+	} else {
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(6), (1 << 6), X5H_HIGHDATARATE_POST_REG);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(7), (1 << 4), X5H_LANE2_HSRX_WORD_CLK_SEL_GATING_REG);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(7), (1 << 2), X5H_LANE1_HSRX_WORD_CLK_SEL_GATING_REG);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(7), (1 << 0), X5H_LANE0_HSRX_WORD_CLK_SEL_GATING_REG);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(6), (1 << 7), X5H_POST_DELAY_REG);
+	}
+
+	return 0;
+}
+
+static int rcsi2_startup_sequence_x5h(struct rcar_csi2 *priv, int msps)
+{
+	const struct rcsi2_msps_lut *conf;
+	int ret;
+
+	// T0: preset_n = 1’b0; rst_n = 1’b0; shutdown_n = 1’b0.
+	rcsi2_write(priv, X5H_PHY_EN_REG, 0x0);
+	rcsi2_write(priv, X5H_PHYSET_REG, 0x0);
+	rcsi2_write(priv, X5H_PHY_CTRL_REG, 0x0);
+	rcsi2_modify(priv, X5H_CFGCLKSET_REG, 0x00000127, X5H_CFG_CLK_CKEN | X5H_CFG_CLK_PERIOD);
+
+	// T1: top level static inputs must be set to the desired configuration.
+	rcsi2_modify(priv, X5H_PHYSET_REG, 0x0000004c, X5H_PHY_MODE_IP |
+		X5H_PRESET_N_PHY1 | X5H_PRESET_N);
+	rcsi2_modify(priv, X5H_PHY_CTRL_REG, 0x00001f00, X5H_PHY_ENABLE_DCK_PHY1 |
+		X5H_PHY_ENABLE_DCK | X5H_PHY_ENABLE_3 | X5H_PHY_ENABLE_2 |
+		X5H_PHY_ENABLE_1 | X5H_PHY_ENABLE_0);
+	rcsi2_write(priv, X5H_FORCEPHYMODE_REG, 0x003f0000);
+
+	if(msps >= 3500){
+		rcsi2_write(priv, X5H_RDWIDTH_REG, 0x02020202); // divided by 6.25
+	} else {
+		// In order to accommodate instantaneous cycle to cycle clock jitter,
+		// CPHY max frequency clock is divided by 6.25 when HM is set to 16-bit, and divided by 12.5 when HM is set to 32-bit.
+		rcsi2_write(priv, X5H_RDWIDTH_REG, 0x01010101); // divided by 12.5
+	}
+
+	rcsi2_write(priv, X5H_PHY_REGMODE_REG, 0x00000001);
+
+	// T2 CSI2_RESETN/csi2_resetn = 1’b1.
+	rcsi2_modify(priv, X5H_PHY_EN_REG, 0x00000f4c, X5H_PHY_MODE_OVR_EN |
+		X5H_PRESETN_PHY1_OVR_EN | X5H_PRESETN_OVR_EN);
+
+	rcsi2_write(priv, X5H_PHY_MODE_CFG_REG, 0x00010001);
+
+	rcsi2_write(priv, X5H_PHY_DESKEW_CFG_REG, 0x00000002);
+	rcsi2_write(priv, X5H_CSI2_GENERAL_CFG_REG, 0x00000001);
+	rcsi2_write(priv, CSI2_DESCRAMBLING_CFG, 0x00000000);
+	rcsi2_write(priv, CSI2_DESCRAMBLING_CFG_REG(0), 0x00010810);		// Lane0 Sync Types 0/1
+	rcsi2_write(priv, CSI2_DESCRAMBLING_CFG_REG(1), 0x10081818);		// Lane0 Sync Types 2/3
+	rcsi2_write(priv, CSI2_DESCRAMBLING_CFG_REG(2), 0x01800990);		// Lane1 Sync Types 0/1
+	rcsi2_write(priv, CSI2_DESCRAMBLING_CFG_REG(3), 0x11881998);		// Lane1 Sync Types 2/3
+	rcsi2_write(priv, CSI2_DESCRAMBLING_CFG_REG(4), 0x02400a51);		// Lane2 Sync Types 0/1
+	rcsi2_write(priv, CSI2_DESCRAMBLING_CFG_REG(5), 0x12481a59);		// Lane2 Sync Types 2/3
+	rcsi2_write(priv, CSI2_DESCRAMBLING_CFG_REG(6), 0x03c00bd0);		// Lane3 Sync Types 0/1
+	rcsi2_write(priv, CSI2_DESCRAMBLING_CFG_REG(7), 0x13c81bd8);		// Lane3 Sync Types 2/3
+
+	// T3: Static Register Access
+	rcsi2_modify16(priv, X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(16), 0x002F, X5H_PHY_READY_addr); // @Databook
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_ANACTRL_RW_COMMON_ANACTRL_REG(0), (63 << 2), X5H_CB_LP_DCO_EN_DLY); // @Databook
+	rcsi2_modify16(priv, X5H_PHY0_PPI_STARTUP_RW_COMMON_STARTUP_1_1_REG, 0x0233, X5H_PHY_READY_DLY); // @Databook
+	rcsi2_modify16(priv, X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(2), 0x0005, X5H_RCAL_addr); // @Databook
+	rcsi2_modify16(priv, X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(6), 0x0027, X5H_LP_DCO_CAL_addr);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_BG_0_REG, 0x01F4, X5H_BG_MAX_COUNTER);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_STARTUP_RW_COMMON_DPHY_REG(10), 0x0030, X5H_HIBERNATE_addr);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_REG(0), 0x0000, X5H_ARBT_CAL_PRIOTITY);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_REG(1), 0x000C, X5H_ARBT_CAL_LOCK);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_REG(2), (8 << 8), X5H_ARBT_CALIB_OP_DELTA);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_REG(2), (3 << 4), X5H_ARBT_CALIB_WRITE_DELTA);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_REG(2), (3 << 0), X5H_ARBT_CALIB_READ_DELTA);
+
+	// Data bus width select
+	if(msps >= 3500){
+		rcsi2_modify16(priv, X5H_PHY0_PPI_RW_COMMON_CFG_REG, 0x000A, X5H_GEN2_SEL | X5H_CFG_CLK_DIV_FACTOR); // LUT
+	} else {
+		rcsi2_modify16(priv, X5H_PHY0_PPI_RW_COMMON_CFG_REG, 0x0002, X5H_CFG_CLK_DIV_FACTOR); // LUT
+	}
+
+	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_CALIBCTRL_2_3_REG, 0x0, X5H_DDL_VT_CAL_EN);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_TERMCAL_CFG_0_REG, 0x0013, X5H_TERMCAL_TIMER); // LUT
+	usleep_range(10, 20);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_OFFSETCAL_CFG_0_REG, 0x0003, X5H_OFFSETCAL_WAIT_THRESH); // LUT
+	usleep_range(10, 20);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_LPDCOCAL_TIMEBASE_REG, 0x004F, X5H_LPCDCOCAL_TIMEBASE); // LUT
+	usleep_range(10, 20);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_LPDCOCAL_NREF_REG, 0x0320, X5H_LPCDCOCAL_NREF);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_LPDCOCAL_NREF_RANGE_REG, 0x001B, X5H_LPCDCOCAL_NREF_RANGE);
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_LPDCOCAL_TWAIT_CONFIG_REG, ((127 << 9) + 24),
+		X5H_LPCDCOCAL_TWAIT_PON | X5H_LPCDCOCAL_TWAIT_COARSE); // LUT
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_LPDCOCAL_VT_CONFIG_REG, ((24 << 7) + (27 << 2) + (1 << 1) + 0),
+		X5H_LPCDCOCAL_TWAIT_FINE | X5H_LPCDCOCAL_VT_NREF_RANGE |
+		X5H_LPCDCOCAL_USE_IDEAL_NREF | X5H_LPCDCOCAL_VT_TRACKING_EN); // LUT
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_LPDCOCAL_COARSE_CFG_REG, 1, X5H_NCOARSE_START);
+
+	rcsi2_modify16(priv, X5H_PHY0_PPI_RW_COMMON_CFG_REG, 3, X5H_CFG_CLK_DIV_FACTOR);
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(0), 0, X5H_OA_CB_HSTX_VCOMM_REG_PON_OVR_VAL);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(1), (1 << 10), X5H_OA_CB_HSTX_VCOMM_REG_PON_OVR_EN);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(1), 0, X5H_OA_CB_HSTXLB_DCO_CLK0_EN_OVR_VAL);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(3), (1 << 8), X5H_OA_CB_HSTXLB_DCO_CLK0_EN_OVR_EN);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(0), 0, X5H_OA_CB_HSTXLB_DCO_CLK90_EN_OVR_VAL);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(3), (1 << 9), X5H_OA_CB_HSTXLB_DCO_CLK90_EN_OVR_EN);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(6), (1 << 13), X5H_OA_CB_HSTXLB_DCO_EN_OVR_EN);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(7), 0, X5H_OA_CB_HSTXLB_DCO_EN_OVR_VAL);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(6), (1 << 12), X5H_OA_CB_HSTXLB_DCO_PON_OVR_EN);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(7), 0, X5H_OA_CB_HSTXLB_DCO_PON_OVR_VAL);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(6), (1 << 14), X5H_OA_CB_HSTXLB_DCO_TUNE_CLKDIG_EN_OVR_EN);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(7), 0, X5H_OA_CB_HSTXLB_DCO_TUNE_CLKDIG_EN_OVR_VAL);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(5), 0, X5H_OA_CB_SEL_45OHM_50OHM);
+
+	// Table 4-3 Supported Frequency Ranges – CPHY Mode
+	if(msps >= 3500){
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(11), (1 << 3), X5H_OA_A2D_16_BUS_EN); //LUT
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(0), (1 << 14), X5H_GEN2_SEL_CORE_DIG); //LUT
+	} else {
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(11), 0, X5H_OA_A2D_16_BUS_EN); //LUT
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(0), 0, X5H_GEN2_SEL_CORE_DIG); //LUT
+	}
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(3), (3 << 4), X5H_OA_CB_SEL_MPLL_REG_VREF);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(4), (3 << 11), X5H_OA_CB_SEL_VCOMM_PROG);
+
+	/* C-PHY settings */
+	ret = rcsi2_c_phy_setting_x5h(priv, msps);
+	if (ret)
+		return ret;
+
+	// Optional features - Pin swap
+	rsci2_set_line_order_x5h(priv, priv->line_orders[0],
+			     X5H_PHY0_CORE_DIG_CLANE_0_RW_CFG_REG(0),
+			     X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(0, 10),
+				 X5H_PHY0_CORE_DIG_CLANE_0_RW_HS_TX_REG(6));
+	rsci2_set_line_order_x5h(priv, priv->line_orders[1],
+			     X5H_PHY0_CORE_DIG_CLANE_1_RW_CFG_REG(0),
+			     X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(1, 10),
+				 X5H_PHY0_CORE_DIG_CLANE_1_RW_HS_TX_REG(6));
+	rsci2_set_line_order_x5h(priv, priv->line_orders[2],
+			     X5H_PHY0_CORE_DIG_CLANE_2_RW_CFG_REG(0),
+			     X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(2, 10),
+				 X5H_PHY0_CORE_DIG_CLANE_2_RW_HS_TX_REG(6));
+
+	// Aggregation specific
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(0), (1 << 13), X5H_OA_CB_VPCLK_REG_PON_OVR_VAL);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(1), (1 << 13), X5H_OA_CB_VPCLK_REG_PON_OVR_EN);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(5), 0, X5H_OA_CB_VPCLK_REG_MODE);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(0), (1 << 4), X5H_OA_CB_PON_OVR_VAL);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(1), (1 << 4), X5H_OA_CB_PON_OVR_EN);
+
+	// C-PHY HS Receivers
+	for (conf = rcsi2_msps_hsrx_lut_r8a78000; conf->msps != 0; conf++) {
+		if (conf->msps > msps)
+			break;
+	}
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(0, 14), (1 << 14), X5H_OA_LANEl_HSRX_EQUALIZER_OVR_EN);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(1, 14), (1 << 14), X5H_OA_LANEl_HSRX_EQUALIZER_OVR_EN);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(2, 14), (1 << 14), X5H_OA_LANEl_HSRX_EQUALIZER_OVR_EN);
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(0, 10), conf->equal_ovr, X5H_OA_LANEl_HSRX_EQUALIZER_OVR_VAL);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(1, 10), conf->equal_ovr, X5H_OA_LANEl_HSRX_EQUALIZER_OVR_VAL);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(2, 10), conf->equal_ovr, X5H_OA_LANEl_HSRX_EQUALIZER_OVR_VAL);
+
+	if (msps >= 3500) {
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(0, 7), (conf->gmode << 14), X5H_OA_LANEl_HSRX_GMODE);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(1, 7), (conf->gmode << 14), X5H_OA_LANEl_HSRX_GMODE);
+		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(2, 7), (conf->gmode << 14), X5H_OA_LANEl_HSRX_GMODE);
+	}
+
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(0, 8), (conf->fbk_cap << 10), X5H_A_LANEl_HSRX_CPHY_CDR_FBK_CAP_PROG);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(1, 8), (conf->fbk_cap << 10), X5H_A_LANEl_HSRX_CPHY_CDR_FBK_CAP_PROG);
+	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(2, 8), (conf->fbk_cap << 10), X5H_A_LANEl_HSRX_CPHY_CDR_FBK_CAP_PROG);
+
+	// T4: initial programming phase is over and PHY is ready to leave Shutdown Mode .
+	// (SHUTDOWNZ/phy_shutdownz = 1’b1 and DPHY_RSTZ/dphy_rstz = 1’b1).
+	rcsi2_modify(priv, X5H_PHY_CTRL_REG, 0x0033, X5H_PHY_SHUTDOWNZ_PHY1 |
+		X5H_PHY_SHUTDOWNZ | X5H_PHY_RSTZ_PHY1 | X5H_PHY_RSTZ); // [5]:PHY_SHUTDOWN_PHY1_N [4]:PHY_SHUTDOWN_N [1]:PHY_RSTZ_PHY1 [0]:PHY_RSTZ
+	usleep_range(1000, 2000);
+
+	// T5: internal calibrations ongoing. No configurations are accepted during power-on-reset (POR). phy_ready asserts to signal that POR is complete.
+	if (rcsi2_wait_phy_start_x5h(priv, X5H_ST_PHY_READY)) {
+		dev_err(priv->dev, "PHY calibration failed\n");
+		return -ETIMEDOUT;
+	}
+
+	// T6: T6: dynamic register fields can be programmed/read through APB (these register fields can be found in Chapter 10.3, “Dynamic Register Access”).
+	// No registers to program.
+
+	// T7: wait for stopstate_N assertion. (see register ST_PHYST)
+	if (rcsi2_wait_phy_start_x5h(priv, X5H_ST_STOPSTATE_0 |
+				 X5H_ST_STOPSTATE_1 |
+				 X5H_ST_STOPSTATE_2 |
+				 X5H_ST_STOPSTATE_3 |
+				 X5H_ST_STOPSTATE_DCK)) {
+		dev_err(priv->dev, "PHY stopstate_N assertion failed\n");
+		return -ETIMEDOUT;
+	}
+
+	// T8: de-assert forcerxmode_N. (see register CSI2LNKn_FORCEPHYMODE)
+	rcsi2_write(priv, X5H_FORCEPHYMODE_REG, 0x0);
+
+	return 0;
+}
+
 static int rcsi2_set_osc_freq(struct rcar_csi2 *priv, unsigned int mbps)
 {
 	const struct rcsi2_mbps_info *info;
@@ -2133,18 +2916,18 @@ static int rcsi2_start_receiver_v4m(struct rcar_csi2 *priv,
 	return 0;
 }
 
+static int __maybe_unused rcsi2_start_receiver_x5h_vdk(struct rcar_csi2 *priv, struct v4l2_subdev_state *state)
+{
+	/* TODO: This function is NOT supported. */
+	return 0;
+}
+
 static int rcsi2_start_receiver_x5h(struct rcar_csi2 *priv, struct v4l2_subdev_state *state)
 {
 	const struct rcar_csi2_format *format;
 	const struct v4l2_mbus_framefmt *fmt;
 	int msps, ret;
 	unsigned int lanes;
-	bool bBypassMode = true;
-	bool bExcludeSP = false;
-	bool bEnableVCFilter = false;
-	unsigned int nVCtoFilter = 0;
-	bool bEnableDTFilter = false;
-	unsigned int nDTtoFilter = 0;
 
 	/* Use the format on the sink pad to compute the receiver config. */
 	fmt = v4l2_subdev_state_get_format(state, RCAR_CSI2_SINK);
@@ -2168,20 +2951,20 @@ static int rcsi2_start_receiver_x5h(struct rcar_csi2 *priv, struct v4l2_subdev_s
 	rcsi2_modify(priv, PHY_DESKEW_CFG, 0x0, DESKEW_SYS_CYCLES);
 
 	/* 3. CSI-2 Programming */
+#ifndef CONFIG_VIDEO_SNPS_CSI2_CAMERA
+		/* C-PHY settings */
+		ret = rcsi2_startup_sequence_x5h(priv, msps);
+		if (ret)
+			return ret;
+#endif
 
 	/* 4. (Optional) CSE programming */
 
 	/* 5. (Optional) IPI Programming */
 
 	/* 6. SDI Programming */
-	rcsi2_modify(priv, SDI_CFG, 0x1, SDI_ENABLE);
-	rcsi2_modify(priv, SDI_CFG, bBypassMode ? 0 : 1, SDI_ENCODE_MODE);
-
-	rcsi2_modify(priv, SDI_FILTER_CFG, bEnableVCFilter ? 1 : 0, SDI_SELECT_VC_EN);
-	rcsi2_modify(priv, SDI_FILTER_CFG, nVCtoFilter, SDI_SELECT_VC);
-	rcsi2_modify(priv, SDI_FILTER_CFG, bEnableDTFilter ? 1 : 0, SDI_SELECT_DT_EN);
-	rcsi2_modify(priv, SDI_FILTER_CFG, nDTtoFilter, SDI_SELECT_DT);
-	rcsi2_modify(priv, SDI_FILTER_CFG, bExcludeSP ? 1 : 0, SDI_EXCLUDE_SP);
+	rcsi2_modify(priv, X5H_SDI_CFG_REG, 1, SDI_ENABLE);
+	rcsi2_write(priv, X5H_SDI_FILTER_CFG_REG, 0x00000000);
 
 	/* 7. Interrupt mask (INT_UNMASK_<group>) programming */
 	rcsi2_modify(priv, INT_UNMASK_CSI2, 0x1, UNMASK_HDR_FATAL_ERR_IRQ);
@@ -2925,9 +3708,14 @@ static const struct rcar_csi2_info rcar_csi2_info_r8a779h0 = {
 };
 
 static const struct rcar_csi2_info rcar_csi2_info_r8a78000 = {
-	.start_receiver = rcsi2_start_receiver_x5h,
-	.use_isp = true,
+#ifdef CONFIG_VIDEO_RCAR_VIN_VDK
+	.start_receiver = rcsi2_start_receiver_x5h_vdk,
 	.support_dphy = true,
+#else
+	.start_receiver = rcsi2_start_receiver_x5h,
+	.support_cphy = true,
+#endif
+	.use_isp = true,
 };
 
 static const struct of_device_id rcar_csi2_of_table[] = {
