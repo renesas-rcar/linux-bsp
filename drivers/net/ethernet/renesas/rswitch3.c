@@ -201,6 +201,90 @@ static void rsw3_top_init(struct rsw3_private *priv)
 	}
 }
 
+static void rsw3_fwd_allow_ports(struct rsw3_private *priv,
+					unsigned int src_port, u32 dst_mask)
+{
+	if (!dst_mask || src_port >= RSWITCH3_NUM_AGENTS)
+		return;
+
+	dst_mask &= GENMASK(RSWITCH3_NUM_AGENTS - 1, 0);
+
+	rsw3_modify(priv->addr, FWPBFC(src_port), 0,
+			FIELD_PREP(FWPBFC_PBDV, dst_mask));
+	rsw3_modify(priv->addr, FWPBFC1(src_port), FWPBFC1_PBRP,
+			FIELD_PREP(FWPBFC1_PBRP, FWPBFC1_PBRP_TSN));
+	rsw3_modify(priv->addr, FWPC2(src_port),
+			FWPC2_LTWFM_TO_PORT(dst_mask), 0);
+	rsw3_modify(priv->addr, FWPC0(src_port), FWPC0_MACSDA,
+			FWPC0_MACSDA);
+}
+
+static void rsw3_enable_tsn_forwarding(struct rsw3_private *priv,
+						u32 tsnes_id, u32 rsw_port,
+						u32 requested_mask)
+{
+	struct device *dev = &priv->pdev->dev;
+	u32 enabled_ports;
+	u32 external_ports;
+	u32 missing_ports;
+	unsigned int i;
+
+	enabled_ports = 0;
+	for (i = 0; i < RSWITCH3_NUM_PORTS; i++) {
+		if (!priv->rdev[i] || priv->rdev[i]->disabled)
+			continue;
+
+		enabled_ports |= BIT(i);
+	}
+
+	enabled_ports &= GENMASK(7, 0);
+	requested_mask &= GENMASK(7, 0);
+
+	if (requested_mask) {
+		missing_ports = requested_mask & ~enabled_ports;
+		if (missing_ports)
+			dev_err(dev,
+				"rswitch3 TSN-ES%u has no enabled in DTS\n", tsnes_id);
+
+		external_ports = requested_mask & enabled_ports;
+	} else {
+		external_ports = enabled_ports;
+	}
+
+	external_ports &= ~BIT(rsw_port);
+
+	if (!external_ports) {
+		dev_err(dev,
+			"rswitch3 TSN-ES%u has no enabled external port to forward from interface %u\n",
+			tsnes_id, rsw_port);
+		return;
+	}
+
+	rsw3_fwd_allow_ports(priv, rsw_port, external_ports);
+
+	for (i = 0; i < RSWITCH3_NUM_PORTS; i++) {
+		if (!(external_ports & BIT(i)))
+			continue;
+
+		rsw3_fwd_allow_ports(priv, i, BIT(rsw_port));
+	}
+}
+
+static void rsw3_attached_forwarding(struct rsw3_private *priv)
+{
+	u32 tsnes_id;
+
+	for (tsnes_id = 0; tsnes_id < RSWITCH3_NUM_TSNES; tsnes_id++) {
+		u32 rsw_port = RSWITCH3_TSNES_PORT_BASE + tsnes_id;
+
+		if (!(priv->tsnes_attached & BIT(tsnes_id)))
+			continue;
+
+		rsw3_enable_tsn_forwarding(priv, tsnes_id, rsw_port,
+					priv->tsnes_fwd_mask[tsnes_id]);
+	}
+}
+
 /* Forwarding engine block (MFWD) */
 static int rsw3_fwd_init(struct rsw3_private *priv)
 {
@@ -220,6 +304,7 @@ static int rsw3_fwd_init(struct rsw3_private *priv)
 			  priv->addr + FWPC2(i));
 		/* Disallow port based forwarding */
 		iowrite32(0, priv->addr + FWPBFC(i));
+		iowrite32(0, priv->addr + FWPBFC1(i));
 	}
 
 	/* For enabled ETHA ports, setup port based forwarding */
@@ -240,6 +325,8 @@ static int rsw3_fwd_init(struct rsw3_private *priv)
 
 	/* For GWCA port, allow direct descriptor forwarding */
 	rsw3_modify(priv->addr, FWPC1(priv->gwca.index), FWPC1_DDE, FWPC1_DDE);
+
+	rsw3_attached_forwarding(priv);
 
 	/* Initialize MAC table */
 	iowrite32(FWMACTIM_MACTIOG, priv->addr + FWMACTIM);
@@ -1352,6 +1439,82 @@ static int rsw3_etha_mii_hw_start(struct rsw3_etha *etha)
 	return 0;
 }
 
+static void rsw3_etha_init_tsn_egress_path(struct rsw3_etha *etha)
+{
+	unsigned int q;
+
+	iowrite32(0, etha->addr + EATDRC);
+	iowrite32(0, etha->addr + EAIRC);
+	iowrite32(0, etha->addr + EATDQSC);
+	iowrite32(0, etha->addr + EATDQAC);
+	iowrite32(0, etha->addr + EATPEC);
+
+	for (q = 0; q < RSWITCH3_NUM_PRIOS; q++) {
+		iowrite32(RSWITCH3_TSNA_QUEUE_DEPTH, etha->addr + EATDQDC(q));
+		iowrite32(EATMFSC_MAX, etha->addr + EATMFSC(q));
+	}
+
+	iowrite32(0, etha->addr + EACTDQDC);
+	iowrite32(0, etha->addr + EATTFC);
+}
+
+static int rsw3_etha_hw_init_tsn_internal(struct rsw3_private *priv,
+						u32 rsw_port, const u8 *tsnes_mac)
+{
+	struct rsw3_etha *etha = &priv->etha[rsw_port];
+	struct rsw3_device *rdev;
+	struct net_device *ndev;
+	const u8 *mac = tsnes_mac;
+	int err;
+
+	if (rsw_port >= RSWITCH3_NUM_PORTS || !priv->rdev[rsw_port])
+		return -ENODEV;
+
+	rdev = priv->rdev[rsw_port];
+	ndev = rdev->ndev;
+
+	if ((!mac || !is_valid_ether_addr(mac)) && ndev)
+		mac = ndev->dev_addr;
+	if (!mac || !is_valid_ether_addr(mac))
+		return -EINVAL;
+
+	err = rsw3_etha_change_mode(etha, EAMC_OPC_DISABLE);
+	if (err < 0)
+		return err;
+
+	err = rsw3_etha_change_mode(etha, EAMC_OPC_CONFIG);
+	if (err < 0)
+		return err;
+
+	rsw3_etha_init_tsn_egress_path(etha);
+	iowrite32(EAVCC_VEM_NO_TAG, etha->addr + EAVCC);
+	rsw3_etha_write_mac_address(etha, mac);
+	iowrite32(RSW3_MRAFC_RX_PROMISC, etha->addr + MRAFC);
+	rsw3_modify(etha->addr, MIOC, MIOC_FORCE_PHY_LINK,
+			MIOC_FORCE_PHY_LINK);
+	rsw3_modify(etha->addr, MPIC, MPIC_PIS | MPIC_LSC | MPIC_PLSPP,
+			FIELD_PREP(MPIC_PIS, MPIC_PIS_GMII) |
+			FIELD_PREP(MPIC_LSC, MPIC_LSC_2_5G) |
+			MPIC_PLSPP);
+
+	/*
+	 * Internal TSN-ES interfaces 8..12 have no external PHY/XPCS.
+	 * The TSN-ES side owns link state
+	 */
+	err = rsw3_etha_change_mode(etha, EAMC_OPC_DISABLE);
+	if (err < 0)
+		return err;
+
+	err = rsw3_etha_change_mode(etha, EAMC_OPC_OPERATION);
+	if (err < 0)
+		return err;
+
+	iowrite32(EATDQC_DISABLE_CUT_THROUGH, etha->addr + EATDQC);
+	etha->operated = true;
+
+	return 0;
+}
+
 static int rsw3_etha_hw_init(struct rsw3_etha *etha, const u8 *mac)
 {
 	int err;
@@ -1364,8 +1527,9 @@ static int rsw3_etha_hw_init(struct rsw3_etha *etha, const u8 *mac)
 	if (err < 0)
 		return err;
 
-	iowrite32(EAVCC_VEM_SC_TAG, etha->addr + EAVCC);
 	rsw3_rmac_setting(etha, mac);
+	rsw3_etha_init_tsn_egress_path(etha);
+	iowrite32(EAVCC_VEM_SC_TAG, etha->addr + EAVCC);
 
 	err = rsw3_etha_wait_link_verification(etha);
 	if (err < 0)
@@ -1375,7 +1539,14 @@ static int rsw3_etha_hw_init(struct rsw3_etha *etha, const u8 *mac)
 	if (err < 0)
 		return err;
 
-	return rsw3_etha_change_mode(etha, EAMC_OPC_OPERATION);
+	err = rsw3_etha_change_mode(etha, EAMC_OPC_OPERATION);
+	if (err < 0)
+		return err;
+
+	iowrite32(EATDQC_DISABLE_CUT_THROUGH, etha->addr + EATDQC);
+	etha->operated = true;
+
+	return 0;
 }
 
 static int rsw3_etha_mpsm_op(struct rsw3_etha *etha, bool read,
@@ -1596,7 +1767,7 @@ static void rsw3_adjust_link(struct net_device *ndev)
 
 		rdev->etha->link = phydev->link;
 
-		if (!parallel_mode && phydev->speed != rdev->etha->speed) {
+		if (phydev->link && !parallel_mode && phydev->speed != rdev->etha->speed) {
 			rdev->etha->speed = phydev->speed;
 
 			rsw3_etha_hw_init(rdev->etha, rdev->ndev->dev_addr);
@@ -2266,6 +2437,83 @@ static u32 rsw3_calc_psmcs(struct rsw3_private *priv)
 	return psmcs;
 }
 
+int rswitch3_attach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port,
+			  u32 fwd_mask, const u8 *mac)
+{
+	struct rsw3_private *priv = dev_get_drvdata(dev);
+	struct rsw3_etha *etha;
+	u32 val;
+	int ret = 0;
+
+	if (!priv)
+		return -EPROBE_DEFER;
+
+	if (tsnes_id >= RSWITCH3_NUM_TSNES)
+		return -EINVAL;
+
+	if (rsw_port != RSWITCH3_TSNES_PORT_BASE + tsnes_id)
+		return -EINVAL;
+
+	mutex_lock(&priv->tsnes_lock);
+
+	if (priv->tsnes_attached & BIT(tsnes_id)) {
+		ret = -EBUSY;
+		goto out_unlock;
+	}
+
+	if (!rsw3_agent_clock_is_enabled(priv->addr, rsw_port))
+		rsw3_agent_clock_ctrl(priv->addr, rsw_port, 1);
+
+	ret = rsw3_etha_hw_init_tsn_internal(priv, rsw_port, mac);
+	if (ret)
+		goto out_unlock;
+
+	/*
+	 * Only TSN-ES0..2 need selector.
+	 * MIOC[3] = 0: connect RSwitch3 port 5..7 to TSN-ES0..2.
+	 * MIOC[3] = 1: connect RSwitch3 port 5..7 to external PHY/XPCS.
+	 */
+	if (tsnes_id <= 2) {
+		etha = &priv->etha[rsw_port];
+
+		if (!etha->addr) {
+			ret = -ENODEV;
+			goto out_unlock;
+		}
+
+		val = ioread32(etha->addr + MIOC);
+		val &= ~MIOC_BIT3_SET;
+		iowrite32(val, etha->addr + MIOC);
+	}
+
+	priv->tsnes_attached |= BIT(tsnes_id);
+	priv->tsnes_fwd_mask[tsnes_id] = fwd_mask;
+	rsw3_enable_tsn_forwarding(priv, tsnes_id, rsw_port, fwd_mask);
+
+out_unlock:
+	mutex_unlock(&priv->tsnes_lock);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(rswitch3_attach_tsnes);
+
+void rswitch3_detach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port)
+{
+	struct rsw3_private *priv = dev_get_drvdata(dev);
+
+	if (!priv || tsnes_id >= RSWITCH3_NUM_TSNES)
+		return;
+
+	mutex_lock(&priv->tsnes_lock);
+
+	priv->tsnes_attached &= ~BIT(tsnes_id);
+	priv->tsnes_fwd_mask[tsnes_id] = 0;
+	rsw3_fwd_init(priv);
+
+	mutex_unlock(&priv->tsnes_lock);
+}
+EXPORT_SYMBOL_GPL(rswitch3_detach_tsnes);
+
 static void rsw3_etha_init(struct rsw3_private *priv, unsigned int index)
 {
 	struct rsw3_etha *etha = &priv->etha[index];
@@ -2483,6 +2731,9 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
+
+	mutex_init(&priv->tsnes_lock);
+	priv->tsnes_attached = 0;
 
 	priv->clk = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(priv->clk)) {

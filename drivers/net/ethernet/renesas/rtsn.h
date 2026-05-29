@@ -316,7 +316,20 @@ enum rtsn_reg {
 #define TGC1_TQTM_SFM		0xff00
 #define TGC1_STTV_DEFAULT	0x03
 
+#define TGC2_DEFAULT	0x00000000
 #define TMS_MFS_MAX		0x2800
+
+#define RGC_DEFAULT		0x88a80000
+#define RDFCR_DEFAULT	0x04000800
+#define RCFCR_DEFAULT	0x00800100
+#define MRGC_DEFAULT	0x00000000
+#define MRFS_MAX		0x0000ffff
+#define MTRC_DEFAULT	0x00020000
+#define RTSN_NUM_PRIOS	8
+
+#define TFS(n)			(TFS0 + (n) * 0x04)
+#define TCF(n)			(TCF0 + (n) * 0x04)
+#define TMS(n)			(TMS0 + (n) * 0x04)
 
 /* RMAC System */
 #define CFCR_SDID(n)		((n) << 16)
@@ -328,21 +341,48 @@ enum rtsn_reg {
 #define MPIC_PIS_RMII		0x01
 #define MPIC_PIS_GMII		0x02
 #define MPIC_PIS_RGMII		0x03
+#define MPIC_PIS_XGMII		0x02
 #define MPIC_LSC_SHIFT		2
 #define MPIC_LSC_MASK		GENMASK(3, MPIC_LSC_SHIFT)
 #define MPIC_LSC_10M		(0 << MPIC_LSC_SHIFT)
 #define MPIC_LSC_100M		(0x01 << MPIC_LSC_SHIFT)
-#define MPIC_LSC_1G		(0x02 << MPIC_LSC_SHIFT)
+#define MPIC_LSC_1G			(0x02 << MPIC_LSC_SHIFT)
+#define MPIC_LSC_2_5G		(0x03 << MPIC_LSC_SHIFT)
 #define MPIC_PSMCS_SHIFT	16
 #define MPIC_PSMCS_MASK		GENMASK(21, MPIC_PSMCS_SHIFT)
 #define MPIC_PSMCS_DEFAULT	(0x0a << MPIC_PSMCS_SHIFT)
 #define MPIC_PSMHT_SHIFT	24
 #define MPIC_PSMHT_MASK		GENMASK(26, MPIC_PSMHT_SHIFT)
 #define MPIC_PSMHT_DEFAULT	(0x07 << MPIC_PSMHT_SHIFT)
+#define MPIC_PSMCS_ENC(v)	FIELD_PREP(MPIC_PSMCS_MASK, (v) & 0x3f)
+#define MPIC_PLSPP			BIT(12)
 
 #define MLVC_PASE		BIT(8)
 #define MLVC_PSE		BIT(16)
 #define MLVC_PLV		BIT(17)
+
+#define MRAFC_UCENE		BIT(0)
+#define MRAFC_MCENE		BIT(1)
+#define MRAFC_BCENE		BIT(2)
+#define MRAFC_NDAREE	BIT(7)
+#define MRAFC_SDSFREE	BIT(8)
+#define MRAFC_NSAREE	BIT(9)
+#define MRAFC_MSAREE	BIT(10)
+#define MRAFC_UCENP		BIT(16)
+#define MRAFC_MCENP		BIT(17)
+#define MRAFC_BCENP		BIT(18)
+#define MRAFC_NDAREP	BIT(23)
+#define MRAFC_SDSFREP	BIT(24)
+#define MRAFC_NSAREP	BIT(25)
+#define MRAFC_MSAREP	BIT(26)
+#define MRAFC_RX_ACCEPT		(MRAFC_UCENE | MRAFC_MCENE | \
+				MRAFC_BCENE | MRAFC_UCENP | \
+				MRAFC_MCENP | MRAFC_BCENP)
+#define MRAFC_RX_PROMISC	(MRAFC_RX_ACCEPT | MRAFC_NDAREE | \
+				MRAFC_SDSFREE | MRAFC_NSAREE | \
+				MRAFC_MSAREE | MRAFC_NDAREP | \
+				MRAFC_SDSFREP | MRAFC_NSAREP | \
+				MRAFC_MSAREP)
 
 #define MPSM_PSME		BIT(0)
 #define MPSM_PSMAD		BIT(1)
@@ -362,6 +402,10 @@ enum rtsn_reg {
 /* RTSN */
 #define RTSN_INTERVAL_US	1000
 #define RTSN_TIMEOUT_US		1000000
+
+#define RTSN_TSNES_MAX_ID			7
+#define RTSN_RSWITCH_IF_BASE		5
+#define RTSN_RSWITCH_EXTERNAL_MAX	7
 
 #define TX_NUM_CHAINS		1
 #define RX_NUM_CHAINS		1
@@ -456,6 +500,24 @@ struct rtsn_ext_ts_desc {
 	__le32 ts_nsec;
 	__le32 ts_sec;
 } __packed;
+
+static const struct rtsn_speed_map {
+	int speed;
+	const char *str;
+} rtsn_speed_map[] = {
+	{ 10, "10Mbps" },
+	{ 100, "100Mbps" },
+	{ 1000, "1Gbps" },
+	{ 2500, "2.5Gbps" },
+	{ 5000, "5Gbps" },
+	{ 10000, "10Gbps" },
+};
+
+enum {
+	RTSN_CLK_RSW3TSN,
+	RTSN_CLK_TSNES,
+	RTSN_NUM_CLKS,
+};
 
 enum EXT_INFO_DS_BIT {
 	TXC = 0x4000,

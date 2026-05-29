@@ -22,6 +22,12 @@
  */
 #define RSWITCH3_NUM_AGENTS	15
 #define RSWITCH3_NUM_PORTS	13
+#define RSWITCH3_NUM_PRIOS	8
+#define RSWITCH3_NUM_TSNES  8
+#define RSWITCH3_TSNES_PORT_BASE	5
+#define RSWITCH3_TSNA_DESC_RAM_DEPTH	2048
+#define RSWITCH3_TSNA_QUEUE_DEPTH	(RSWITCH3_TSNA_DESC_RAM_DEPTH / \
+					 RSWITCH3_NUM_PRIOS)
 
 #define RSWITCH3_MAX_MAC_ENTRY	1024
 
@@ -811,7 +817,41 @@ enum rsw3_etha_mode {
 
 #define EAMS_OPS_MASK		EAMC_OPC_OPERATION
 
+#define EAVCC_VEM_NO_TAG	0
 #define EAVCC_VEM_SC_TAG	(0x3 << 16)
+#define EATMFSC(q)				(EATMFSC0 + (q) * 0x04)
+#define EATDQDC(q)				(EATDQDC0 + (q) * 0x04)
+#define EATDQM(q)				(EATDQM0 + (q) * 0x04)
+#define EATDQMLM(q)				(EATDQMLM0 + (q) * 0x04)
+#define EATDQC_TDQD(q)			BIT(q)
+#define EATDQC_TCTDQD			BIT(RSWITCH3_NUM_PRIOS)
+#define EATDQC_DISABLE_UNUSED	(GENMASK(RSWITCH3_NUM_PRIOS - 1, 1) | \
+				 EATDQC_TCTDQD)
+#define EATDQC_DISABLE_CUT_THROUGH	EATDQC_TCTDQD
+#define EATMFSC_MAX		0xffff
+
+#define RSW3_MRAFC_UCENE	BIT(0)
+#define RSW3_MRAFC_MCENE	BIT(1)
+#define RSW3_MRAFC_BCENE	BIT(2)
+#define RSW3_MRAFC_NDAREE	BIT(7)
+#define RSW3_MRAFC_SDSFREE	BIT(8)
+#define RSW3_MRAFC_NSAREE	BIT(9)
+#define RSW3_MRAFC_MSAREE	BIT(10)
+#define RSW3_MRAFC_UCENP	BIT(16)
+#define RSW3_MRAFC_MCENP	BIT(17)
+#define RSW3_MRAFC_BCENP	BIT(18)
+#define RSW3_MRAFC_NDAREP	BIT(23)
+#define RSW3_MRAFC_SDSFREP	BIT(24)
+#define RSW3_MRAFC_NSAREP	BIT(25)
+#define RSW3_MRAFC_MSAREP	BIT(26)
+#define RSW3_MRAFC_RX_ACCEPT	(RSW3_MRAFC_UCENE | RSW3_MRAFC_MCENE | \
+				 RSW3_MRAFC_BCENE | RSW3_MRAFC_UCENP | \
+				 RSW3_MRAFC_MCENP | RSW3_MRAFC_BCENP)
+#define RSW3_MRAFC_RX_PROMISC	(RSW3_MRAFC_RX_ACCEPT | \
+				 RSW3_MRAFC_NDAREE | RSW3_MRAFC_SDSFREE | \
+				 RSW3_MRAFC_NSAREE | RSW3_MRAFC_MSAREE | \
+				 RSW3_MRAFC_NDAREP | RSW3_MRAFC_SDSFREP | \
+				 RSW3_MRAFC_NSAREP | RSW3_MRAFC_MSAREP)
 
 #define MPIC_PIS		GENMASK(2, 0)
 #define MPIC_PIS_GMII		2
@@ -822,6 +862,7 @@ enum rsw3_etha_mode {
 #define MPIC_LSC_2_5G		3
 #define MPIC_LSC_5G		4
 #define MPIC_LSC_10G		5
+#define MPIC_PLSPP	BIT(10)
 
 #define MPIC_PSMCS_LO		GENMASK(22, 16)  /* bits [6:0]  -> MPIC[22:16] */
 #define MPIC_PSMCS_HI		GENMASK(15, 13)  /* bits [9:7]  -> MPIC[15:13] */
@@ -854,6 +895,7 @@ enum rsw3_etha_mode {
 
 /* MIOC Register define */
 #define MIOC_BIT3_SET		BIT(3)
+#define MIOC_FORCE_PHY_LINK	BIT(5)
 
 /* GWCA */
 enum rsw3_gwca_mode {
@@ -930,6 +972,10 @@ enum rsw3_gwca_mode {
 
 #define FWPBFC(i)		(FWPBFC00 + (i) * 0x10)
 #define FWPBFC_PBDV		GENMASK(RSWITCH3_NUM_AGENTS - 1, 0)
+
+#define FWPBFC1(i)			(FWPBFC10 + (i) * 0x10)
+#define FWPBFC1_PBRP		GENMASK(19, 16)
+#define FWPBFC1_PBRP_TSN	0xf
 
 #define FWPBFCSDC(j, i)		(FWPBFCSDC00 + (i) * 0x20 + (j) * 0x04)
 
@@ -1160,6 +1206,10 @@ struct rsw3_private {
 	struct clk *phy_clk;
 
 	struct rsw3_irq irq[GWCA_NUM_IRQS];
+
+	struct mutex tsnes_lock;
+	unsigned long tsnes_attached;
+	u32 tsnes_fwd_mask[RSWITCH3_NUM_TSNES];
 };
 
 struct rsw3_dst_mac_search_result {
@@ -1176,4 +1226,8 @@ static bool parallel_mode;
 module_param(parallel_mode, bool, 0644);
 MODULE_PARM_DESC(parallel_mode, "Operate simultaneously with Realtime core");
 
-#endif	/* #ifndef __RSWITCH3_H__ */
+int rswitch3_attach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port,
+				  u32 fwd_mask, const u8 *mac);
+void rswitch3_detach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port);
+
+#endif /* __RSWITCH3_H__ */

@@ -7,6 +7,7 @@
  */
 
 #include <linux/clk.h>
+#include <linux/device.h>
 #include <linux/dma-mapping.h>
 #include <linux/etherdevice.h>
 #include <linux/ethtool.h>
@@ -15,21 +16,27 @@
 #include <linux/of.h>
 #include <linux/of_mdio.h>
 #include <linux/of_net.h>
+#include <linux/of_platform.h>
 #include <linux/phy.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/reset.h>
+#include <linux/rtnetlink.h>
 #include <linux/spinlock.h>
 
 #include "rtsn.h"
 #include "rcar_gen4_ptp.h"
+
+int rswitch3_attach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port,
+			  u32 fwd_mask, const u8 *mac);
+void rswitch3_detach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port);
 
 struct rtsn_private {
 	struct net_device *ndev;
 	struct platform_device *pdev;
 	void __iomem *base;
 	struct rcar_gen4_ptp_private *ptp_priv;
-	struct clk *clk;
+	struct clk_bulk_data clks[RTSN_NUM_CLKS];
 	struct reset_control *reset;
 
 	u32 num_tx_ring;
@@ -57,6 +64,16 @@ struct rtsn_private {
 
 	struct mii_bus *mii;
 	phy_interface_t iface;
+	bool fixed_link;
+	int duplex;
+	u32 tsnes_id;
+
+	struct platform_device *rswitch_pdev;
+	struct device *rswitch_dev;
+	struct device_link *rswitch_link;
+	u32 rswitch_port;
+	u32 rswitch_fwd_mask;
+	bool rswitch_attached;
 	int link;
 	int speed;
 
@@ -88,6 +105,172 @@ static int rtsn_reg_wait(struct rtsn_private *priv, enum rtsn_reg reg,
 	return readl_poll_timeout(priv->base + reg, val,
 				  (val & mask) == expected,
 				  RTSN_INTERVAL_US, RTSN_TIMEOUT_US);
+}
+
+static const char *rtsn_speed_to_str(u32 speed)
+{
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(rtsn_speed_map); i++)
+		if (rtsn_speed_map[i].speed == speed)
+			return rtsn_speed_map[i].str;
+
+	return "Unknown";
+}
+
+static int rtsn_parse_rswitch_forward_ports(struct rtsn_private *priv)
+{
+	struct device *dev = &priv->pdev->dev;
+	struct device_node *np = dev->of_node;
+	u32 fwd_mask = 0;
+	int count;
+	int i;
+
+	count = of_property_count_u32_elems(np, "renesas,rswitch-forward-ports");
+	if (count == -EINVAL)
+		return 0;
+	if (count < 0)
+		return dev_err_probe(dev, count, "invalid renesas,rswitch-forward-ports\n");
+
+	for (i = 0; i < count; i++) {
+		u32 port;
+		int ret;
+
+		ret = of_property_read_u32_index(np, "renesas,rswitch-forward-ports", i, &port);
+		if (ret)
+			return ret;
+
+		if (port > RTSN_RSWITCH_EXTERNAL_MAX)
+			return dev_err_probe(dev, -EINVAL,
+				"rswitch external forward port %u is invalid\n", port);
+		if (port == priv->rswitch_port)
+			dev_warn(dev,
+			"rswitch forward port %u is the TSN-ES internal interface\n", port);
+
+		fwd_mask |= BIT(port);
+	}
+
+	priv->rswitch_fwd_mask = fwd_mask;
+
+	return 0;
+}
+
+static int rtsn_parse_rswitch(struct rtsn_private *priv)
+{
+	struct device *dev = &priv->pdev->dev;
+	struct device_node *np = dev->of_node;
+	int ret;
+
+	if (priv->tsnes_id > RTSN_TSNES_MAX_ID)
+		return dev_err_probe(dev, -EINVAL, "invalid tsnes-id %u\n",
+				priv->tsnes_id);
+
+	priv->rswitch_port = RTSN_RSWITCH_IF_BASE + priv->tsnes_id;
+
+	ret = of_property_read_u32(np, "renesas,rswitch-if",
+				&priv->rswitch_port);
+	if (ret == -EINVAL)
+		ret = of_property_read_u32(np, "renesas,rswitch-interface",
+					&priv->rswitch_port);
+	if (ret && ret != -EINVAL)
+		return ret;
+
+	if (priv->rswitch_port != RTSN_RSWITCH_IF_BASE + priv->tsnes_id)
+		return dev_err_probe(dev, -EINVAL,
+				"invalid rswitch interface %u for tsnes%u\n",
+				priv->rswitch_port, priv->tsnes_id);
+
+	rtsn_parse_rswitch_forward_ports(priv);
+
+	return ret;
+}
+
+static int rtsn_link_rswitch(struct rtsn_private *priv)
+{
+	struct device *dev = &priv->pdev->dev;
+	struct device_node *rswitch_np;
+	struct platform_device *rsw_pdev;
+
+	if (priv->rswitch_dev)
+		return 0;
+
+	rswitch_np = of_parse_phandle(dev->of_node, "renesas,rswitch", 0);
+	if (!rswitch_np)
+		return 0;
+
+	rsw_pdev = of_find_device_by_node(rswitch_np);
+	of_node_put(rswitch_np);
+
+	if (!rsw_pdev)
+		return dev_err_probe(dev, -EPROBE_DEFER, "rswitch device is not ready\n");
+
+	if (!dev_get_drvdata(&rsw_pdev->dev)) {
+		platform_device_put(rsw_pdev);
+		return dev_err_probe(dev, -EPROBE_DEFER,
+				"rswitch driver data is not ready\n");
+	}
+
+	priv->rswitch_link = device_link_add(dev, &rsw_pdev->dev, DL_FLAG_STATELESS);
+	if (!priv->rswitch_link) {
+		platform_device_put(rsw_pdev);
+		return dev_err_probe(dev, -ENOMEM, "failed to link rswitch device\n");
+	}
+
+	priv->rswitch_pdev = rsw_pdev;
+	priv->rswitch_dev = &rsw_pdev->dev;
+	return 0;
+}
+
+static int rtsn_attach_rswitch(struct rtsn_private *priv)
+{
+	struct device *dev = &priv->pdev->dev;
+	int ret;
+
+	if (priv->rswitch_attached)
+		return 0;
+
+	ret = rtsn_link_rswitch(priv);
+	if (ret || !priv->rswitch_dev)
+		return ret;
+
+	ret = rswitch3_attach_tsnes(priv->rswitch_dev, priv->tsnes_id,
+					priv->rswitch_port,
+					priv->rswitch_fwd_mask,
+					priv->ndev->dev_addr);
+	if (ret)
+		return dev_err_probe(dev, ret,
+					"failed to attach tsnes%u to rswitch interface %u\n",
+					priv->tsnes_id, priv->rswitch_port);
+
+	priv->rswitch_attached = true;
+
+	return 0;
+}
+
+static void rtsn_detach_rswitch(struct rtsn_private *priv)
+{
+	if (!priv->rswitch_attached)
+		return;
+
+	if (priv->rswitch_dev)
+		rswitch3_detach_tsnes(priv->rswitch_dev, priv->tsnes_id, priv->rswitch_port);
+	priv->rswitch_attached = false;
+}
+
+static void rtsn_unlink_rswitch(struct rtsn_private *priv)
+{
+	rtsn_detach_rswitch(priv);
+
+	if (priv->rswitch_link) {
+		device_link_del(priv->rswitch_link);
+		priv->rswitch_link = NULL;
+	}
+
+	if (priv->rswitch_pdev) {
+		platform_device_put(priv->rswitch_pdev);
+		priv->rswitch_pdev = NULL;
+		priv->rswitch_dev = NULL;
+	}
 }
 
 static void rtsn_ctrl_data_irq(struct rtsn_private *priv, bool enable)
@@ -611,9 +794,24 @@ static int rtsn_axibmi_init(struct rtsn_private *priv)
 
 static void rtsn_mhd_init(struct rtsn_private *priv)
 {
+	u32 i;
+
 	/* TX General setting */
 	rtsn_write(priv, TGC1, TGC1_STTV_DEFAULT | TGC1_TQTM_SFM);
-	rtsn_write(priv, TMS0, TMS_MFS_MAX);
+	rtsn_write(priv, TGC2, TGC2_DEFAULT);
+
+	for (i = 0; i < 4; i++) {
+		rtsn_write(priv, TFS(i), 0x10);
+		rtsn_write(priv, TCF(i), 0x80);
+	}
+
+	for (i = 0; i < RTSN_NUM_PRIOS; i++)
+		rtsn_write(priv, TMS(i), TMS_MFS_MAX);
+
+	rtsn_write(priv, RGC, RGC_DEFAULT);
+	rtsn_write(priv, RDFCR, RDFCR_DEFAULT);
+	rtsn_write(priv, RCFCR, RCFCR_DEFAULT);
+	rtsn_write(priv, REFCNCR, 0);
 
 	/* RX Filter IP */
 	rtsn_write(priv, CFCR0, CFCR_SDID(RX_CHAIN_IDX));
@@ -622,24 +820,63 @@ static void rtsn_mhd_init(struct rtsn_private *priv)
 
 static int rtsn_get_phy_params(struct rtsn_private *priv)
 {
+	struct device_node *rtsn_node = priv->pdev->dev.of_node;
+	struct device_node *fixed_link_node;
+	u32 max_speed = 0;
 	int ret;
 
-	ret = of_get_phy_mode(priv->pdev->dev.of_node, &priv->iface);
+	ret = of_get_phy_mode(rtsn_node, &priv->iface);
 	if (ret)
 		return ret;
 
+	priv->fixed_link = of_phy_is_fixed_link(rtsn_node);
+	priv->duplex = DUPLEX_FULL;
+
+	of_property_read_u32(rtsn_node, "max-speed", &max_speed);
+
 	switch (priv->iface) {
 	case PHY_INTERFACE_MODE_MII:
-		priv->speed = 100;
+	case PHY_INTERFACE_MODE_RMII:
+		priv->speed = max_speed ? max_speed : 100;
 		break;
+	case PHY_INTERFACE_MODE_GMII:
 	case PHY_INTERFACE_MODE_RGMII:
 	case PHY_INTERFACE_MODE_RGMII_ID:
 	case PHY_INTERFACE_MODE_RGMII_RXID:
 	case PHY_INTERFACE_MODE_RGMII_TXID:
-		priv->speed = 1000;
+	case PHY_INTERFACE_MODE_SGMII:
+		priv->speed = max_speed ? max_speed : 1000;
+		break;
+	case PHY_INTERFACE_MODE_2500BASEX:
+		priv->speed = max_speed ? max_speed : 2500;
+		break;
+	case PHY_INTERFACE_MODE_5GBASER:
+		priv->speed = max_speed ? max_speed : 5000;
+		break;
+	case PHY_INTERFACE_MODE_10GBASER:
+	case PHY_INTERFACE_MODE_USXGMII:
+		priv->speed = max_speed ? max_speed : 10000;
 		break;
 	default:
-		return -EOPNOTSUPP;
+		priv->speed = max_speed ? max_speed : 2500;
+		priv->iface = PHY_INTERFACE_MODE_GMII;
+		break;
+	}
+
+	/*
+	 * For internal TSN-ES fixed-link, prefer fixed-link/speed over
+	 * max-speed. This allows GMII + 2500 virtual link.
+	 */
+	fixed_link_node = of_get_child_by_name(rtsn_node, "fixed-link");
+	if (fixed_link_node) {
+		of_property_read_u32(fixed_link_node, "speed", &priv->speed);
+
+		if (of_property_read_bool(fixed_link_node, "full-duplex"))
+			priv->duplex = DUPLEX_FULL;
+		else
+			priv->duplex = DUPLEX_HALF;
+
+		of_node_put(fixed_link_node);
 	}
 
 	return 0;
@@ -653,14 +890,28 @@ static void rtsn_set_phy_interface(struct rtsn_private *priv)
 	case PHY_INTERFACE_MODE_MII:
 		val = MPIC_PIS_MII;
 		break;
+	case PHY_INTERFACE_MODE_RMII:
+		val = MPIC_PIS_RMII;
+		break;
 	case PHY_INTERFACE_MODE_RGMII:
 	case PHY_INTERFACE_MODE_RGMII_ID:
 	case PHY_INTERFACE_MODE_RGMII_RXID:
 	case PHY_INTERFACE_MODE_RGMII_TXID:
+		val = MPIC_PIS_RGMII;
+		break;
+	case PHY_INTERFACE_MODE_GMII:
+	case PHY_INTERFACE_MODE_SGMII:
+	case PHY_INTERFACE_MODE_2500BASEX:
 		val = MPIC_PIS_GMII;
 		break;
+	case PHY_INTERFACE_MODE_5GBASER:
+	case PHY_INTERFACE_MODE_10GBASER:
+	case PHY_INTERFACE_MODE_USXGMII:
+		val = MPIC_PIS_XGMII;
+		break;
 	default:
-		return;
+		val = MPIC_PIS_GMII;
+		break;
 	}
 
 	rtsn_modify(priv, MPIC, MPIC_PIS_MASK, val);
@@ -679,6 +930,9 @@ static void rtsn_set_rate(struct rtsn_private *priv)
 		break;
 	case 1000:
 		val = MPIC_LSC_1G;
+		break;
+	case 2500:
+		val = MPIC_LSC_2_5G;
 		break;
 	default:
 		return;
@@ -702,8 +956,20 @@ static int rtsn_rmac_init(struct rtsn_private *priv)
 	rtsn_set_rate(priv);
 
 	/* Enable MII */
-	rtsn_modify(priv, MPIC, MPIC_PSMCS_MASK | MPIC_PSMHT_MASK,
-		    MPIC_PSMCS_DEFAULT | MPIC_PSMHT_DEFAULT);
+	if (priv->fixed_link)
+		rtsn_modify(priv, MPIC, MPIC_PLSPP, 0);
+	else
+		rtsn_modify(priv, MPIC, MPIC_PSMCS_MASK | MPIC_PSMHT_MASK,
+			MPIC_PSMCS_DEFAULT | MPIC_PSMHT_DEFAULT);
+
+	rtsn_write(priv, MRGC, MRGC_DEFAULT);
+	rtsn_write(priv, MRFSCE, MRFS_MAX);
+	rtsn_write(priv, MRFSCP, MRFS_MAX);
+	rtsn_write(priv, MTRC, MTRC_DEFAULT);
+	rtsn_write(priv, MRAFC, MRAFC_RX_PROMISC);
+
+	if (priv->fixed_link)
+		return 0;
 
 	/* Link verification */
 	rtsn_modify(priv, MLVC, MLVC_PLV, MLVC_PLV);
@@ -795,7 +1061,8 @@ static int rtsn_mdio_alloc(struct rtsn_private *priv)
 
 	mdio_node = of_get_child_by_name(dev->of_node, "mdio");
 	if (!mdio_node) {
-		ret = -ENODEV;
+		/* Fixed-link ports do not manage an external PHY over MDIO. */
+		ret = priv->fixed_link ? 0 : -ENODEV;
 		goto out_free_bus;
 	}
 
@@ -836,6 +1103,9 @@ out_free_bus:
 
 static void rtsn_mdio_free(struct rtsn_private *priv)
 {
+	if (!priv->mii)
+		return;
+
 	mdiobus_unregister(priv->mii);
 	mdiobus_free(priv->mii);
 	priv->mii = NULL;
@@ -908,6 +1178,13 @@ static int rtsn_phy_init(struct rtsn_private *priv)
 
 	priv->link = 0;
 
+	if (of_phy_is_fixed_link(np)) {
+		priv->fixed_link = true;
+		priv->link = 1;
+		netif_carrier_on(priv->ndev);
+		return 0;
+	}
+
 	phy = of_parse_phandle(np, "phy-handle", 0);
 	if (!phy)
 		return -ENOENT;
@@ -930,8 +1207,15 @@ static int rtsn_phy_init(struct rtsn_private *priv)
 
 static void rtsn_phy_deinit(struct rtsn_private *priv)
 {
-	phy_disconnect(priv->ndev->phydev);
-	priv->ndev->phydev = NULL;
+	struct net_device *ndev = priv->ndev;
+
+	if (ndev->phydev) {
+		phy_disconnect(ndev->phydev);
+		ndev->phydev = NULL;
+	} else if (priv->fixed_link) {
+		priv->link = 0;
+		netif_carrier_off(ndev);
+	}
 }
 
 static int rtsn_init(struct rtsn_private *priv)
@@ -1010,7 +1294,7 @@ static void rtsn_parse_mac_address(struct device_node *np,
 	eth_hw_addr_random(ndev);
 }
 
-static int rtsn_open(struct net_device *ndev)
+static int rtsn_open_common(struct net_device *ndev, bool attach_rswitch)
 {
 	struct rtsn_private *priv = netdev_priv(ndev);
 	int ret;
@@ -1023,23 +1307,63 @@ static int rtsn_open(struct net_device *ndev)
 		return ret;
 	}
 
-	phy_start(ndev->phydev);
+	if (attach_rswitch) {
+		ret = rtsn_attach_rswitch(priv);
+		if (ret) {
+			rtsn_change_mode(priv, OCR_OPC_DISABLE);
+			rtsn_deinit(priv);
+			napi_disable(&priv->napi);
+			return ret;
+		}
+	}
+
+	if (priv->fixed_link) {
+		netif_carrier_off(ndev);
+		priv->link = 1;
+		netif_carrier_on(ndev);
+		netdev_info(ndev, "Link is Up - %s/%s - flow control off\n",
+			rtsn_speed_to_str(priv->speed),
+			priv->duplex == DUPLEX_FULL ? "Full" : "Half");
+	} else {
+		phy_start(ndev->phydev);
+	}
 
 	netif_start_queue(ndev);
 
 	return 0;
 }
 
-static int rtsn_stop(struct net_device *ndev)
+static int rtsn_open(struct net_device *ndev)
+{
+	return rtsn_open_common(ndev, true);
+}
+
+static int rtsn_stop_common(struct net_device *ndev, bool detach_rswitch)
 {
 	struct rtsn_private *priv = netdev_priv(ndev);
 
-	phy_stop(priv->ndev->phydev);
+	netif_stop_queue(ndev);
+
+	if (priv->fixed_link) {
+		netif_carrier_off(ndev);
+		priv->link = 0;
+		netdev_info(ndev, "Link is Down\n");
+	} else {
+		phy_stop(priv->ndev->phydev);
+	}
+
 	napi_disable(&priv->napi);
 	rtsn_change_mode(priv, OCR_OPC_DISABLE);
 	rtsn_deinit(priv);
+	if (detach_rswitch)
+		rtsn_detach_rswitch(priv);
 
 	return 0;
+}
+
+static int rtsn_stop(struct net_device *ndev)
+{
+	return rtsn_stop_common(ndev, true);
 }
 
 static netdev_tx_t rtsn_start_xmit(struct sk_buff *skb, struct net_device *ndev)
@@ -1110,6 +1434,27 @@ static void rtsn_get_stats64(struct net_device *ndev,
 	struct rtsn_private *priv = netdev_priv(ndev);
 	*storage = priv->stats;
 }
+
+static int rtsn_set_mac_address(struct net_device *ndev, void *addr)
+{
+	struct rtsn_private *priv = netdev_priv(ndev);
+	const u8 *mac;
+	int ret;
+
+	ret = eth_mac_addr(ndev, addr);
+	if (ret)
+		return ret;
+
+	if (netif_running(ndev)) {
+		mac = ndev->dev_addr;
+		rtsn_write(priv, MRMAC0, (mac[0] << 8) | mac[1]);
+		rtsn_write(priv, MRMAC1, (mac[2] << 24) | (mac[3] << 16)
+					| (mac[4] << 8) | mac[5]);
+	}
+
+	return 0;
+}
+
 
 static int rtsn_do_ioctl(struct net_device *ndev, struct ifreq *ifr, int cmd)
 {
@@ -1201,6 +1546,44 @@ static int rtsn_hwtstamp_set(struct net_device *ndev,
 	return 0;
 }
 
+static int rtsn_get_link_ksettings(struct net_device *ndev,
+								struct ethtool_link_ksettings *cmd)
+{
+	struct rtsn_private *priv = netdev_priv(ndev);
+
+	/* External PHY ports keep using PHYLIB ethtool settings. */
+	if (ndev->phydev && !priv->fixed_link)
+		return phy_ethtool_get_link_ksettings(ndev, cmd);
+
+	/* Internal TSN-ES fixed-link has no phydev, report DTS link params. */
+	ethtool_link_ksettings_zero_link_mode(cmd, supported);
+	ethtool_link_ksettings_zero_link_mode(cmd, advertising);
+	ethtool_link_ksettings_zero_link_mode(cmd, lp_advertising);
+	ethtool_link_ksettings_add_link_mode(cmd, supported, MII);
+	ethtool_link_ksettings_add_link_mode(cmd, supported, 2500baseT_Full);
+
+	cmd->base.speed = priv->speed;
+	cmd->base.duplex = priv->duplex;
+	cmd->base.autoneg = AUTONEG_DISABLE;
+	cmd->base.port = PORT_MII;
+	cmd->base.phy_address = 0;
+	cmd->base.transceiver = XCVR_INTERNAL;
+
+	return 0;
+}
+
+static int rtsn_set_link_ksettings(struct net_device *ndev,
+							const struct ethtool_link_ksettings *cmd)
+{
+	struct rtsn_private *priv = netdev_priv(ndev);
+
+	/* Only external PHY ports can change link settings through PHYLIB. */
+	if (ndev->phydev && !priv->fixed_link)
+		return phy_ethtool_set_link_ksettings(ndev, cmd);
+
+	return -EOPNOTSUPP;
+}
+
 static const struct net_device_ops rtsn_netdev_ops = {
 	.ndo_open		= rtsn_open,
 	.ndo_stop		= rtsn_stop,
@@ -1208,7 +1591,7 @@ static const struct net_device_ops rtsn_netdev_ops = {
 	.ndo_get_stats64	= rtsn_get_stats64,
 	.ndo_eth_ioctl		= rtsn_do_ioctl,
 	.ndo_validate_addr	= eth_validate_addr,
-	.ndo_set_mac_address	= eth_mac_addr,
+	.ndo_set_mac_address	= rtsn_set_mac_address,
 	.ndo_hwtstamp_set	= rtsn_hwtstamp_set,
 	.ndo_hwtstamp_get	= rtsn_hwtstamp_get,
 };
@@ -1220,9 +1603,11 @@ static int rtsn_get_ts_info(struct net_device *ndev,
 
 	info->phc_index = ptp_clock_index(priv->ptp_priv->clock);
 	info->so_timestamping = SOF_TIMESTAMPING_TX_SOFTWARE |
-		SOF_TIMESTAMPING_TX_HARDWARE |
-		SOF_TIMESTAMPING_RX_HARDWARE |
-		SOF_TIMESTAMPING_RAW_HARDWARE;
+				SOF_TIMESTAMPING_RX_SOFTWARE |
+				SOF_TIMESTAMPING_SOFTWARE |
+				SOF_TIMESTAMPING_TX_HARDWARE |
+				SOF_TIMESTAMPING_RX_HARDWARE |
+				SOF_TIMESTAMPING_RAW_HARDWARE;
 	info->tx_types = BIT(HWTSTAMP_TX_OFF) | BIT(HWTSTAMP_TX_ON);
 	info->rx_filters = BIT(HWTSTAMP_FILTER_NONE) | BIT(HWTSTAMP_FILTER_ALL);
 
@@ -1233,12 +1618,13 @@ static const struct ethtool_ops rtsn_ethtool_ops = {
 	.nway_reset		= phy_ethtool_nway_reset,
 	.get_link		= ethtool_op_get_link,
 	.get_ts_info		= rtsn_get_ts_info,
-	.get_link_ksettings	= phy_ethtool_get_link_ksettings,
-	.set_link_ksettings	= phy_ethtool_set_link_ksettings,
+	.get_link_ksettings	= rtsn_get_link_ksettings,
+	.set_link_ksettings	= rtsn_set_link_ksettings,
 };
 
 static const struct of_device_id rtsn_match_table[] = {
 	{ .compatible = "renesas,r8a779g0-ethertsn", },
+	{ .compatible = "renesas,r8a78000-ethertsn", },
 	{ /* Sentinel */ }
 };
 
@@ -1260,6 +1646,11 @@ static int rtsn_probe(struct platform_device *pdev)
 	priv->pdev = pdev;
 	priv->ndev = ndev;
 
+	ret = of_property_read_u32(pdev->dev.of_node, "renesas,tsnes-id",
+				&priv->tsnes_id);
+	if (!ret)
+		snprintf(ndev->name, IFNAMSIZ, "tsnes%u", priv->tsnes_id);
+
 	priv->ptp_priv = rcar_gen4_ptp_alloc(pdev);
 	if (!priv->ptp_priv) {
 		ret = -ENOMEM;
@@ -1269,13 +1660,18 @@ static int rtsn_probe(struct platform_device *pdev)
 	spin_lock_init(&priv->lock);
 	platform_set_drvdata(pdev, priv);
 
-	priv->clk = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(priv->clk)) {
-		ret = PTR_ERR(priv->clk);
-		goto error_free;
-	}
+	priv->clks[RTSN_CLK_RSW3TSN].id = "rsw3tsn";
+	priv->clks[RTSN_CLK_TSNES].id = "tsnes";
 
-	priv->reset = devm_reset_control_get(&pdev->dev, NULL);
+	ret = devm_clk_bulk_get(&pdev->dev, RTSN_NUM_CLKS, priv->clks);
+	if (ret)
+		goto error_free;
+
+	ret = clk_bulk_prepare_enable(RTSN_NUM_CLKS, priv->clks);
+	if (ret)
+		goto error_free;
+
+	priv->reset = devm_reset_control_get_optional_exclusive(&pdev->dev, NULL);
 	if (IS_ERR(priv->reset)) {
 		ret = PTR_ERR(priv->reset);
 		goto error_free;
@@ -1319,6 +1715,10 @@ static int rtsn_probe(struct platform_device *pdev)
 	if (ret)
 		goto error_free;
 
+	ret = rtsn_parse_rswitch(priv);
+	if (ret)
+		goto error_free;
+
 	pm_runtime_enable(&pdev->dev);
 	pm_runtime_get_sync(&pdev->dev);
 
@@ -1331,7 +1731,7 @@ static int rtsn_probe(struct platform_device *pdev)
 	device_set_wakeup_capable(&pdev->dev, 1);
 
 	ret = rcar_gen4_ptp_register(priv->ptp_priv, RCAR_GEN4_PTP_REG_LAYOUT,
-				     clk_get_rate(priv->clk));
+				clk_get_rate(priv->clks[RTSN_CLK_TSNES].clk));
 	if (ret)
 		goto error_pm;
 
@@ -1339,14 +1739,20 @@ static int rtsn_probe(struct platform_device *pdev)
 	if (ret)
 		goto error_ptp;
 
-	ret = register_netdev(ndev);
+	ret = rtsn_link_rswitch(priv);
 	if (ret)
 		goto error_mdio;
+
+	ret = register_netdev(ndev);
+	if (ret)
+		goto error_rswitch;
 
 	netdev_info(ndev, "MAC address %pM\n", ndev->dev_addr);
 
 	return 0;
 
+error_rswitch:
+	rtsn_unlink_rswitch(priv);
 error_mdio:
 	rtsn_mdio_free(priv);
 error_ptp:
@@ -1368,6 +1774,7 @@ static void rtsn_remove(struct platform_device *pdev)
 
 	unregister_netdev(priv->ndev);
 	rtsn_mdio_free(priv);
+	rtsn_unlink_rswitch(priv);
 	rcar_gen4_ptp_unregister(priv->ptp_priv);
 	rtsn_change_mode(priv, OCR_OPC_DISABLE);
 	netif_napi_del(&priv->napi);
@@ -1378,11 +1785,70 @@ static void rtsn_remove(struct platform_device *pdev)
 	free_netdev(priv->ndev);
 }
 
+static int rtsn_suspend(struct device *dev)
+{
+	struct rtsn_private *priv = dev_get_drvdata(dev);
+	struct net_device *ndev = priv->ndev;
+	int ret = 0;
+
+	if (netif_running(ndev)) {
+		netif_device_detach(ndev);
+
+		rtnl_lock();
+		ret = rtsn_stop_common(ndev, false);
+		rtnl_unlock();
+		if (ret)
+			return ret;
+	} else {
+		rtsn_change_mode(priv, OCR_OPC_DISABLE);
+	}
+
+	clk_bulk_disable_unprepare(RTSN_NUM_CLKS, priv->clks);
+
+	return 0;
+}
+
+static int rtsn_resume(struct device *dev)
+{
+	struct rtsn_private *priv = dev_get_drvdata(dev);
+	struct net_device *ndev = priv->ndev;
+	int ret;
+
+	ret = clk_bulk_prepare_enable(RTSN_NUM_CLKS, priv->clks);
+	if (ret)
+		return ret;
+
+	ret = rcar_gen4_ptp_reinit_hw(priv->ptp_priv);
+	if (ret)
+		goto error_clk;
+
+	if (!netif_running(ndev))
+		return 0;
+
+	rtnl_lock();
+	ret = rtsn_open_common(ndev, false);
+	rtnl_unlock();
+	if (ret)
+		goto error_clk;
+
+	netif_device_attach(ndev);
+
+	return 0;
+
+error_clk:
+	clk_bulk_disable_unprepare(RTSN_NUM_CLKS, priv->clks);
+
+	return ret;
+}
+
+static DEFINE_SIMPLE_DEV_PM_OPS(rtsn_pm_ops, rtsn_suspend, rtsn_resume);
+
 static struct platform_driver rtsn_driver = {
 	.probe		= rtsn_probe,
 	.remove		= rtsn_remove,
 	.driver	= {
 		.name	= "rtsn",
+		.pm	= pm_sleep_ptr(&rtsn_pm_ops),
 		.of_match_table	= rtsn_match_table,
 	}
 };
