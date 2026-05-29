@@ -3664,7 +3664,7 @@
 		};
 
 		vin000: video@c4900000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4900000 0 0x1000>;
 			interrupts = <0 510 4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_VIN000>;
@@ -3692,7 +3692,7 @@
 		};
 
 		vin001: video@c4901000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4901000 0 0x1000>;
 			interrupts = <0 511 4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_VIN001>;
@@ -3720,7 +3720,7 @@
 		};
 
 		vin010: video@c4908000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4908000 0 0x1000>;
 			interrupts = <0 518 4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_VIN010>;
@@ -3748,7 +3748,7 @@
 		};
 
 		vin020: video@c4910000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4910000 0 0x1000>;
 			interrupts = <0 526 4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_VIN020>;
@@ -3776,7 +3776,7 @@
 		};
 
 		vin030: video@c4918000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4918000 0 0x1000>;
 			interrupts = <0 534 4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_VIN030>;
@@ -3804,7 +3804,7 @@
 		};
 
 		vin031: video@c4919000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4919000 0 0x1000>;
 			interrupts = <0 535 4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_VIN031>;
@@ -3832,7 +3832,7 @@
 		};
 
 		vin040: video@c4920000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4920000 0 0x1000>;
 			interrupts = <0 542 4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_VIN040>;
@@ -3860,7 +3860,7 @@
 		};
 
 		vin050: video@c4928000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4928000 0 0x1000>;
 			interrupts = <0 550 4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_VIN050>;
@@ -3888,7 +3888,7 @@
 		};
 
 		vin060: video@c4930000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4930000 0 0x1000>;
 			interrupts = <0 558 4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_VIN060>;
@@ -3916,7 +3916,7 @@
 		};
 
 		vin061: video@c4931000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4931000 0 0x1000>;
 			interrupts = <0 559 4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_VIN061>;
@@ -3944,7 +3944,7 @@
 		};
 
 		vin070: video@c4938000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4938000 0 0x1000>;
 			interrupts = <0 566 4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_VIN070>;
@@ -3972,7 +3972,7 @@
 		};
 
 		vin080: video@c4940000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4940000 0 0x1000>;
 			interrupts = <0 574 4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_VIN080>;
@@ -4000,7 +4000,7 @@
 		};
 
 		vin090: video@c4948000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4948000 0 0x1000>;
 			interrupts = <0 582 4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_VIN090>;
@@ -4028,7 +4028,7 @@
 		};
 
 		vin091: video@c4949000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4949000 0 0x1000>;
 			interrupts = <0 583 4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_VIN091>;
@@ -4056,7 +4056,7 @@
 		};
 
 		vin100: video@c4950000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4950000 0 0x1000>;
 			interrupts = <0 590 4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_VIN100>;
@@ -4084,7 +4084,7 @@
 		};
 
 		vin110: video@c4958000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4958000 0 0x1000>;
 			interrupts = <0 598 4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_VIN110>;
@@ -4220,7 +4220,7 @@
 		};
 
 		isp0: isp@c4700000 {
-			compatible = "renesas,r8a78000-isp";
+			compatible = "renesas,rcar-gen5-isp";
 			reg = <0 0xc4700000 0 0x10000>;
 			interrupts = <0 506 8>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_ISPCS0>;
@@ -4275,7 +4275,7 @@
 		};
 
 		isp1: isp@c4720000 {
-			compatible = "renesas,r8a78000-isp";
+			compatible = "renesas,rcar-gen5-isp";
 			reg = <0 0xc4720000 0 0x10000>;
 			interrupts = <0 507 8>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_ISPCS1>;
@@ -4330,7 +4330,7 @@
 		};
 
 		isp2: isp@c4740000 {
-			compatible = "renesas,r8a78000-isp";
+			compatible = "renesas,rcar-gen5-isp";
 			reg = <0 0xc4740000 0 0x10000>;
 			interrupts = <0 508 8>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_ISPCS2>;
@@ -4385,7 +4385,7 @@
 		};
 
 		isp3: isp@c4760000 {
-			compatible = "renesas,r8a78000-isp";
+			compatible = "renesas,rcar-gen5-isp";
 			reg = <0 0xc4760000 0 0x10000>;
 			interrupts = <0 509 8>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_ISPCS3>;

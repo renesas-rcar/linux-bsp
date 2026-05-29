@@ -2063,7 +2063,7 @@
 				bus-type = <MEDIA_BUS_TYPE_CSI2_CPHY>;
 				clock-lanes = <0>;
 				data-lanes = <1 2 3 4>;
-				pin-swap-rx-order = <ABC ACB ABC ACB>;
+				line-orders = <0 1 0 1>;
 				remote-endpoint = <&max96726_out0>;
 			};
 		};
@@ -2084,7 +2084,7 @@
 				bus-type = <MEDIA_BUS_TYPE_CSI2_CPHY>;
 				clock-lanes = <0>;
 				data-lanes = <1 2 3 4>;
-				pin-swap-rx-order = <ABC ACB ABC ACB>;
+				line-orders = <0 1 0 1>;
 				remote-endpoint = <&max96726_out1>;
 			};
 		};
@@ -2105,7 +2105,7 @@
 				bus-type = <MEDIA_BUS_TYPE_CSI2_CPHY>;
 				clock-lanes = <0>;
 				data-lanes = <1 2 3 4>;
-				pin-swap-rx-order = <ABC ACB ABC ACB>;
+				line-orders = <0 1 0 1>;
 				remote-endpoint = <&max96726_out2>;
 			};
 		};
@@ -2126,7 +2126,7 @@
 				bus-type = <MEDIA_BUS_TYPE_CSI2_CPHY>;
 				clock-lanes = <0>;
 				data-lanes = <1 2 3 4>;
-				pin-swap-rx-order = <ABC ACB ABC ACB>;
+				line-orders = <0 1 0 1>;
 				remote-endpoint = <&max96726_out3>;
 			};
 		};
