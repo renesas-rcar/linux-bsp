@@ -366,7 +366,11 @@ static struct scmi_desc scmi_mailbox_desc = {
 	.ops = &scmi_mailbox_ops,
 	.max_rx_timeout_ms = 30, /* We may increase this if required */
 	.max_msg = 20, /* Limited by MBOX_TX_QUEUE_LEN */
+#if defined(CONFIG_ARCH_R8A78000)
+	.max_msg_size = 220,
+#else
 	.max_msg_size = 128,
+#endif
 #if defined(CONFIG_ARCH_R8A78000) && defined(CONFIG_RCAR_SCP_FIXUP)
 	.atomic_enabled = IS_ENABLED(CONFIG_SCMI_FULL_HW_VIRTUALIZATION),
 #endif /* CONFIG_ARCH_R8A78000 && CONFIG_RCAR_SCP_FIXUP */
