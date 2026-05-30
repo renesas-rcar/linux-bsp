@@ -584,7 +584,7 @@ static int uio_pdrv_genirq_probe(struct platform_device *pdev)
 	 */
 	pm_runtime_enable(&pdev->dev);
 
-	if (!of_property_read_bool(node, "power-domains")) {
+	if (!fwnode_property_read_bool(node, "power-domains")) {
 		dev_dbg(&pdev->dev, "device has not power-domains property\n");
 		pm_runtime_get_sync(&pdev->dev);
 		pm_runtime_put_sync(&pdev->dev);
