@@ -908,10 +908,6 @@
 	pinctrl-names = "default";
 
 	status = "okay";
-	sensor@72 {
-		compatible = "null";
-		reg = <0x72 0x0 0x10>;
-	};
 };
 
 &i2c5 {
