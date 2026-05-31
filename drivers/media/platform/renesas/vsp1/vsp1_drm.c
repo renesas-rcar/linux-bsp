@@ -64,8 +64,10 @@ static void vsp1_du_pipeline_frame_end(struct vsp1_pipeline *pipe,
 				       unsigned int completion)
 {
 	struct vsp1_drm_pipeline *drm_pipe = to_vsp1_drm_pipeline(pipe);
+	void (*du_complete)(void *data, unsigned int status, u32 crc);
 
-	if (drm_pipe->du_complete) {
+	du_complete = READ_ONCE(drm_pipe->du_complete);
+	if (du_complete) {
 		struct vsp1_entity *uif = drm_pipe->uif;
 		unsigned int status = completion
 				    & (VSP1_DU_STATUS_COMPLETE |
@@ -73,7 +75,7 @@ static void vsp1_du_pipeline_frame_end(struct vsp1_pipeline *pipe,
 		u32 crc;
 
 		crc = uif ? vsp1_uif_get_crc(to_uif(&uif->subdev)) : 0;
-		drm_pipe->du_complete(drm_pipe->du_private, status, crc);
+		du_complete(drm_pipe->du_private, status, crc);
 	}
 
 	if (completion & VSP1_DL_FRAME_END_INTERNAL) {
@@ -747,7 +749,7 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int pipe_index,
 			brx->inputs[rpf->brx_input].rpf = NULL;
 		}
 
-		drm_pipe->du_complete = NULL;
+		WRITE_ONCE(drm_pipe->du_complete, NULL);
 		pipe->num_inputs = 0;
 
 		dev_dbg(vsp1->dev, "%s: pipe %u: releasing %s\n",
@@ -801,8 +803,8 @@ int vsp1_du_setup_lif(struct device *dev, unsigned int pipe_index,
 	 * Register a callback to allow us to notify the DRM driver of frame
 	 * completion events.
 	 */
-	drm_pipe->du_complete = cfg->callback;
 	drm_pipe->du_private = cfg->callback_data;
+	WRITE_ONCE(drm_pipe->du_complete, cfg->callback);
 
 	/* Disable the display interrupts. */
 	vsp1_write(vsp1, VI6_DISP_IRQ_STA(pipe_index), 0);
