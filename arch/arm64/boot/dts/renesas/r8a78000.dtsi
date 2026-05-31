@@ -4578,8 +4578,18 @@
 
 		mfis: mfis@18800000 {
 			compatible = "renesas,mfis";
-			reg = <0x0 0x18800000 0x0 0x10000>, <0x0 0x189e0900 0x0 0x4>;
-			reg-names = "io_base", "unlock_reg";
+			reg = <0x0 0x18800000 0x0 0x1000>,
+			      <0x0 0x18801000 0x0 0x1000>,
+			      <0x0 0x18802000 0x0 0x1000>,
+			      <0x0 0x18803000 0x0 0x1000>,
+			      <0x0 0x18804000 0x0 0x1000>,
+			      <0x0 0x18805000 0x0 0x1000>,
+			      <0x0 0x18806000 0x0 0x1000>,
+			      <0x0 0x18807000 0x0 0x1000>,
+			      <0x0 0x189e0900 0x0 0x4>;
+			reg-names = "ch0", "ch1", "ch2", "ch3",
+				    "ch4", "ch5", "ch6", "ch7",
+				    "unlock_reg";
 			interrupts = <GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 103 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>,
@@ -4588,8 +4598,9 @@
 				     <GIC_SPI 111 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 113 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 115 IRQ_TYPE_LEVEL_HIGH>;
-			interrupt-names = "eicr0", "eicr1", "eicr2", "eicr3", "eicr4", "eicr5", "eicr6", "eicr7";
-			renesas,mfis-channels = <0 1 2 3>;
+			interrupt-names = "ch0", "ch1", "ch2", "ch3",
+					  "ch4", "ch5", "ch6", "ch7";
+			renesas,mfis-channels = <0 1 2>;
 			status = "disabled";
 		};
 
