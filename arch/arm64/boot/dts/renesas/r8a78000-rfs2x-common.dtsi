@@ -127,8 +127,7 @@
 			reusable;
 			reg = <0x1c 0x0 0x0 0x40000000>;
 		};
-	};
-
+		
 		ucie_shared: ucie_shared@90000000 {
 		/*
 		 * UCIe shared region covering:
@@ -142,6 +141,7 @@
 		 */
 		reg = <0x0 0x90000000 0x0 0x201000>;
 		no-map;
+		};
 	};
 
 	sound_card: sound {
