@@ -306,8 +306,11 @@ static int ufs_system_suspend(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct ufs_hba *hba = platform_get_drvdata(pdev);
 	struct ufs_rcar_gen5_priv *priv = ufshcd_get_variant(hba);
+	int ret = 0;
 
-	reset_control_reset(priv->rstc);
+	ret = reset_control_assert(priv->rstc);
+	if (ret)
+		dev_warn(dev, "Failed to release the UFS system from reset");
 
 	return ufshcd_system_suspend(dev);
 }
@@ -317,10 +320,19 @@ static int ufs_system_resume(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct ufs_hba *hba = platform_get_drvdata(pdev);
 	struct ufs_rcar_gen5_priv *priv = ufshcd_get_variant(hba);
+	int ret = 0;
 
-	reset_control_reset(priv->rstc);
+	ret = ufshcd_system_resume(dev);
+	if (ret) {
+		dev_err(dev, "Failed to resume the UFS system");
+		return ret;
+	}
 
-	return ufshcd_system_resume(dev);
+	ret = reset_control_deassert(priv->rstc);
+	if (ret)
+		dev_warn(dev, "Failed to release the UFS system from reset");
+
+	return 0;
 }
 
 static const struct dev_pm_ops ufs_pm_ops = {
