@@ -503,28 +503,6 @@ static int r8a78000_eth_pcs_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	for (int i = 0; i < R8A78000_ETH_PCS_NUM - 1; ++i) {
-		char rst_name[16] = {0};
-
-		sprintf(rst_name, "pcs%d", i);
-		ret = reset_control_assert(dd->resets[i]);
-		if (ret) {
-			dev_err(&pdev->dev, "Failed to assert pcs%d", i);
-			return ret;
-		}
-	}
-
-	for (int i = 0; i < R8A78000_ETH_PCS_NUM - 1; ++i) {
-		char rst_name[16] = {0};
-
-		sprintf(rst_name, "pcs%d", i);
-		ret = reset_control_deassert(dd->resets[i]);
-		if (ret) {
-			dev_err(&pdev->dev, "Failed to deassert pcs%d", i);
-			return ret;
-		}
-	}
-
 	ret = clk_bulk_prepare_enable(dd->num_clks, dd->clks);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to enable bulk clocks: %d\n", ret);
@@ -566,22 +544,6 @@ static int pcs_resume(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct r8a78000_eth_pcs_drv_data *dd = platform_get_drvdata(pdev);
 	int ret;
-
-	for (int i = 0; i < R8A78000_ETH_PCS_NUM - 1; ++i) {
-		ret = reset_control_assert(dd->resets[i]);
-		if (ret) {
-			dev_err(&pdev->dev, "Failed to assert pcs%d", i);
-			return ret;
-		}
-	}
-
-	for (int i = 0; i < R8A78000_ETH_PCS_NUM - 1; ++i) {
-		ret = reset_control_deassert(dd->resets[i]);
-		if (ret) {
-			dev_err(&pdev->dev, "Failed to deassert pcs%d", i);
-			return ret;
-		}
-	}
 
 	ret = clk_bulk_prepare_enable(dd->num_clks, dd->clks);
 	if (ret) {
