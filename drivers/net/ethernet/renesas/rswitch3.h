@@ -9,6 +9,7 @@
 #ifndef __RSWITCH3_H__
 #define __RSWITCH3_H__
 
+#include <linux/bitfield.h>
 #include <linux/platform_device.h>
 #include "rcar_gen4_ptp.h"
 
@@ -22,7 +23,15 @@
  * Non-MACsec ports: 0 to 7
  * MACsec ports: 8 to 12
  */
+#define RSWITCH3_NUM_AGENTS	15
 #define RSWITCH3_NUM_PORTS	13
+#define RSWITCH3_NUM_PRIOS	8
+#define RSWITCH3_NUM_TSNES  8
+#define RSWITCH3_TSNES_PORT_BASE	5
+#define RSWITCH3_TSNA_DESC_RAM_DEPTH	2048
+#define RSWITCH3_TSNA_QUEUE_DEPTH	(RSWITCH3_TSNA_DESC_RAM_DEPTH / \
+					 RSWITCH3_NUM_PRIOS)
+#define RSWITCH_TSNES_SELECTOR_BASE	5
 
 #define RSWITCH3_GWCA_IDX_TO_HW_NUM(i)	((i) + RSWITCH3_NUM_PORTS)
 #define RSWITCH3_HW_NUM_TO_GWCA_IDX(i)	((i) - RSWITCH3_NUM_PORTS)
@@ -807,17 +816,49 @@ enum rswitch_etha_mode {
 
 #define EAMS_OPS_MASK		EAMC_OPC_OPERATION
 
+#define EAVCC_VEM_NO_TAG	0
 #define EAVCC_VEM_SC_TAG	(0x3 << 16)
+#define EATMFSC(q)		(EATMFSC0 + (q) * 0x04)
+#define EATDQDC(q)		(EATDQDC0 + (q) * 0x04)
+#define EATDQC_TCTDQD		BIT(RSWITCH3_NUM_PRIOS)
+#define EATDQC_DISABLE_CUT_THROUGH	EATDQC_TCTDQD
+#define EATMFSC_MAX		0xffff
 
+#define RSW3_MRAFC_UCENE	BIT(0)
+#define RSW3_MRAFC_MCENE	BIT(1)
+#define RSW3_MRAFC_BCENE	BIT(2)
+#define RSW3_MRAFC_NDAREE	BIT(7)
+#define RSW3_MRAFC_SDSFREE	BIT(8)
+#define RSW3_MRAFC_NSAREE	BIT(9)
+#define RSW3_MRAFC_MSAREE	BIT(10)
+#define RSW3_MRAFC_UCENP	BIT(16)
+#define RSW3_MRAFC_MCENP	BIT(17)
+#define RSW3_MRAFC_BCENP	BIT(18)
+#define RSW3_MRAFC_NDAREP	BIT(23)
+#define RSW3_MRAFC_SDSFREP	BIT(24)
+#define RSW3_MRAFC_NSAREP	BIT(25)
+#define RSW3_MRAFC_MSAREP	BIT(26)
+#define RSW3_MRAFC_RX_ACCEPT	(RSW3_MRAFC_UCENE | RSW3_MRAFC_MCENE | \
+				 RSW3_MRAFC_BCENE | RSW3_MRAFC_UCENP | \
+				 RSW3_MRAFC_MCENP | RSW3_MRAFC_BCENP)
+#define RSW3_MRAFC_RX_PROMISC	(RSW3_MRAFC_RX_ACCEPT | \
+				 RSW3_MRAFC_NDAREE | RSW3_MRAFC_SDSFREE | \
+				 RSW3_MRAFC_NSAREE | RSW3_MRAFC_MSAREE | \
+				 RSW3_MRAFC_NDAREP | RSW3_MRAFC_SDSFREP | \
+				 RSW3_MRAFC_NSAREP | RSW3_MRAFC_MSAREP)
+
+#define MPIC_PIS			GENMASK(2, 0)
 #define MPIC_PIS_MII		0x00
 #define MPIC_PIS_GMII		0x02
 #define MPIC_PIS_XGMII		0x04
+#define MPIC_LSC			GENMASK(5, 3)
 #define MPIC_LSC_SHIFT		3
 #define MPIC_LSC_100M		(1 << MPIC_LSC_SHIFT)
 #define MPIC_LSC_1G			(2 << MPIC_LSC_SHIFT)
 #define MPIC_LSC_2_5G		(3 << MPIC_LSC_SHIFT)
 #define MPIC_LSC_5G			(4 << MPIC_LSC_SHIFT)
 #define MPIC_LSC_10G		(5 << MPIC_LSC_SHIFT)
+#define MPIC_PLSPP		BIT(10)
 
 #define MDIO_READ_C45		0x03
 #define MDIO_WRITE_C45		0x01
@@ -855,6 +896,8 @@ enum rswitch_etha_mode {
 #define MPIC_PSMHT(val)		((val) << MPIC_PSMHT_SHIFT)
 
 #define MLVC_PLV		BIT(16)
+#define MIOC_FORCE_PHY_LINK	BIT(5)
+#define MIOC_BIT3_SET		BIT(3)
 
 /* GWCA */
 enum rswitch_gwca_mode {
@@ -927,7 +970,16 @@ enum rswitch_gwca_mode {
 #define FWPC1(i)			(FWPC10 + (i) * 0x10)
 #define FWPC1_DDE			BIT(0)
 
+#define FWPC2(i)			(FWPC20 + (i) * 0x10)
+#define FWPC2_LTWFM			GENMASK(16 + (RSWITCH3_NUM_AGENTS - 1), 16)
+#define FWPC2_LTWFM_TO_PORT(p)		FIELD_PREP(FWPC2_LTWFM, (p))
+
 #define	FWPBFC(i)			(FWPBFC00 + (i) * 0x10)
+#define FWPBFC_PBDV			GENMASK(RSWITCH3_NUM_AGENTS - 1, 0)
+
+#define FWPBFC1(i)			(FWPBFC10 + (i) * 0x10)
+#define FWPBFC1_PBRP			GENMASK(19, 16)
+#define FWPBFC1_PBRP_TSN		0xf
 
 #define FWPBFCSDC(j, i)		(FWPBFCSDC00 + (i) * 0x20 + (j) * 0x04)
 
@@ -1031,6 +1083,7 @@ struct rswitch_etha {
 	 * this flag to avoid multiple initialization.
 	 */
 	bool operated;
+	bool connect_to_xpcs;
 };
 
 /* The datasheet said descriptor "chain" and/or "queue". For consistency of
@@ -1129,6 +1182,11 @@ struct rswitch_private {
 	bool	vpf_mode;
 	struct clk *rsw_clk;
 	struct clk *phy_clk;
+
+	struct mutex tsnes_lock;
+	unsigned long tsnes_attached;
+	u32 tsnes_fwd_mask[RSWITCH3_NUM_TSNES];
+
 };
 
 static int rswitch3_num_ports = 13;
@@ -1138,5 +1196,10 @@ MODULE_PARM_DESC(num_etha_ports, "Number of using Switch3 ports");
 static bool parallel_mode;
 module_param(parallel_mode, bool, 0644);
 MODULE_PARM_DESC(parallel_mode, "Operate simultaneously with Realtime core");
+
+int rswitch_attach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port,
+						u32 fwd_mask, const u8 *mac);
+void rswitch_detach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port);
+
 
 #endif	/* #ifndef __RSWITCH3_H__ */

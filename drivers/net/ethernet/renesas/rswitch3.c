@@ -170,6 +170,121 @@ static void rswitch_top_init(struct rswitch_private *priv)
 		iowrite32((i / 16) << (GWCA_INDEX * 8), priv->addr + TPDEMIMC0(i));
 }
 
+static void rswitch_fwd_allow_ports(struct rswitch_private *priv,
+					unsigned int src_port, u32 dst_mask)
+{
+	if (!dst_mask || src_port >= RSWITCH3_NUM_AGENTS)
+		return;
+
+	dst_mask &= GENMASK(RSWITCH3_NUM_AGENTS - 1, 0);
+
+	rswitch_modify(priv->addr, FWPBFC(src_port), 0,
+				FIELD_PREP(FWPBFC_PBDV, dst_mask));
+	rswitch_modify(priv->addr, FWPBFC1(src_port), FWPBFC1_PBRP,
+				FIELD_PREP(FWPBFC1_PBRP, FWPBFC1_PBRP_TSN));
+	rswitch_modify(priv->addr, FWPC2(src_port),
+				FWPC2_LTWFM_TO_PORT(dst_mask), 0);
+	rswitch_modify(priv->addr, FWPC0(src_port), FWPC0_MACSDA,
+				FWPC0_MACSDA);
+}
+
+static void rswitch_fwd_disallow_ports(struct rswitch_private *priv,
+					unsigned int src_port, u32 dst_mask)
+{
+	if (!dst_mask || src_port >= RSWITCH3_NUM_AGENTS)
+		return;
+
+	dst_mask &= GENMASK(RSWITCH3_NUM_AGENTS - 1, 0);
+
+	rswitch_modify(priv->addr, FWPBFC(src_port),
+				FIELD_PREP(FWPBFC_PBDV, dst_mask), 0);
+	rswitch_modify(priv->addr, FWPC2(src_port),
+				FWPC2_LTWFM_TO_PORT(dst_mask),
+				FWPC2_LTWFM_TO_PORT(dst_mask));
+}
+
+static void rswitch_enable_tsn_forwarding(struct rswitch_private *priv,
+						u32 tsnes_id, u32 rsw_port, u32 requested_mask)
+{
+	struct device *dev = &priv->pdev->dev;
+	u32 enabled_ports;
+	u32 external_ports;
+	u32 missing_ports;
+	unsigned int i;
+
+	enabled_ports = 0;
+	for (i = 0; i < RSWITCH3_NUM_PORTS; i++) {
+		if (!priv->rdev[i] || priv->rdev[i]->disabled)
+			continue;
+
+		enabled_ports |= BIT(i);
+	}
+
+	enabled_ports &= GENMASK(RSWITCH3_NUM_PORTS - 1, 0);
+	requested_mask &= GENMASK(RSWITCH3_NUM_PORTS - 1, 0);
+
+	if (requested_mask) {
+		missing_ports = requested_mask & ~enabled_ports;
+		if (missing_ports)
+			dev_err(dev,
+				"rswitch3 TSN-ES%u has no enabled in DTS\n", tsnes_id);
+
+		external_ports = requested_mask & enabled_ports;
+	} else {
+		external_ports = enabled_ports;
+	}
+
+	external_ports &= ~BIT(rsw_port);
+
+	if (!external_ports) {
+		dev_err(dev,
+			"rswitch3 TSN-ES%u has no enabled external port to forward from interface %u\n",
+			tsnes_id, rsw_port);
+		return;
+	}
+
+	rswitch_fwd_allow_ports(priv, rsw_port, external_ports);
+
+	for (i = 0; i < RSWITCH3_NUM_PORTS; i++) {
+		if (!(external_ports & BIT(i)))
+			continue;
+
+		rswitch_fwd_allow_ports(priv, i, BIT(rsw_port));
+	}
+}
+
+static void rswitch_disable_tsn_forwarding(struct rswitch_private *priv,
+						u32 tsnes_id, u32 rsw_port, u32 requested_mask)
+{
+	u32 enabled_ports = 0;
+	u32 external_ports;
+	unsigned int i;
+
+	for (i = 0; i < RSWITCH3_NUM_PORTS; i++) {
+		if (!priv->rdev[i] || priv->rdev[i]->disabled)
+			continue;
+		enabled_ports |= BIT(i);
+	}
+
+	enabled_ports &= GENMASK(RSWITCH3_NUM_PORTS - 1, 0);
+	requested_mask &= GENMASK(RSWITCH3_NUM_PORTS - 1, 0);
+
+	external_ports = requested_mask ? (requested_mask & enabled_ports)
+					: enabled_ports;
+	external_ports &= ~BIT(rsw_port);
+
+	if (!external_ports)
+		return;
+
+	rswitch_fwd_disallow_ports(priv, rsw_port, external_ports);
+
+	for (i = 0; i < RSWITCH3_NUM_PORTS; i++) {
+		if (!(external_ports & BIT(i)))
+			continue;
+		rswitch_fwd_disallow_ports(priv, i, BIT(rsw_port));
+	}
+}
+
 /* Forwarding engine block (MFWD) */
 static void rswitch_fwd_init(struct rswitch_private *priv)
 {
@@ -1076,31 +1191,54 @@ static int __maybe_unused rswitch_etha_wait_link_verification(struct rswitch_eth
 
 static void rswitch_rmac_setting(struct rswitch_etha *etha, const u8 *mac)
 {
-	u32 val;
+	u32 pis, lsc;
 
 	rswitch_etha_write_mac_address(etha, mac);
 
-	switch (etha->speed) {
-	case 100:
-		val = MPIC_LSC_100M;
+	switch (etha->phy_interface) {
+	case PHY_INTERFACE_MODE_SGMII:
+		pis = MPIC_PIS_GMII;
 		break;
-	case 1000:
-		val = MPIC_LSC_1G;
-		break;
-	case 2500:
-		val = MPIC_LSC_2_5G;
-		break;
-	case 5000:
-		val = MPIC_LSC_5G;
-		break;
-	case 10000:
-		val = MPIC_LSC_10G;
+	case PHY_INTERFACE_MODE_USXGMII:
+	case PHY_INTERFACE_MODE_5GBASER:
+	case PHY_INTERFACE_MODE_10GBASER:
+		pis = MPIC_PIS_XGMII;
 		break;
 	default:
-		return;
+		pis = FIELD_GET(MPIC_PIS, ioread32(etha->addr + MPIC));
+		break;
 	}
 
-	iowrite32(MPIC_PIS_GMII | val, etha->addr + MPIC);
+	switch (etha->speed) {
+	case 100:
+		lsc = MPIC_LSC_100M;
+		break;
+	case 1000:
+		lsc = MPIC_LSC_1G;
+		break;
+	case 2500:
+		lsc = MPIC_LSC_2_5G;
+		break;
+	case 5000:
+		lsc = MPIC_LSC_5G;
+		break;
+	case 10000:
+		lsc = MPIC_LSC_10G;
+		break;
+	default:
+		lsc = FIELD_GET(MPIC_LSC, ioread32(etha->addr + MPIC));
+		break;
+	}
+
+	rswitch_modify(etha->addr, MPIC, MPIC_PIS | MPIC_LSC,
+			FIELD_PREP(MPIC_PIS, pis) | FIELD_PREP(MPIC_LSC, lsc));
+	/* Set MIOC Bit(3)*/
+	if (etha->connect_to_xpcs) {
+		if (etha->index >= 5 && etha->index <= 7)
+			iowrite32(MIOC_BIT3_SET, etha->addr + MIOC);
+		else
+			pr_err("%s: Invalid port %d for XPCS connection\n", __func__, etha->index);
+	}
 }
 
 static void rswitch_etha_enable_mii(struct rswitch_etha *etha)
@@ -1108,6 +1246,27 @@ static void rswitch_etha_enable_mii(struct rswitch_etha *etha)
 	rswitch_modify(etha->addr, MPIC, MPIC_PSMCS_MASK | MPIC_PSMHT_MASK,
 		       MPIC_PSMCS(etha->psmcs) | MPIC_PSMHT(0x06));
 	rswitch_modify(etha->addr, MPSM, 0, MPSM_MFF_C45);
+}
+
+static void rswitch_etha_init_tsn_egress_path(struct rswitch_etha *etha)
+{
+	unsigned int q;
+
+	iowrite32(0, etha->addr + EATDRC);
+	iowrite32(0, etha->addr + EAIRC);
+	iowrite32(0, etha->addr + EATDQSC);
+	iowrite32(0, etha->addr + EATDQAC);
+	iowrite32(0, etha->addr + EATPEC);
+	iowrite32(0, etha->addr + MIOC);
+
+	for (q = 0; q < RSWITCH3_NUM_PRIOS; q++) {
+		iowrite32(RSWITCH3_TSNA_QUEUE_DEPTH, etha->addr + EATDQDC(q));
+		iowrite32(EATMFSC_MAX, etha->addr + EATMFSC(q));
+	}
+
+	iowrite32(0, etha->addr + EACTDQDC);
+	iowrite32(0, etha->addr + EATTFC);
+	iowrite32(EAVCC_VEM_SC_TAG, etha->addr + EAVCC);
 }
 
 static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
@@ -1123,13 +1282,14 @@ static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
 	if (err < 0)
 		return err;
 
-	iowrite32(EAVCC_VEM_SC_TAG, etha->addr + EAVCC);
 
 	if (priv->vpf_mode) {
 		iowrite32(USMFSPE, etha->addr + EACKSC);
 	}
+
 	rswitch_rmac_setting(etha, mac);
 	rswitch_etha_enable_mii(etha);
+	rswitch_etha_init_tsn_egress_path(etha);
 
 	/* Disable function to use vpf environemnt
 	err = rswitch_etha_wait_link_verification(etha);
@@ -1142,6 +1302,50 @@ static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
 		return err;
 
 	return rswitch_etha_change_mode(etha, EAMC_OPC_OPERATION);
+}
+
+static int rswitch_etha_hw_init_tsn_internal(struct rswitch_private *priv,
+					u32 rsw_port, const u8 *mac)
+{
+	struct rswitch_etha *etha;
+	struct net_device *ndev;
+	int err;
+
+	if (rsw_port >= RSWITCH3_NUM_PORTS || !priv->rdev[rsw_port])
+		return -ENODEV;
+
+	etha = &priv->etha[rsw_port];
+	ndev = priv->rdev[rsw_port]->ndev;
+
+	if ((!mac || !is_valid_ether_addr(mac)) && ndev)
+		mac = ndev->dev_addr;
+	if (!mac || !is_valid_ether_addr(mac))
+		return -EINVAL;
+
+	err = rswitch_etha_change_mode(etha, EAMC_OPC_DISABLE);
+	if (err < 0)
+		return err;
+
+	err = rswitch_etha_change_mode(etha, EAMC_OPC_CONFIG);
+	if (err < 0)
+		return err;
+
+	rswitch_etha_init_tsn_egress_path(etha);
+	rswitch_etha_write_mac_address(etha, mac);
+	iowrite32(RSW3_MRAFC_RX_PROMISC, etha->addr + MRAFC);
+
+	err = rswitch_etha_change_mode(etha, EAMC_OPC_DISABLE);
+	if (err < 0)
+		return err;
+
+	err = rswitch_etha_change_mode(etha, EAMC_OPC_OPERATION);
+	if (err < 0)
+		return err;
+
+	iowrite32(EATDQC_DISABLE_CUT_THROUGH, etha->addr + EATDQC);
+	etha->operated = true;
+
+	return 0;
 }
 
 static int rswitch_etha_set_access(struct rswitch_etha *etha, bool read,
@@ -1305,6 +1509,9 @@ static int rswitch_etha_get_params(struct rswitch_device *rdev)
 	err = of_get_phy_mode(rdev->np_port, &rdev->etha->phy_interface);
 	if (err)
 		return err;
+
+	rdev->etha->connect_to_xpcs =
+		of_property_read_bool(rdev->np_port, "renesas,connect_to_xpcs");
 
 	err = of_property_read_u32(rdev->np_port, "max-speed", &max_speed);
 	if (!err) {
@@ -1869,6 +2076,84 @@ static const struct of_device_id renesas_eth_sw_of_table[] = {
 };
 MODULE_DEVICE_TABLE(of, renesas_eth_sw_of_table);
 
+int rswitch_attach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port,
+				u32 fwd_mask, const u8 *mac)
+{
+	struct rswitch_private *priv = dev_get_drvdata(dev);
+	struct rswitch_etha *selector_etha;
+	u32 val;
+	int ret = 0;
+
+	if (!priv)
+		return -EPROBE_DEFER;
+
+	if (tsnes_id >= RSWITCH3_NUM_TSNES)
+		return -EINVAL;
+
+	if (rsw_port >= RSWITCH3_NUM_PORTS)
+		return -EINVAL;
+
+
+	mutex_lock(&priv->tsnes_lock);
+
+	if (priv->tsnes_attached & BIT(tsnes_id)) {
+		ret = -EBUSY;
+		goto out_unlock;
+	}
+
+
+	if (!rswitch_agent_clock_is_enabled(priv->addr, rsw_port))
+		rswitch_agent_clock_ctrl(priv->addr, rsw_port, 1);
+
+	ret = rswitch_etha_hw_init_tsn_internal(priv, rsw_port, mac);
+		if (ret)
+			goto out_unlock;
+
+	if (tsnes_id <= 2) {
+		selector_etha = &priv->etha[rsw_port];
+		if (!selector_etha->addr) {
+			ret = -ENODEV;
+			goto out_unlock;
+		}
+		val = ioread32(selector_etha->addr + MIOC);
+		val &= ~MIOC_BIT3_SET;
+		iowrite32(val, selector_etha->addr + MIOC);
+	}
+
+	priv->tsnes_attached |= BIT(tsnes_id);
+	priv->tsnes_fwd_mask[tsnes_id] = fwd_mask;
+	rswitch_enable_tsn_forwarding(priv, tsnes_id, rsw_port, fwd_mask);
+
+out_unlock:
+	mutex_unlock(&priv->tsnes_lock);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(rswitch_attach_tsnes);
+
+void rswitch_detach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port)
+{
+	struct rswitch_private *priv = dev_get_drvdata(dev);
+
+	if (!priv || tsnes_id >= RSWITCH3_NUM_TSNES)
+		return;
+
+	mutex_lock(&priv->tsnes_lock);
+
+	if (!(priv->tsnes_attached & BIT(tsnes_id)))
+		goto out_unlock;
+
+	rswitch_disable_tsn_forwarding(priv, tsnes_id, rsw_port,
+				priv->tsnes_fwd_mask[tsnes_id]);
+
+	priv->tsnes_attached &= ~BIT(tsnes_id);
+	priv->tsnes_fwd_mask[tsnes_id] = 0;
+
+out_unlock:
+	mutex_unlock(&priv->tsnes_lock);
+}
+EXPORT_SYMBOL_GPL(rswitch_detach_tsnes);
+
 static void rswitch_etha_init(struct rswitch_private *priv, unsigned int index)
 {
 	struct rswitch_etha *etha = &priv->etha[index];
@@ -2077,6 +2362,9 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	if (!priv)
 		return -ENOMEM;
 	spin_lock_init(&priv->lock);
+
+	mutex_init(&priv->tsnes_lock);
+	priv->tsnes_attached = 0;
 
 	priv->clk = devm_clk_get(&pdev->dev, NULL);
 	if (IS_ERR(priv->clk))
