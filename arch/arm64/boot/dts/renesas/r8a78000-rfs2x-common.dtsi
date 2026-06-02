@@ -677,6 +677,118 @@
 	};
 };
 
+&tsnes0 {
+	phy-mode = "gmii";
+	max-speed = <2500>;
+	renesas,tsnes-id = <0>;
+	renesas,rswitch = <&rswitch3>;
+	renesas,rswitch-interface = <5>;
+	renesas,rswitch-forward-ports = <0>;
+	status = "okay";
+	fixed-link {
+		speed = <2500>;
+		full-duplex;
+	};
+};
+
+&tsnes1 {
+	phy-mode = "gmii";
+	max-speed = <2500>;
+	renesas,tsnes-id = <1>;
+	renesas,rswitch = <&rswitch3>;
+	renesas,rswitch-interface = <6>;
+	renesas,rswitch-forward-ports = <0>;
+	status = "okay";
+	fixed-link {
+		speed = <2500>;
+		full-duplex;
+	};
+};
+
+&tsnes2 {
+	phy-mode = "gmii";
+	max-speed = <2500>;
+	renesas,tsnes-id = <2>;
+	renesas,rswitch = <&rswitch3>;
+	renesas,rswitch-interface = <7>;
+	renesas,rswitch-forward-ports = <0>;
+	status = "okay";
+	fixed-link {
+		speed = <2500>;
+		full-duplex;
+	};
+};
+
+&tsnes3 {
+	phy-mode = "gmii";
+	max-speed = <2500>;
+	renesas,tsnes-id = <3>;
+	renesas,rswitch = <&rswitch3>;
+	renesas,rswitch-interface = <8>;
+	renesas,rswitch-forward-ports = <0>;
+	status = "okay";
+	fixed-link {
+		speed = <2500>;
+		full-duplex;
+	};
+};
+
+&tsnes4 {
+	phy-mode = "gmii";
+	max-speed = <2500>;
+	renesas,tsnes-id = <4>;
+	renesas,rswitch = <&rswitch3>;
+	renesas,rswitch-interface = <9>;
+	renesas,rswitch-forward-ports = <0>;
+	status = "okay";
+	fixed-link {
+		speed = <2500>;
+		full-duplex;
+	};
+};
+
+&tsnes5 {
+	phy-mode = "gmii";
+	max-speed = <2500>;
+	renesas,tsnes-id = <5>;
+	renesas,rswitch = <&rswitch3>;
+	renesas,rswitch-interface = <10>;
+	renesas,rswitch-forward-ports = <0>;
+	status = "okay";
+	fixed-link {
+		speed = <2500>;
+		full-duplex;
+	};
+};
+
+&tsnes6 {
+	phy-mode = "gmii";
+	max-speed = <2500>;
+	renesas,tsnes-id = <6>;
+	renesas,rswitch = <&rswitch3>;
+	renesas,rswitch-interface = <11>;
+	renesas,rswitch-forward-ports = <0>;
+	status = "okay";
+	fixed-link {
+		speed = <2500>;
+		full-duplex;
+	};
+};
+
+&tsnes7 {
+	phy-mode = "gmii";
+	max-speed = <2500>;
+	renesas,tsnes-id = <7>;
+	renesas,rswitch = <&rswitch3>;
+	renesas,rswitch-interface = <12>;
+	renesas,rswitch-forward-ports = <0>;
+	status = "okay";
+	fixed-link {
+		speed = <2500>;
+		full-duplex;
+	};
+};
+
 &gsx {
 	status = "okay";
 	operating-points-v2 = <&gsx_opp0>;

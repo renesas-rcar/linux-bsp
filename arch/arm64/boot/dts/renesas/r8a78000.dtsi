@@ -98,6 +98,12 @@
 		#clock-cells = <0>;
 	};
 
+	tsnes_clk: tsnes_clk {
+		compatible = "fixed-clock";
+		clock-frequency = <320000000>;
+		#clock-cells = <0>;
+	};
+
 	can_clk: can {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
@@ -3666,6 +3672,159 @@
 				clock-names = "rsw2", "eth-phy";
 				vpf_mode;
 
+			status = "disabled";
+		};
+
+		tsnes0: ethernet@c9c60000 {
+			compatible = "renesas,r8a78000-ethertsn";
+			reg = <0 0xc9c60000 0 0x4000>,
+				  <0 0xc9ca0000 0 0x800>;
+			reg-names = "tsnes", "gptp";
+			interrupts = <GIC_SPI 838 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 839 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 840 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 841 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 842 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "status", "tx", "rx", "ts", "error";
+			// power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_RSW>;
+			clocks = <&tsnes_clk>, <&tsnes_clk>;
+			clock-names = "rsw3tsn", "tsnes";
+			renesas,gptp-domain = "a";
+			renesas,vpf-mode;
+			status = "disabled";
+		};
+
+		tsnes1: ethernet@c9c64000 {
+			compatible = "renesas,r8a78000-ethertsn";
+			reg = <0 0xc9c64000 0 0x4000>,
+				  <0 0xc9ca1000 0 0x800>;
+			reg-names = "tsnes", "gptp";
+			interrupts = <GIC_SPI 843 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 844 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 845 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 846 IRQ_TYPE_LEVEL_HIGH>,
+					<GIC_SPI 847 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "status", "tx", "rx", "ts", "error";
+			// power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_RSW>;
+			clocks = <&tsnes_clk>, <&tsnes_clk>;
+			clock-names = "rsw3tsn", "tsnes";
+			renesas,gptp-domain = "a";
+			renesas,vpf-mode;
+			status = "disabled";
+		};
+
+		tsnes2: ethernet@c9c68000 {
+			compatible = "renesas,r8a78000-ethertsn";
+			reg = <0 0xc9c68000 0 0x4000>,
+				  <0 0xc9ca2000 0 0x800>;
+			reg-names = "tsnes", "gptp";
+			interrupts = <GIC_SPI 848 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 849 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 850 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 851 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 852 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "status", "tx", "rx", "ts", "error";
+			// power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_RSW>;
+			clocks = <&tsnes_clk>, <&tsnes_clk>;
+			clock-names = "rsw3tsn", "tsnes";
+			renesas,gptp-domain = "a";
+			renesas,tsnes-id = <2>;
+			renesas,vpf-mode;
+			status = "disabled";
+		};
+
+		tsnes3: ethernet@c9c6c000 {
+			compatible = "renesas,r8a78000-ethertsn";
+			reg = <0 0xc9c6c000 0 0x4000>,
+				  <0 0xc9ca3000 0 0x800>;
+			reg-names = "tsnes", "gptp";
+			interrupts = <GIC_SPI 853 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 854 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 855 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 856 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 857 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "status", "tx", "rx", "ts", "error";
+			// power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_RSW>;
+			clocks = <&tsnes_clk>, <&tsnes_clk>;
+			clock-names = "rsw3tsn", "tsnes";
+			renesas,gptp-domain = "b";
+			renesas,vpf-mode;
+			status = "disabled";
+		};
+
+		tsnes4: ethernet@c9c70000 {
+			compatible = "renesas,r8a78000-ethertsn";
+			reg = <0 0xc9c70000 0 0x4000>,
+				  <0 0xc9ca4000 0 0x800>;
+			reg-names = "tsnes", "gptp";
+			interrupts = <GIC_SPI 858 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 859 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 860 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 861 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 862 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "status", "tx", "rx", "ts", "error";
+			// power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_RSW>;
+			clocks = <&tsnes_clk>, <&tsnes_clk>;
+			clock-names = "rsw3tsn", "tsnes";
+			renesas,gptp-domain = "b";
+			renesas,vpf-mode;
+			status = "disabled";
+		};
+
+		tsnes5: ethernet@c9c74000 {
+			compatible = "renesas,r8a78000-ethertsn";
+			reg = <0 0xc9c74000 0 0x4000>,
+				  <0 0xc9ca5000 0 0x800>;
+			reg-names = "tsnes", "gptp";
+			interrupts = <GIC_SPI 863 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 864 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 865 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 866 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 867 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "status", "tx", "rx", "ts", "error";
+			// power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_RSW>;
+			clocks = <&tsnes_clk>, <&tsnes_clk>;
+			clock-names = "rsw3tsn", "tsnes";
+			renesas,gptp-domain = "b";
+			renesas,vpf-mode;
+			status = "disabled";
+		};
+
+		tsnes6: ethernet@c9c78000 {
+			compatible = "renesas,r8a78000-ethertsn";
+			reg = <0 0xc9c78000 0 0x4000>,
+				  <0 0xc9ca6000 0 0x800>;
+			reg-names = "tsnes", "gptp";
+			interrupts = <GIC_SPI 868 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 869 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 870 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 871 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 872 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "status", "tx", "rx", "ts", "error";
+			// power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_RSW>;
+			clocks = <&tsnes_clk>, <&tsnes_clk>;
+			clock-names = "rsw3tsn", "tsnes";
+			renesas,gptp-domain = "b";
+			renesas,vpf-mode;
+			status = "disabled";
+		};
+
+		tsnes7: ethernet@c9c7c000 {
+			compatible = "renesas,r8a78000-ethertsn";
+			reg = <0 0xc9c7c000 0 0x4000>,
+				  <0 0xc9ca7000 0 0x800>;
+			reg-names = "tsnes", "gptp";
+			interrupts = <GIC_SPI 873 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 874 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 875 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 876 IRQ_TYPE_LEVEL_HIGH>,
+				<GIC_SPI 877 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "status", "tx", "rx", "ts", "error";
+			// power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_RSW>;
+			clocks = <&tsnes_clk>, <&tsnes_clk>;
+			clock-names = "rsw3tsn", "tsnes";
+			renesas,gptp-domain = "b";
+			renesas,vpf-mode;
 			status = "disabled";
 		};
 
