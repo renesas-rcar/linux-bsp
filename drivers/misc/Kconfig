@@ -475,6 +475,13 @@ config PCI_ENDPOINT_TEST
 	   Enable this configuration option to enable the host side test driver
 	   for PCI Endpoint.
 
+config UCIE_LDR_MAP
+	depends on HAS_IOMEM && OF
+	tristate "UCIe LDR address mapping driver"
+	help
+	  Platform driver that ioremaps the LDR physical
+	  address for each UCIe channel.
+
 config XILINX_SDFEC
 	tristate "Xilinx SDFEC 16"
 	depends on HAS_IOMEM
