@@ -687,6 +687,8 @@ static int risp_set_pad_format(struct v4l2_subdev *sd,
 		format->format.code = rcar_isp_formats[0].code;
 
 	for (unsigned int i = 0; i < RCAR_ISP_NUM_PADS; i++) {
+		if (!media_pad_remote_pad_first(&sd->entity.pads[i]))
+				continue;
 		framefmt = v4l2_subdev_state_get_format(state, i);
 		*framefmt = format->format;
 	}
@@ -919,7 +921,7 @@ static int risp_probe(struct platform_device *pdev)
 	for (i = RCAR_ISP_PORT0; i <= isp->info->num_vin_conn_bridge; i++)
 		isp->pads[i].flags = MEDIA_PAD_FL_SOURCE;
 
-	ret = media_entity_pads_init(&isp->subdev.entity, isp->info->num_vin_conn_bridge,
+	ret = media_entity_pads_init(&isp->subdev.entity, isp->info->num_vin_conn_bridge + 1,
 				     isp->pads);
 	if (ret)
 		goto error_notifier;
