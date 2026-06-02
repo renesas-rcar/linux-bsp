@@ -175,6 +175,36 @@
 		};
 	};
 
+	dp-con0 {
+		compatible = "dp-connector";
+
+		port {
+			dp_con0_out: endpoint {
+				remote-endpoint = <&rcar_dw_dp0_out>;
+			};
+		};
+	};
+
+	dp-con1 {
+		compatible = "dp-connector";
+
+		port {
+			dp_con1_out: endpoint {
+				remote-endpoint = <&rcar_dw_dp1_out>;
+			};
+		};
+	};
+
+	dp-con2 {
+		compatible = "dp-connector";
+
+		port {
+			dp_con2_out: endpoint {
+				remote-endpoint = <&rcar_dw_dp2_out>;
+			};
+		};
+	};
+
 	vspm_if {
 		compatible = "renesas,vspm_if";
 	};
@@ -363,37 +393,6 @@
 			remote-endpoint = <&dp_con1_out>;
 		};
 	};
-
-	dp-con0 {
-		compatible = "dp-connector";
-
-		port {
-			dp_con0_out: endpoint {
-				remote-endpoint = <&rcar_dw_dp0_out>;
-			};
-		};
-	};
-
-	dp-con1 {
-		compatible = "dp-connector";
-
-		port {
-			dp_con1_out: endpoint {
-				remote-endpoint = <&rcar_dw_dp1_out>;
-			};
-		};
-	};
-
-	dp-con2 {
-		compatible = "dp-connector";
-
-		port {
-			dp_con2_out: endpoint {
-				remote-endpoint = <&rcar_dw_dp2_out>;
-			};
-		};
-	};
-
 };
 
 &dp2 {
