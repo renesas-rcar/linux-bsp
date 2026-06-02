@@ -95,6 +95,16 @@
 			reg = <0x0 0x8e200000 0x0 0x100000>;
 		};
 
+		ucie_ldr0: ucie_ldr0@82000000 {
+			no-map;
+			reg = <0x0 0x8c200000 0x0 0x100000>;
+		};
+
+		ucie_ldr1: ucie_ldr1@83000000 {
+			no-map;
+			reg = <0x0 0x8c300000 0x0 0x100000>;
+		};
+
 		cr52_ram0: cr52_ram0@96600000 {
 			no-map;
 			reg = <0x0 0x96600000 0x0 0x50000>;
@@ -142,6 +152,11 @@
 		reg = <0x0 0x90000000 0x0 0x201000>;
 		no-map;
 		};
+	};
+
+	ucie_ldr_map_dev: ucie_ldr_map {
+		compatible = "renesas,ucie-ldr-map";
+		ldr-regions = <&ucie_ldr0>, <&ucie_ldr1>;
 	};
 
 	sound_card: sound {
