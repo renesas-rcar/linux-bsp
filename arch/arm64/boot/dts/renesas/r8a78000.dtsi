@@ -3371,6 +3371,9 @@
 			renesas,#rpf_clut = <6>;
 			renesas,#wpf_rot = <0>;
 			renesas,has-bru;
+                        renesas,has-lut;
+                        renesas,has-clu;
+                        renesas,has-hgo;
 			renesas,#read_outstanding = <0>;
 			renesas,#start_reservation = <2>;
 			renesas,#burst_access = <0>;
@@ -3391,6 +3394,9 @@
 			renesas,#rpf_clut = <6>;
 			renesas,#wpf_rot = <0>;
 			renesas,has-bru;
+                        renesas,has-lut;
+                        renesas,has-clu;
+                        renesas,has-hgo;
 			renesas,#read_outstanding = <0>;
 			renesas,#start_reservation = <2>;
 			renesas,#burst_access = <0>;
@@ -3411,6 +3417,9 @@
 			renesas,#rpf_clut = <6>;
 			renesas,#wpf_rot = <0>;
 			renesas,has-bru;
+                        renesas,has-lut;
+                        renesas,has-clu;
+                        renesas,has-hgo;
 			renesas,#read_outstanding = <0>;
 			renesas,#start_reservation = <2>;
 			renesas,#burst_access = <0>;
@@ -3431,6 +3440,9 @@
 			renesas,#rpf_clut = <6>;
 			renesas,#wpf_rot = <0>;
 			renesas,has-bru;
+                        renesas,has-lut;
+                        renesas,has-clu;
+                        renesas,has-hgo;
 			renesas,#read_outstanding = <0>;
 			renesas,#start_reservation = <2>;
 			renesas,#burst_access = <0>;
@@ -3451,6 +3463,9 @@
 			renesas,#rpf_clut = <6>;
 			renesas,#wpf_rot = <0>;
 			renesas,has-bru;
+                        renesas,has-lut;
+                        renesas,has-clu;
+                        renesas,has-hgo;
 			renesas,#read_outstanding = <0>;
 			renesas,#start_reservation = <2>;
 			renesas,#burst_access = <0>;
