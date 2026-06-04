@@ -59,7 +59,13 @@
 		clock-output-names = "clk24mhz";
 	};
 
-	cluster1_opp: opp_table10 {
+	cpu_clk: cpu-clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <2700000000>;
+	};
+
+	cluster_opp: opp_table10 {
 		compatible = "operating-points-v2";
 		opp-shared;
 		opp-500000000 {
@@ -79,6 +85,21 @@
 		};
 		opp-1200000000 {
 			opp-hz = /bits/ 64 <1200000000>;
+			opp-microvolt = <880000>;
+			clock-latency-ns = <500000>;
+		};
+		opp-1800000000 {
+			opp-hz = /bits/ 64 <1800000000>;
+			opp-microvolt = <880000>;
+			clock-latency-ns = <500000>;
+		};
+		opp-2400000000 {
+			opp-hz = /bits/ 64 <2400000000>;
+			opp-microvolt = <880000>;
+			clock-latency-ns = <500000>;
+		};
+		opp-2700000000 {
+			opp-hz = /bits/ 64 <2700000000>;
 			opp-microvolt = <880000>;
 			clock-latency-ns = <500000>;
 			opp-suspend;
@@ -270,13 +291,13 @@
 		};
 
 		cpu0: cpu@0 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x0>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			clocks = <&cpg 0 30>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -287,13 +308,13 @@
 		};
 
 		cpu1: cpu@1 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x1>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			clocks = <&cpg 0 30>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -304,13 +325,13 @@
 		};
 
 		cpu2: cpu@2 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x2>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			clocks = <&cpg 0 30>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -321,13 +342,13 @@
 		};
 
 		cpu3: cpu@3 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x3>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			clocks = <&cpg 0 30>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -338,13 +359,13 @@
 		};
 
 		cpu4: cpu@4 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x4>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			clocks = <&cpg 0 30>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -355,13 +376,13 @@
 		};
 
 		cpu5: cpu@5 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x5>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			clocks = <&cpg 0 30>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -372,13 +393,13 @@
 		};
 
 		cpu6: cpu@6 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x6>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			clocks = <&cpg 0 30>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -389,13 +410,13 @@
 		};
 
 		cpu7: cpu@7 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x7>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			clocks = <&cpg 0 30>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -406,12 +427,13 @@
 		};
 
 		cpu8: cpu@8 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x8>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -422,12 +444,13 @@
 		};
 
 		cpu9: cpu@9 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x9>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -438,12 +461,13 @@
 		};
 
 		cpu10: cpu@10 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0xa>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -454,12 +478,13 @@
 		};
 
 		cpu11: cpu@11 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0xb>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -470,12 +495,13 @@
 		};
 
 		cpu12: cpu@12 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0xc>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -486,12 +512,13 @@
 		};
 
 		cpu13: cpu@13 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0xd>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -502,12 +529,13 @@
 		};
 
 		cpu14: cpu@14 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0xe>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -518,12 +546,13 @@
 		};
 
 		cpu15: cpu@15 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0xf>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -534,12 +563,13 @@
 		};
 
 		cpu16: cpu@16 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x100>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -550,12 +580,13 @@
 		};
 
 		cpu17: cpu@17 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x101>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -566,12 +597,13 @@
 		};
 
 		cpu18: cpu@18 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x102>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -582,12 +614,13 @@
 		};
 
 		cpu19: cpu@19 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x103>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -598,12 +631,13 @@
 		};
 
 		cpu20: cpu@20 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x104>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -614,12 +648,13 @@
 		};
 
 		cpu21: cpu@21 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x105>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -630,12 +665,13 @@
 		};
 
 		cpu22: cpu@22 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x106>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -646,12 +682,13 @@
 		};
 
 		cpu23: cpu@23 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x107>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -662,12 +699,13 @@
 		};
 
 		cpu24: cpu@24 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x108>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -678,12 +716,13 @@
 		};
 
 		cpu25: cpu@25 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x109>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -694,12 +733,13 @@
 		};
 
 		cpu26: cpu@26 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x10a>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -710,12 +750,13 @@
 		};
 
 		cpu27: cpu@27 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x10b>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -726,12 +767,13 @@
 		};
 
 		cpu28: cpu@28 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x10c>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -742,12 +784,13 @@
 		};
 
 		cpu29: cpu@29 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x10d>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -758,12 +801,13 @@
 		};
 
 		cpu30: cpu@30 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x10e>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -774,12 +818,13 @@
 		};
 
 		cpu31: cpu@31 {
-			compatible = "arm,cortex-a57";
+			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x10f>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
-			operating-points-v2 = <&cluster1_opp>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
 			i-cache-size = <0x8000>;
 			i-cache-line-size = <64>;
 			i-cache-sets = <256>;
@@ -945,21 +990,6 @@
 				#msi-cells = <1>;
 				reg = <0x0 0x38040000 0x0 0x20000>;
 			};
-		};
-
-		cpg: clock-controller@c64f0000 {
-			compatible = "renesas,r8a779f0-cpg-mssr";
-			reg = <0 0xc64f0000 0 0x4000>;
-			clocks = <&extal_clk>, <&extalr_clk>;
-			clock-names = "extal", "extalr";
-			#clock-cells = <2>;
-			#power-domain-cells = <0>;
-			#reset-cells = <1>;
-		};
-
-		rst: reset-controller@c6490000 {
-			compatible = "renesas,r8a779f0-rst";
-			reg = <0 0xc6490000 0 0x4000>;
 		};
 
 		scif0: serial@c0700000 {
@@ -2335,7 +2365,7 @@
 					};
 				};
 
-				port@17 {
+				port@11 {
 					reg = <17>;
 					isp0vin020: endpoint {
 						remote-endpoint = <&vin020isp0>;
@@ -2390,7 +2420,7 @@
 					};
 				};
 
-				port@17 {
+				port@11 {
 					reg = <17>;
 					isp1vin050: endpoint {
 						remote-endpoint = <&vin050isp1>;
@@ -2445,7 +2475,7 @@
 					};
 				};
 
-				port@17 {
+				port@11 {
 					reg = <17>;
 					isp2vin080: endpoint {
 						remote-endpoint = <&vin080isp2>;
@@ -2500,7 +2530,7 @@
 					};
 				};
 
-				port@17 {
+				port@11 {
 					reg = <17>;
 					isp3vin110: endpoint {
 						remote-endpoint = <&vin110isp3>;
@@ -3848,7 +3878,7 @@
 		reg = <0 0xcb000000 0 0x200000>;
 		interrupts = <GIC_SPI 482 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&dummy_clk>;
-		clock-names = <&dummy_clk>;
+		clock-names = "dummy_clk";
 		assigned-clocks = <&dummy_clk>;
 		assigned-clock-rates = <1000000000>;
 		#status = "disabled";
