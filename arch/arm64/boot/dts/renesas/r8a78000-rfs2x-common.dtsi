@@ -485,7 +485,7 @@
 &msiof0 {
 	status = "okay";
 
-	slavedev {
+	slavedev@0 {
 		compatible = "maker,slavedev";
 		reg = <0>;
 		spi-max-frequency = <16666666>;
@@ -498,6 +498,7 @@
 	status = "okay";
 
 	spi-slave;
+	#address-cells = <0>;
 	slave {
 		compatible = "maker,slavedev";
 		spi-cpha;
