@@ -15,99 +15,99 @@
 };
 
 &vin000 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &vin001 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &vin010 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &vin020 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &vin030 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &vin031 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &vin040 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &vin050 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &vin060 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &vin061 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &vin070 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &vin080 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &vin090 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &vin091 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &vin100 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &vin110 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &csi40 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &csi41 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &csi42 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &csi43 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &isp0 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &isp1 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &isp2 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &isp3 {
-	status = "disabled";
+	status = "enabled";
 };
 
 &vspi0 {
