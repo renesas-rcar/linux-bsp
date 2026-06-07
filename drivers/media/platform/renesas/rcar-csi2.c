@@ -3017,6 +3017,10 @@ static int rcsi2_start(struct rcar_csi2 *priv, struct v4l2_subdev_state *state)
 	if (ret < 0)
 		return ret;
 
+#ifndef CONFIG_VIDEO_SNPS_CSI2_CAMERA
+	v4l2_subdev_call(priv->remote, video, enable_link, 0);
+#endif
+
 	ret = priv->info->start_receiver(priv, state);
 	if (ret) {
 		rcsi2_enter_standby(priv);
@@ -3032,6 +3036,12 @@ static int rcsi2_start(struct rcar_csi2 *priv, struct v4l2_subdev_state *state)
 #else
 	ret = v4l2_subdev_enable_streams(priv->remote, priv->remote_pad,
 					 BIT_ULL(0));
+	if (ret) {
+		rcsi2_enter_standby(priv);
+		return ret;
+	}
+
+	ret = v4l2_subdev_call(priv->remote, video, enable_link, 1);
 	if (ret) {
 		rcsi2_enter_standby(priv);
 		return ret;
