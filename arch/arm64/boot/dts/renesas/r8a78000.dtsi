@@ -2207,6 +2207,7 @@
 						bus-type = <0>; //DPHY
 						clock-lanes = <0>;
 						data-lanes = <1 2 3 4>;
+						line-orders = <0 1 0 1>;
 						remote-endpoint = <&csi2cam_out0>;
 					};
 				};
@@ -2240,6 +2241,7 @@
 						bus-type = <0>; //DPHY
 						clock-lanes = <0>;
 						data-lanes = <1 2 3 4>;
+						line-orders = <0 1 0 1>;
 						remote-endpoint = <&csi2cam_out1>;
 					};
 				};
@@ -2273,6 +2275,7 @@
 						bus-type = <0>; //DPHY
 						clock-lanes = <0>;
 						data-lanes = <1 2 3 4>;
+						line-orders = <0 1 0 1>;
 						remote-endpoint = <&csi2cam_out2>;
 					};
 				};
@@ -2306,6 +2309,7 @@
 						bus-type = <0>; //DPHY
 						clock-lanes = <0>;
 						data-lanes = <1 2 3 4>;
+						line-orders = <0 1 0 1>;
 						remote-endpoint = <&csi2cam_out3>;
 					};
 				};
@@ -2320,7 +2324,7 @@
 		};
 
 		isp0: isp@c4700000 {
-			compatible = "renesas,r8a78000-isp";
+			compatible = "renesas,rcar-gen5-isp";
 			reg = <0 0xc4700000 0 0x10000>;
 			interrupts = <GIC_SPI 506 IRQ_TYPE_LEVEL_LOW>;
 			clocks = <&dummy_clk>;
@@ -2375,7 +2379,7 @@
 		};
 
 		isp1: isp@c4720000 {
-			compatible = "renesas,r8a78000-isp";
+			compatible = "renesas,rcar-gen5-isp";
 			reg = <0 0xc4720000 0 0x10000>;
 			interrupts = <GIC_SPI 507 IRQ_TYPE_LEVEL_LOW>;
 			clocks = <&dummy_clk>;
@@ -2430,7 +2434,7 @@
 		};
 
 		isp2: isp@c4740000 {
-			compatible = "renesas,r8a78000-isp";
+			compatible = "renesas,rcar-gen5-isp";
 			reg = <0 0xc4740000 0 0x10000>;
 			interrupts = <GIC_SPI 508 IRQ_TYPE_LEVEL_LOW>;
 			clocks = <&dummy_clk>;
@@ -2485,7 +2489,7 @@
 		};
 
 		isp3: isp@c4760000 {
-			compatible = "renesas,r8a78000-isp";
+			compatible = "renesas,rcar-gen5-isp";
 			reg = <0 0xc4760000 0 0x10000>;
 			interrupts = <GIC_SPI 509 IRQ_TYPE_LEVEL_LOW>;
 			clocks = <&dummy_clk>;
@@ -2700,7 +2704,7 @@
 		};
 
 		vin000: video@c4900000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4900000 0 0x1000>;
 			interrupts = <GIC_SPI 510 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&dummy_clk>;
@@ -2728,7 +2732,7 @@
 		};
 
 		vin001: video@c4901000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4901000 0 0x1000>;
 			interrupts = <GIC_SPI 511 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&dummy_clk>;
@@ -2756,7 +2760,7 @@
 		};
 
 		vin010: video@c4908000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4908000 0 0x1000>;
 			interrupts = <GIC_SPI 518 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&dummy_clk>;
@@ -2784,7 +2788,7 @@
 		};
 
 		vin020: video@c4910000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4910000 0 0x1000>;
 			interrupts = <GIC_SPI 526 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&dummy_clk>;
@@ -2812,7 +2816,7 @@
 		};
 
 		vin030: video@c4918000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4918000 0 0x1000>;
 			interrupts = <GIC_SPI 534 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&dummy_clk>;
@@ -2840,7 +2844,7 @@
 		};
 
 		vin031: video@c4919000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4919000 0 0x1000>;
 			interrupts = <GIC_SPI 535 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&dummy_clk>;
@@ -2868,7 +2872,7 @@
 		};
 
 		vin040: video@c4920000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4920000 0 0x1000>;
 			interrupts = <GIC_SPI 542 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&dummy_clk>;
@@ -2896,7 +2900,7 @@
 		};
 
 		vin050: video@c4928000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4928000 0 0x1000>;
 			interrupts = <GIC_SPI 550 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&dummy_clk>;
@@ -2924,7 +2928,7 @@
 		};
 
 		vin060: video@c4930000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4930000 0 0x1000>;
 			interrupts = <GIC_SPI 558 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&dummy_clk>;
@@ -2952,7 +2956,7 @@
 		};
 
 		vin061: video@c4931000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4931000 0 0x1000>;
 			interrupts = <GIC_SPI 559 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&dummy_clk>;
@@ -2980,7 +2984,7 @@
 		};
 
 		vin070: video@c4938000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4938000 0 0x1000>;
 			interrupts = <GIC_SPI 566 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&dummy_clk>;
@@ -3008,7 +3012,7 @@
 		};
 
 		vin080: video@c4940000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4940000 0 0x1000>;
 			interrupts = <GIC_SPI 574 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&dummy_clk>;
@@ -3036,7 +3040,7 @@
 		};
 
 		vin090: video@c4948000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4948000 0 0x1000>;
 			interrupts = <GIC_SPI 582 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&dummy_clk>;
@@ -3064,7 +3068,7 @@
 		};
 
 		vin091: video@c4949000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4949000 0 0x1000>;
 			interrupts = <GIC_SPI 583 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&dummy_clk>;
@@ -3092,7 +3096,7 @@
 		};
 
 		vin100: video@c4950000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4950000 0 0x1000>;
 			interrupts = <GIC_SPI 590 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&dummy_clk>;
@@ -3120,7 +3124,7 @@
 		};
 
 		vin110: video@c4958000 {
-			compatible = "renesas,vin-r8a78000", "generic-uio";
+			compatible = "renesas,rcar-gen5-vin", "generic-uio";
 			reg = <0 0xc4958000 0 0x1000>;
 			interrupts = <GIC_SPI 598 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&dummy_clk>;
