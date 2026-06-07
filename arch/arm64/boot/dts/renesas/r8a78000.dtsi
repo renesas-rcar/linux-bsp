@@ -3881,7 +3881,7 @@
 		clock-names = "dummy_clk";
 		assigned-clocks = <&dummy_clk>;
 		assigned-clock-rates = <1000000000>;
-		#status = "disabled";
+		status = "disabled";
 	};
 
 		sys_dmac00: dma-controller@c0940000 {

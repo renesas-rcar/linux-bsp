@@ -188,3 +188,5 @@ dtb-$(CONFIG_ARCH_RCAR_GEN3) += salvator-panel-aa104xd12.dtbo
 
 dtb-$(CONFIG_ARCH_R8A78000) += r8a78000-rfs2x.dtb
 dtb-$(CONFIG_ARCH_R8A78000) += r8a78000-rfs2x-uio.dtb
+dtb-$(CONFIG_ARCH_R8A78000) += r8a78000-rfs2x-gsx.dtb
+dtb-$(CONFIG_ARCH_R8A78000) += r8a78000-rfs2x-uio-gsx.dtb

@@ -810,11 +810,6 @@
 	};
 };
 
-&gsx {
-	status = "okay";
-	operating-points-v2 = <&gsx_opp0>;
-};
-
 &i2c0 {
 	clock-frequency = <400000>;
 
