@@ -3011,7 +3011,6 @@ static int __maybe_unused ravb_suspend(struct device *dev)
 		return ret;
 
 	if (priv->info->ccc_gac)
-	if (priv->chip_id != RCAR_GEN2)
 		ravb_ptp_stop(ndev);
 
 	return ret;
@@ -3022,7 +3021,6 @@ static int __maybe_unused ravb_resume(struct device *dev)
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct ravb_private *priv = netdev_priv(ndev);
 	const struct ravb_hw_info *info = priv->info;
-	struct platform_device *pdev = priv->pdev;
 	int ret = 0;
 
 	/* If WoL is enabled set reset mode to rearm the WoL logic */
@@ -3060,8 +3058,6 @@ static int __maybe_unused ravb_resume(struct device *dev)
 
 	if (priv->info->ccc_gac)
 		ravb_ptp_init(ndev, priv->pdev);
-	if (priv->chip_id != RCAR_GEN2)
-		ravb_ptp_init(ndev, pdev);
 
 	if (netif_running(ndev)) {
 		rtnl_lock();

@@ -1179,11 +1179,6 @@ struct ravb_hw_info {
 	unsigned half_duplex:1;		/* E-MAC supports half duplex mode */
 };
 
-enum ravb_chip_id {
-	RCAR_GEN2,
-	RCAR_GEN3,
-};
-
 struct ravb_private {
 	struct net_device *ndev;
 	struct platform_device *pdev;
@@ -1230,7 +1225,6 @@ struct ravb_private {
 	int msg_enable;
 	int speed;
 	int emac_irq;
-	enum ravb_chip_id chip_id;
 	int erra_irq;
 	int mgmta_irq;
 	int rx_irqs[NUM_RX_QUEUE];
