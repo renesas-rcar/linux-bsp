@@ -633,7 +633,7 @@ static int renesas_sdhi_internal_dmac_probe(struct platform_device *pdev)
 	return renesas_sdhi_probe(pdev, &renesas_sdhi_internal_dmac_dma_ops,
 				  of_data_quirks->of_data, quirks);
 #else
-	return renesas_sdhi_probe(pdev, NULL, NULL, NULL);
+	return renesas_sdhi_probe(pdev, NULL, of_data_quirks->of_data, quirks);
 #endif
 }
 
