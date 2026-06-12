@@ -390,21 +390,21 @@ static bool rcar_gen3_thermal_read_fuses(struct rcar_gen3_thermal_priv *priv)
 	 * PTAT is shared between all TSCs but only fused for the first
 	 * TSC while THCODEs are fused for each TSC.
 	 */
-	priv->ptat[0] = rcar_gen3_thermal_read(priv->tscs[0], REG_GEN3_PTAT1) &
+	priv->ptat[0] = rcar_gen3_thermal_read(priv->tscs[0], REG_PTAT1(priv)) &
 		FUSE_MASK;
-	priv->ptat[1] = rcar_gen3_thermal_read(priv->tscs[0], REG_GEN3_PTAT2) &
+	priv->ptat[1] = rcar_gen3_thermal_read(priv->tscs[0], REG_PTAT2(priv)) &
 		FUSE_MASK;
-	priv->ptat[2] = rcar_gen3_thermal_read(priv->tscs[0], REG_GEN3_PTAT3) &
+	priv->ptat[2] = rcar_gen3_thermal_read(priv->tscs[0], REG_PTAT3(priv)) &
 		FUSE_MASK;
 
 	for (i = 0; i < priv->num_tscs; i++) {
 		struct rcar_gen3_thermal_tsc *tsc = priv->tscs[i];
 
-		tsc->thcode[0] = rcar_gen3_thermal_read(tsc, REG_GEN3_THCODE1) &
+		tsc->thcode[0] = rcar_gen3_thermal_read(tsc, REG_THCODE1(priv)) &
 			FUSE_MASK;
-		tsc->thcode[1] = rcar_gen3_thermal_read(tsc, REG_GEN3_THCODE2) &
+		tsc->thcode[1] = rcar_gen3_thermal_read(tsc, REG_THCODE2(priv)) &
 			FUSE_MASK;
-		tsc->thcode[2] = rcar_gen3_thermal_read(tsc, REG_GEN3_THCODE3) &
+		tsc->thcode[2] = rcar_gen3_thermal_read(tsc, REG_THCODE3(priv)) &
 			FUSE_MASK;
 	}
 
@@ -500,11 +500,7 @@ static const struct of_device_id rcar_gen3_thermal_dt_ids[] = {
 	},
 	{
 		.compatible = "renesas,r8a779f0-thermal",
-		.data = &data_gen3,
-	},
-	{
-		.compatible = "renesas,r8a779f0-thermal",
-		.data = &data_gen3,
+		.data = &data_gen4,
 	},
 	{},
 };
