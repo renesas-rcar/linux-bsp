@@ -1083,7 +1083,8 @@
 		};
 
 		rt_dmac0: dma-controller@ffd60000 {
-			compatible = "renesas,dmac-r8a779f0";
+			compatible = "renesas,dmac-r8a779f0",
+				     "renesas,rcar-gen4-dmac";
 			reg = <0 0xffd60000 0 0x1000>,
 			      <0 0xffc10000 0 0x10000>;
 			interrupts = <GIC_SPI 29 IRQ_TYPE_LEVEL_HIGH>,
@@ -1118,7 +1119,8 @@
 		};
 
 		rt_dmac1: dma-controller@ffd61000 {
-			compatible = "renesas,dmac-r8a779f0";
+			compatible = "renesas,dmac-r8a779f0",
+				     "renesas,rcar-gen4-dmac";
 			reg = <0 0xffd61000 0 0x1000>,
 			      <0 0xffc20000 0 0x10000>;
 			interrupts = <GIC_SPI 47 IRQ_TYPE_LEVEL_HIGH>,
@@ -1153,7 +1155,8 @@
 		};
 
 		rt_dmac2: dma-controller@ffd62000 {
-			compatible = "renesas,dmac-r8a779f0";
+			compatible = "renesas,dmac-r8a779f0",
+				     "renesas,rcar-gen4-dmac";
 			reg = <0 0xffd62000 0 0x1000>,
 			      <0 0xffd70000 0 0x10000>;
 			interrupts = <GIC_SPI 65 IRQ_TYPE_LEVEL_HIGH>,
@@ -1188,7 +1191,8 @@
 		};
 
 		rt_dmac3: dma-controller@ffd63000 {
-			compatible = "renesas,dmac-r8a779f0";
+			compatible = "renesas,dmac-r8a779f0",
+				     "renesas,rcar-gen4-dmac";
 			reg = <0 0xffd63000 0 0x1000>,
 			      <0 0xffd80000 0 0x10000>;
 			interrupts = <GIC_SPI 83 IRQ_TYPE_LEVEL_HIGH>,
