@@ -274,12 +274,12 @@
 		status = "disabled";
 
 		cpu_scp_lpri0: scp-shmem@5800 {
-			compatible = "arm,rcar-scp-shmem";
+			compatible = "arm,scmi-shmem";
 			reg = <0x0000 0x1000>;
 		};
 
 		cpu_scp_hpri0: scp-shmem@5c00 {
-			compatible = "arm,rcar-scp-shmem";
+			compatible = "arm,scmi-shmem";
 			reg = <0x4000 0x1000>;
 		};
 	};
