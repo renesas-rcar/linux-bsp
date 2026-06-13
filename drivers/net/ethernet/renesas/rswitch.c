@@ -732,6 +732,8 @@ enum rswitch_etha_mode {
 #define MPIC_LSC_100M		1
 #define MPIC_LSC_1G		2
 #define MPIC_LSC_2_5G		3
+#define MPIC_LSC_5G			4
+#define MPIC_LSC_10G		5
 #define MPIC_PSMCS_MASK		GENMASK(22, 16)
 #define MPIC_PSMHT_MASK		GENMASK(26, 24)
 
@@ -1500,6 +1502,9 @@ static void rswitch_etha_pis_lsc_setting(struct rswitch_etha *etha)
 	case 2500:
 		lsc = MPIC_LSC_2_5G;
 		break;
+	case 5000:
+		lsc = MPIC_LSC_5G;
+		break;
 	default:
 		lsc = FIELD_GET(MPIC_LSC_MASK, rswitch_etha_read(etha, MPIC));
 		break;
@@ -2041,9 +2046,15 @@ static void rswitch_etha_start(struct net_device *ndev)
 	int err;
 
 	if (etha->speed != ndev->phydev->speed) {
-		if (etha->mode != EAMC_OPC_DISABLE) {
-			netdev_warn(ndev, "start: unexpected etha mode\n");
-			return;
+		/* Switch ETHA to CONFIG to update PIS/LSC */
+		if (etha->mode == EAMC_OPC_OPERATION) {
+			err = rswitch_etha_change_mode(etha, EAMC_OPC_DISABLE);
+			if (err) {
+				netdev_warn(ndev,
+					    "start: OPERATION->DISABLE fail %d\n",
+					    err);
+				return;
+			}
 		}
 
 		err = rswitch_etha_change_mode(etha, EAMC_OPC_CONFIG);
@@ -2062,31 +2073,9 @@ static void rswitch_etha_start(struct net_device *ndev)
 		}
 	}
 
-	if (etha->mode == EAMC_OPC_DISABLE) {
-		err = rswitch_etha_change_mode(etha, EAMC_OPC_OPERATION);
-		if (err) {
-			netdev_warn(ndev, "failed to change etha mode to OPERATION\n");
-			return;
-		}
-	}
-
-	if (etha->mode != EAMC_OPC_OPERATION) {
-		netdev_warn(ndev, "unexpected etha mode\n");
-		return;
-	}
-
-	if (!rdev->priv->serdes_common_init) {
-		err = rswitch_serdes_common_init(etha);
-		if (err) {
-			netdev_warn(ndev, "failed to initialize serdes\n");
-			return;
-		}
-		rdev->priv->serdes_common_init = true;
-	}
-
-	err = rswitch_serdes_chan_init(etha, false);
-	if (err < 0) {
-		netdev_warn(ndev, "failed to configure serdes\n");
+	err = rswitch_etha_change_mode(etha, EAMC_OPC_OPERATION);
+	if (err) {
+		netdev_warn(ndev, "failed to change etha mode to OPERATION\n");
 		return;
 	}
 
@@ -2159,16 +2148,27 @@ static int rswitch_phy_init(struct rswitch_device *rdev)
 	struct rswitch_etha *etha = rdev->etha;
 	struct phy_device *phydev;
 
-	phydev = of_phy_connect(rdev->ndev, rdev->etha->phy_node,
+	phydev = of_phy_connect(rdev->ndev, etha->phy_node,
 				rswitch_adjust_link, 0,
-				rdev->etha->phy_interface);
+				etha->phy_interface);
 	if (!phydev)
 		return -ENOENT;
 
-	if (etha->phy_interface == PHY_INTERFACE_MODE_SGMII)
+	switch (etha->phy_interface) {
+	case PHY_INTERFACE_MODE_SGMII:
 		phy_set_max_speed(phydev, 1000);
-	else
+		break;
+	case PHY_INTERFACE_MODE_USXGMII:
 		phy_set_max_speed(phydev, 2500);
+		break;
+	case PHY_INTERFACE_MODE_5GBASER:
+		phy_set_max_speed(phydev, 5000);
+		break;
+	default:
+		phy_set_max_speed(phydev, 2500);
+		break;
+	}
+
 	phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_10baseT_Half_BIT);
 	phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_10baseT_Full_BIT);
 	phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_100baseT_Half_BIT);
@@ -2187,12 +2187,64 @@ static void rswitch_phy_deinit(struct rswitch_device *rdev)
 static int rswitch_open(struct net_device *ndev)
 {
 	struct rswitch_device *rdev = netdev_priv(ndev);
+	struct rswitch_etha *etha = rdev->etha;
 	unsigned long flags;
+	int err;
 
 	napi_enable(&rdev->napi);
 
-	if (!parallel_mode && rdev->etha)
+	if (!parallel_mode && etha) {
+		/* For 5GBASE-R / USXGMII, the PHY system side cannot finish
+		 * link bring-up unless MAC SerDes/PCS is brought up first.
+		 * So initialize ETHA + SerDes BEFORE phy_start().
+		 */
+
+		/* Move ETHA into CONFIG, set PIS/LSC for the configured speed,
+		 * then back to DISABLE -> OPERATION.
+		 */
+		if (etha->mode != EAMC_OPC_DISABLE) {
+			err = rswitch_etha_change_mode(etha, EAMC_OPC_DISABLE);
+			if (err)
+				netdev_warn(ndev,
+					    "open: ETHA->DISABLE fail %d\n",
+					    err);
+		}
+
+		err = rswitch_etha_change_mode(etha, EAMC_OPC_CONFIG);
+		if (!err) {
+			rswitch_etha_pis_lsc_setting(etha);
+			err = rswitch_etha_change_mode(etha, EAMC_OPC_DISABLE);
+		}
+		if (err)
+			netdev_warn(ndev,
+				    "open: ETHA pre-config fail %d\n", err);
+
+		err = rswitch_etha_change_mode(etha, EAMC_OPC_OPERATION);
+		if (err)
+			netdev_warn(ndev,
+				    "open: ETHA->OPERATION fail %d\n", err);
+
+		/* Bring up SerDes common (once) and per-channel BEFORE PHY */
+		if (!rdev->priv->serdes_common_init) {
+			err = rswitch_serdes_common_init(etha);
+			if (err)
+				netdev_warn(ndev,
+					    "open: serdes_common_init fail %d\n",
+					    err);
+			else
+				rdev->priv->serdes_common_init = true;
+		}
+
+		err = rswitch_serdes_chan_init(etha, false);
+		if (err)
+			netdev_warn(ndev,
+				    "open: serdes_chan_init fail %d\n", err);
+
+		etha->link = 1;
+
+		/* Now start the PHY state machine */
 		phy_start(ndev->phydev);
+	}
 
 	netif_start_queue(ndev);
 
@@ -2631,12 +2683,29 @@ static void rswitch_etha_init(struct rswitch_private *priv, int index)
 		etha->phy_interface = PHY_INTERFACE_MODE_SGMII;
 	}
 
+	/* Set default speed BEFORE phy_set_max_speed so PHY can advertise. */
+	switch (etha->phy_interface) {
+	case PHY_INTERFACE_MODE_SGMII:
+		etha->speed = 1000;
+		break;
+	case PHY_INTERFACE_MODE_USXGMII:
+		etha->speed = 2500;
+		break;
+	case PHY_INTERFACE_MODE_5GBASER:
+		etha->speed = 5000;
+		break;
+	default:
+		etha->speed = 1000;
+		break;
+	}
+
 	if (etha->phy_interface == PHY_INTERFACE_MODE_SGMII &&
 	    soc_device_match(rswitch_soc_needs_etha_stop_wa))
 		etha->needs_stop_workaround = true;
 
-	if (etha->phy_interface == PHY_INTERFACE_MODE_USXGMII &&
-	    soc_device_match(rswitch_soc_needs_usgmii_serdes_check)) {
+	if ((etha->phy_interface == PHY_INTERFACE_MODE_USXGMII ||
+	     etha->phy_interface == PHY_INTERFACE_MODE_5GBASER) &&
+	     soc_device_match(rswitch_soc_needs_usgmii_serdes_check)) {
 		etha->needs_usgmii_serdes_check = true;
 		INIT_DELAYED_WORK(&etha->usgmii_serdes_check_work,
 				rswitch_usgmii_serdes_check);
