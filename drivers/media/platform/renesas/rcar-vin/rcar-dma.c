@@ -1349,6 +1349,18 @@ static void rvin_buffer_queue(struct vb2_buffer *vb)
 	struct rvin_dev *vin = vb2_get_drv_priv(vb->vb2_queue);
 	unsigned long flags;
 
+	if (vin->suspend) {
+		if (!wait_event_timeout(vin->setup_wait,
+					!vin->suspend,
+					msecs_to_jiffies(SETUP_WAIT_TIME))) {
+			dev_warn(vin->dev, "set up timeout\n");
+			return_unused_buffers(vin, VB2_BUF_STATE_ERROR);
+		}
+
+		rvin_capture_start(vin);
+		vin->suspend = false;
+	}
+
 	spin_lock_irqsave(&vin->qlock, flags);
 
 	list_add_tail(to_buf_list(vbuf), &vin->buf_list);
@@ -1680,6 +1692,121 @@ static void rvin_stop_streaming_vq(struct vb2_queue *vq)
 	return_unused_buffers(vin, VB2_BUF_STATE_ERROR);
 }
 
+void rvin_resume_start_streaming(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct rvin_dev *vin =
+			container_of(dwork, struct rvin_dev, rvin_resume);
+	unsigned long flags;
+	int ret;
+
+	ret = rvin_set_stream(vin, 1);
+	if (ret) {
+		dev_warn(vin->dev, "Warning at streaming when resuming.\n");
+		return_unused_buffers(vin, VB2_BUF_STATE_ERROR);
+	}
+
+	spin_lock_irqsave(&vin->qlock, flags);
+	vin->sequence = 0;
+	spin_unlock_irqrestore(&vin->qlock, flags);
+
+	vin->suspend = false;
+	wake_up(&vin->setup_wait);
+}
+
+void rvin_suspend_stop_streaming(struct rvin_dev *vin)
+{
+	unsigned int i, retries;
+	unsigned long flags;
+	bool buffersFreed;
+	u32 vnmc;
+
+	spin_lock_irqsave(&vin->qlock, flags);
+
+	/* Wait until only scratch buffer is used, max 3 interrupts. */
+	retries = 0;
+	while (retries++ < RVIN_RETRIES) {
+		buffersFreed = true;
+		for (i = 0; i < HW_BUFFER_NUM; i++)
+			if (vin->buf_hw[i].buffer)
+				buffersFreed = false;
+
+		if (buffersFreed)
+			break;
+
+		spin_unlock_irqrestore(&vin->qlock, flags);
+		msleep(RVIN_TIMEOUT_MS);
+		spin_lock_irqsave(&vin->qlock, flags);
+	}
+
+	/* Wait for streaming to stop */
+	retries = 0;
+	while (retries++ < RVIN_RETRIES) {
+		rvin_capture_stop(vin);
+
+		/* Check if HW is stopped */
+		if (!rvin_capture_active(vin))
+			break;
+
+		spin_unlock_irqrestore(&vin->qlock, flags);
+		msleep(RVIN_TIMEOUT_MS);
+		spin_lock_irqsave(&vin->qlock, flags);
+	}
+
+	/* Clear UDS usage after we have stopped */
+	if (vin->info->model == RCAR_GEN3) {
+		vnmc = rvin_read(vin, VNMC_REG) & ~(VNMC_SCLE | VNMC_VUP);
+		rvin_write(vin, vnmc, VNMC_REG);
+	}
+
+	spin_unlock_irqrestore(&vin->qlock, flags);
+
+	/* Return all unused buffers. */
+	return_unused_buffers(vin, VB2_BUF_STATE_ERROR);
+
+	/* If HW didn't drain to scratch, free the leftover HW buffers. */
+	if (!buffersFreed) {
+		for (i = 0; i < HW_BUFFER_NUM; i++) {
+			if (vin->buf_hw[i].buffer)
+				vb2_buffer_done(&vin->buf_hw[i].buffer->vb2_buf,
+						VB2_BUF_STATE_ERROR);
+			vin->buf_hw[i].buffer = NULL;
+		}
+	}
+
+	rvin_set_stream(vin, 0);
+
+	 /* disable UDS */
+	if (vin->info->scalers)
+		rvin_disable_uds(vin);
+
+	/* disable interrupts */
+	rvin_disable_interrupts(vin);
+
+	if (vin->info->use_mc) {
+		u32 timeout = MSTP_WAIT_TIME;
+
+		pm_runtime_put_sync(vin->dev);
+		pm_runtime_force_suspend(vin->dev);
+
+		while (1) {
+			bool enable;
+
+			enable = __clk_is_enabled(vin->clk);
+			if (!enable)
+				break;
+			if (!timeout) {
+				dev_warn(vin->dev, "MSTP status timeout\n");
+				break;
+			}
+			usleep_range(10, 15);
+			timeout--;
+		}
+	}
+
+	vin->suspend = true;
+}
+
 static const struct vb2_ops rvin_qops = {
 	.queue_setup		= rvin_queue_setup,
 	.buf_prepare		= rvin_buffer_prepare,
@@ -1713,6 +1840,8 @@ int rvin_dma_register(struct rvin_dev *vin, int irq)
 	spin_lock_init(&vin->qlock);
 
 	vin->state = STOPPED;
+	vin->suspend = false;
+	init_waitqueue_head(&vin->setup_wait);
 
 	for (i = 0; i < HW_BUFFER_NUM; i++)
 		vin->buf_hw[i].buffer = NULL;
@@ -1791,6 +1920,8 @@ int rvin_set_channel_routing(struct rvin_dev *vin, u8 chsel)
 		if (ifmd == (VNCSI_IFMD_DES0 | VNCSI_IFMD_DES1))
 			break;
 	}
+
+	vin->chsel = chsel;
 
 	if (ifmd) {
 		ifmd |= VNCSI_IFMD_CSI_CHSEL(chsel);

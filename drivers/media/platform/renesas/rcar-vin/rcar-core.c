@@ -1087,7 +1087,7 @@ static int __maybe_unused rvin_suspend(struct device *dev)
 	if (vin->state != RUNNING)
 		return 0;
 
-	rvin_stop_streaming(vin);
+	rvin_suspend_stop_streaming(vin);
 
 	vin->state = SUSPENDED;
 
@@ -1116,12 +1116,18 @@ static int __maybe_unused rvin_resume(struct device *dev)
 		if (WARN_ON(!master))
 			return -ENODEV;
 
+		pm_runtime_force_resume(vin->dev);
+		pm_runtime_get_sync(vin->dev);
+
 		ret = rvin_set_channel_routing(master, master->chsel);
 		if (ret)
 			return ret;
 	}
 
-	return rvin_start_streaming(vin);
+	queue_delayed_work_on(0, vin->work_queue, &vin->rvin_resume,
+			      msecs_to_jiffies(CONNECTION_TIME));
+
+	return 0;
 }
 
 /* -----------------------------------------------------------------------------
@@ -1450,6 +1456,13 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	pm_suspend_ignore_children(&pdev->dev, true);
 	pm_runtime_enable(&pdev->dev);
 
+	vin->work_queue = create_singlethread_workqueue(dev_name(vin->dev));
+	if (!vin->work_queue) {
+		ret = -ENOMEM;
+		goto error;
+	}
+	INIT_DELAYED_WORK(&vin->rvin_resume, rvin_resume_start_streaming);
+
 	vin->rstc = devm_reset_control_get(&pdev->dev, NULL);
 	if (IS_ERR(vin->rstc)) {
 		dev_err(&pdev->dev, "failed to get cpg reset %s\n",
@@ -1470,6 +1483,9 @@ static int rcar_vin_probe(struct platform_device *pdev)
 
 error_destroy_workqueue:
 	destroy_workqueue(vin->work_queue);
+
+error:
+	pm_runtime_disable(&pdev->dev);
 
 	return ret;
 }
