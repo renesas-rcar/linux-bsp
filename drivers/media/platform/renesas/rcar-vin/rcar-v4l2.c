@@ -996,13 +996,9 @@ static int rvin_open(struct file *file)
 	struct rvin_dev *vin = video_drvdata(file);
 	int ret;
 
-	ret = pm_runtime_resume_and_get(vin->dev);
-	if (ret < 0)
-		return ret;
-
 	ret = mutex_lock_interruptible(&vin->lock);
 	if (ret)
-		goto err_pm;
+		return ret;
 
 	file->private_data = vin;
 
@@ -1039,7 +1035,6 @@ err_open:
 	v4l2_fh_release(file);
 err_unlock:
 	mutex_unlock(&vin->lock);
-err_pm:
 
 	return ret;
 }
