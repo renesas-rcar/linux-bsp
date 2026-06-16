@@ -176,14 +176,14 @@
 
 	tsn0_pins: tsn0 {
 		mux {
-			groups = "tsn0_link", "tsn0_mdio";
+			groups = "tsn0_link_b", "tsn0_mdio_b";
 			function = "tsn0";
 			drive-strength = <18>;
 			power-source = <3300>;
 		};
 
 		pins_mdio {
-			groups = "tsn0_mdio";
+			groups = "tsn0_mdio_b";
 			drive-strength = <18>;
 			power-source = <3300>;
 		};
@@ -191,14 +191,14 @@
 
 	tsn1_pins: tsn1 {
 		mux {
-			groups = "tsn1_link", "tsn1_mdio";
+			groups = "tsn1_link_b", "tsn1_mdio_b";
 			function = "tsn1";
 			drive-strength = <18>;
 			power-source = <3300>;
 		};
 
 		pins_mdio {
-			groups = "tsn1_mdio";
+			groups = "tsn1_mdio_b";
 			drive-strength = <18>;
 			power-source = <3300>;
 		};
