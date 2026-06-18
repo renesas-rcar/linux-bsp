@@ -192,3 +192,4 @@ dtb-$(CONFIG_ARCH_R8A78000) += r8a78000-ironhide-uio-ca.dtb
 dtb-$(CONFIG_ARCH_R8A78000) += r8a78000-ironhide-coresight.dtb
 dtb-$(CONFIG_ARCH_R8A78000) += r8j78070-perceptor.dtb
 dtb-$(CONFIG_ARCH_R8A78000) += r8j78070-perceptor-uio.dtb
+dtb-$(CONFIG_ARCH_R8A78000) += r8j78070-perceptor-uio-ca.dtb
