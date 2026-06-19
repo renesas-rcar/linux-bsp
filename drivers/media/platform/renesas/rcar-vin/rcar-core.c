@@ -1198,6 +1198,10 @@ static int __maybe_unused rvin_suspend(struct device *dev)
 {
 	struct rvin_dev *vin = dev_get_drvdata(dev);
 
+	clk_disable_unprepare(vin->clk);
+
+	pm_runtime_put_sync(vin->dev);
+
 	if (!vin->running)
 		return 0;
 
@@ -1209,6 +1213,16 @@ static int __maybe_unused rvin_suspend(struct device *dev)
 static int __maybe_unused rvin_resume(struct device *dev)
 {
 	struct rvin_dev *vin = dev_get_drvdata(dev);
+	int ret = 0;
+
+	pm_runtime_get_sync(vin->dev);
+
+	ret = clk_prepare_enable(vin->clk);
+	if (ret) {
+		dev_err(vin->dev, "clock prepare failed for clock: %s\n",
+			dev_name(vin->dev));
+		return ret;
+	}
 
 	if (!vin->running)
 		return 0;
@@ -1632,9 +1646,11 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	pm_suspend_ignore_children(&pdev->dev, true);
 	pm_runtime_enable(&pdev->dev);
 
+	pm_runtime_get_sync(vin->dev);
+
 	ret = clk_prepare_enable(vin->clk);
 	if (ret) {
-		dev_err(&pdev->dev, "clock prepare failed for clock: %s\n",
+		dev_err(vin->dev, "clock prepare failed for clock: %s\n",
 			dev_name(vin->dev));
 		return ret;
 	}
@@ -1656,6 +1672,8 @@ static void rcar_vin_remove(struct platform_device *pdev)
 	struct rvin_dev *vin = platform_get_drvdata(pdev);
 
 	clk_disable_unprepare(vin->clk);
+
+	pm_runtime_put_sync(vin->dev);
 
 	pm_runtime_disable(&pdev->dev);
 
