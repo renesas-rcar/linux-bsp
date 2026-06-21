@@ -549,31 +549,22 @@ int rcar_du_async_commit(struct drm_device *dev, struct drm_crtc *crtc)
 	state = drm_atomic_state_alloc(dev);
 	if (!state) {
 		ret = -ENOMEM;
-		goto err;
+		goto err_unlock;
 	}
+	state->acquire_ctx = config->acquire_ctx;
 
-	if (crtc->funcs->atomic_duplicate_state) {
-		crtc_state = crtc->funcs->atomic_duplicate_state(crtc);
-	} else {
-		crtc_state = drm_atomic_helper_crtc_duplicate_state(crtc);
+	crtc_state = drm_atomic_get_crtc_state(state, crtc);
+	if (IS_ERR(crtc_state)) {
+		ret = PTR_ERR(crtc_state);
+		goto err_put_state;
 	}
-
-	if (!crtc_state) {
-		ret = -ENOMEM;
-		goto err;
-	}
-
-	state->crtcs->state = crtc_state;
-	state->crtcs->old_state = crtc->state;
-	state->crtcs->new_state = crtc_state;
-	state->crtcs->ptr = crtc;
-	crtc_state->state = state;
 	crtc_state->active = true;
 
-	state->acquire_ctx = config->acquire_ctx;
 	ret = drm_atomic_commit(state);
+
+err_put_state:
 	drm_atomic_state_put(state);
-err:
+err_unlock:
 	drm_modeset_unlock_all(dev);
 
 	return ret;
