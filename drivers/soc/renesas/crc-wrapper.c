@@ -1003,9 +1003,6 @@ static int wcrc_open(struct inode *inode, struct file *filep)
 
 static int wcrc_release(struct inode *inode, struct file *filep)
 {
-	struct wcrc_device *priv;
-
-	priv = filep->private_data;
 	filep->private_data = NULL;
 
 	return 0;
