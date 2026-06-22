@@ -908,6 +908,8 @@ static int rswitch_gwca_hw_init(struct rswitch_private *priv)
 		return err;
 
 	iowrite32(0, priv->addr_gwca + GWVCC);
+
+	/* GWCA uses only one queue */
 	iowrite32(0, priv->addr_gwca + GWIRC);
 	iowrite32(FIELD_PREP(DQD, DES_RAM_DP), priv->addr_gwca + GWRDQDC0);
 
@@ -1565,7 +1567,6 @@ static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac,
 	if (err < 0)
 		return err;
 
-	iowrite32(0, etha->addr + EAIRC);
 	iowrite32(FIELD_PREP(DQD, DES_RAM_DP), etha->addr + EATDQDC0);
 
 	/* Drop frames with unknown tags */
@@ -2570,7 +2571,8 @@ static int rswitch_device_alloc(struct rswitch_private *priv, unsigned int index
 	if (index >= priv->info->rswitch_num_ports)
 		return -EINVAL;
 
-	ndev = alloc_etherdev_mqs(sizeof(struct rswitch_device), 1, 1);
+	ndev = devm_alloc_etherdev_mqs(&pdev->dev, sizeof(struct rswitch_device),
+				       RSWITCH_PRIOS, 1);
 	if (!ndev)
 		return -ENOMEM;
 

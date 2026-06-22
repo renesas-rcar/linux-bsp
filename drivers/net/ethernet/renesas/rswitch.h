@@ -195,6 +195,8 @@ struct rswitch_etha {
 	u8 mac_addr[MAX_ADDR_LEN];
 	int link;
 	int speed;
+	u32 num_rx_prios_used;
+	u32 num_tx_prios_used;
 
 	/* This hardware could not be initialized twice so that marked
 	 * this flag to avoid multiple initialization.
