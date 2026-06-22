@@ -8,7 +8,6 @@
 #include <linux/dma-mapping.h>
 #include <linux/err.h>
 #include <linux/etherdevice.h>
-#include <linux/ethtool.h>
 #include <linux/ip.h>
 #include <linux/iopoll.h>
 #include <linux/kernel.h>
@@ -30,6 +29,7 @@
 #include "rswitch.h"
 #include "rswitch_l2.h"
 #include "rswitch_tc.h"
+#include "rswitch_ethtool.h"
 
 static bool parallel_mode;
 
@@ -2402,23 +2402,6 @@ bool is_rdev(const struct net_device *ndev)
 	return ndev && (ndev->netdev_ops == &rswitch_netdev_ops);
 }
 
-static int rswitch_get_ts_info(struct net_device *ndev, struct kernel_ethtool_ts_info *info)
-{
-	struct rswitch_device *rdev = netdev_priv(ndev);
-
-	info->phc_index = ptp_clock_index(rdev->priv->ptp_priv->clock);
-	info->so_timestamping = SOF_TIMESTAMPING_TX_SOFTWARE |
-				SOF_TIMESTAMPING_TX_HARDWARE |
-				SOF_TIMESTAMPING_SOFTWARE |
-				SOF_TIMESTAMPING_TX_HARDWARE |
-				SOF_TIMESTAMPING_RX_HARDWARE |
-				SOF_TIMESTAMPING_RAW_HARDWARE;
-	info->tx_types = BIT(HWTSTAMP_TX_OFF) | BIT(HWTSTAMP_TX_ON);
-	info->rx_filters = BIT(HWTSTAMP_FILTER_NONE) | BIT(HWTSTAMP_FILTER_ALL);
-
-	return 0;
-}
-
 static int rswitch2_map_addr(struct platform_device *pdev, struct rswitch_private *priv)
 {
 	struct resource *res_mfwd;
@@ -2483,12 +2466,6 @@ static int rswitch3_map_addr(struct platform_device *pdev, struct rswitch_privat
 
 	return 0;
 }
-
-static const struct ethtool_ops rswitch_ethtool_ops = {
-	.get_ts_info = rswitch_get_ts_info,
-	.get_link_ksettings = phy_ethtool_get_link_ksettings,
-	.set_link_ksettings = phy_ethtool_set_link_ksettings,
-};
 
 static const struct rswitch_hw_info rswitch_rsw2_hw_info = {
 	.rswitch_map_addr = rswitch2_map_addr,
@@ -2614,7 +2591,7 @@ static int rswitch_device_alloc(struct rswitch_private *priv, unsigned int index
 	ndev->base_addr = (unsigned long)priv->addr_mfwd;
 	snprintf(ndev->name, IFNAMSIZ, "tsn%d", index);
 	ndev->netdev_ops = &rswitch_netdev_ops;
-	ndev->ethtool_ops = &rswitch_ethtool_ops;
+	rswitch_set_ethtool_ops(ndev);
 	ndev->max_mtu = RSWITCH_MAX_MTU;
 	ndev->min_mtu = ETH_MIN_MTU;
 
