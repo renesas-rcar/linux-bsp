@@ -709,6 +709,24 @@ enum vlan_egress_mode {
 #define DQD			GENMASK(10, 0)
 #define DES_RAM_DP		0x400
 
+/* bit field definitions for EATMFSCq */
+#define EATMFSC(q)		(EATMFSC0 + (q) * 0x4)
+#define MFS			GENMASK(15, 0)
+
+/* bit field definitions for EACAEC/EACOEM */
+#define	CE			GENMASK(7, 0)
+
+/* bit field definitions for EACC */
+#define	CC			GENMASK(7, 0)
+
+/* bit field definitions for EACAIVCq */
+#define	EACAIVC(q)		(EACAIVC0 + (q) * 0x4)
+#define CIV			GENMASK(19, 0)
+
+/* bit field definitions for EACAIVCq */
+#define	EACAULC(q)		(EACAULC0 + (q) * 0x4)
+#define CUL			GENMASK(30, 0)
+
 /* bit field definitions for MPIC */
 enum rswitch_pis_mode {
 	PIS_GMII = 2,

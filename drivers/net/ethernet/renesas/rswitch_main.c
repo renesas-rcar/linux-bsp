@@ -29,6 +29,7 @@
 
 #include "rswitch.h"
 #include "rswitch_l2.h"
+#include "rswitch_tc.h"
 
 static bool parallel_mode;
 
@@ -2387,6 +2388,7 @@ static const struct net_device_ops rswitch_netdev_ops = {
 	.ndo_start_xmit = rswitch_start_xmit,
 	.ndo_get_stats = rswitch_get_stats,
 	.ndo_eth_ioctl = phy_do_ioctl_running,
+	.ndo_setup_tc = rswitch_setup_tc,
 	.ndo_get_port_parent_id = rswitch_get_port_parent_id,
 	.ndo_get_phys_port_name = rswitch_get_phys_port_name,
 	.ndo_validate_addr = eth_validate_addr,
