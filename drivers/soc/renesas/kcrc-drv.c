@@ -165,9 +165,9 @@ static int kcrc_probe(struct platform_device *pdev)
 
 	dev = &pdev->dev;
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
-	platform_set_drvdata(pdev, priv);
 	if (!priv)
 		return -ENOMEM;
+	platform_set_drvdata(pdev, priv);
 
 	/* Map I/O memory */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
