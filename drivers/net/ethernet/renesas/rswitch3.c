@@ -1757,22 +1757,30 @@ static void rsw3_adjust_link(struct net_device *ndev)
 {
 	struct rsw3_device *rdev = netdev_priv(ndev);
 	struct phy_device *phydev = ndev->phydev;
+	int err;
 
 	if (phydev->link != rdev->etha->link) {
 		phy_print_status(phydev);
-		if (phydev->link)
-			phy_power_on(rdev->pcs);
-		else if (rdev->pcs->power_count)
-			phy_power_off(rdev->pcs);
 
+		if (phydev->link) {
+			if (!rdev->pcs->power_count) {
+				phy_power_on(rdev->pcs);
+			} else {
+				phy_power_off(rdev->pcs);
+				phy_power_on(rdev->pcs);
+			}
+			if (!parallel_mode && phydev->speed != rdev->etha->speed) {
+				rdev->etha->speed = phydev->speed;
+				err = rsw3_etha_hw_init(rdev->etha, rdev->ndev->dev_addr);
+				if (err < 0) {
+					netdev_err(ndev, "ETHA hw_init failed: %d\n", err);
+					rdev->etha->link = phydev->link;
+					return;
+				}
+				phy_set_speed(rdev->pcs, rdev->etha->speed);
+			}
+		} 
 		rdev->etha->link = phydev->link;
-
-		if (phydev->link && !parallel_mode && phydev->speed != rdev->etha->speed) {
-			rdev->etha->speed = phydev->speed;
-
-			rsw3_etha_hw_init(rdev->etha, rdev->ndev->dev_addr);
-			phy_set_speed(rdev->pcs, rdev->etha->speed);
-		}
 	}
 }
 
