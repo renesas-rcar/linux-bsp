@@ -2006,13 +2006,13 @@ static int dw_dp_link_enable(struct dw_dp *dp)
 		return ret;
 
 	/* Clear the MST state, if any in the SST mode,
-	 * to avoid redundant mode setting on the sink device
+	 * to avoid redundant mode setting on the sink device.
+	 * Old monitor that supports up to DPCD v1.1 may not
+	 * support this register and will NACK the access, so
+	 * avoid returning an error if we cannot set it.
 	 */
-	if (!dp->mst.enabled) {
-		ret = drm_dp_dpcd_writeb(&dp->aux, DP_MSTM_CTRL, 0);
-		if (ret < 0)
-			return ret;
-	}
+	if (!dp->mst.enabled)
+		drm_dp_dpcd_writeb(&dp->aux, DP_MSTM_CTRL, 0);
 
 	ret = dw_dp_link_train(dp);
 
