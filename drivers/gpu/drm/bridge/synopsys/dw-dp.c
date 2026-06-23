@@ -379,6 +379,7 @@ struct dw_dp {
 	int irq;
 	struct work_struct hpd_work;
 	struct dw_dp_hotplug hotplug;
+	/* Serialize hpd status access */
 	struct mutex irq_lock;
 
 	struct drm_dp_aux aux;
@@ -883,7 +884,7 @@ static bool dw_dp_link_get_adjustments(struct dw_dp_link *link,
 		p = drm_dp_get_adjust_request_pre_emphasis(status, i);
 		p >>= DP_TRAIN_PRE_EMPHASIS_SHIFT;
 
-		if ((v != adj->voltage_swing[i]) || (p != adj->pre_emphasis[i]))
+		if (v != adj->voltage_swing[i] || p != adj->pre_emphasis[i])
 			changed = true;
 
 		if (p >=  (DP_TRAIN_PRE_EMPH_LEVEL_3 >> DP_TRAIN_PRE_EMPHASIS_SHIFT)) {
@@ -2456,7 +2457,7 @@ static void dw_dp_reset(struct dw_dp *dp)
 	disable_irq(dp->irq);
 	regmap_update_bits(dp->regmap, DW_DP_SOFT_RESET_CTRL, CONTROLLER_RESET,
 			   FIELD_PREP(CONTROLLER_RESET, 1));
-	udelay(10);
+	usleep_range(10, 20);
 	regmap_update_bits(dp->regmap, DW_DP_SOFT_RESET_CTRL, CONTROLLER_RESET,
 			   FIELD_PREP(CONTROLLER_RESET, 0));
 
@@ -2644,10 +2645,10 @@ static enum drm_connector_status dw_dp_bridge_detect(struct drm_bridge *bridge)
 			dw_dp_mst_enadis(dp, true);
 
 		return connector_status_disconnected;
-	} else {
-		if (dp->mst.enabled)
-			dw_dp_mst_enadis(dp, false);
 	}
+
+	if (dp->mst.enabled)
+		dw_dp_mst_enadis(dp, false);
 
 	return connector_status_connected;
 }
