@@ -1,0 +1,130 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/display/renesas,vcon.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Renesas R-Car Video Interface Converter (VCON)
+
+maintainers:
+  - TBD
+
+description:
+  These DT bindings describes the Video Interface Converter (VCON) embedded
+  in the Renesas R-Car Gen5 SoC.
+
+properties:
+  compatible:
+    enum:
+      - renesas,r8a78000-vcon     # R-Car X5H
+
+  reg:
+    minItems: 1
+    maxItems: 4
+
+  interrupts:
+    minItems: 1
+    maxItems: 4
+
+  interrupt-names:
+    minItems: 1
+    items:
+      - const: ch0
+      - const: ch1
+      - const: ch2
+      - const: ch3
+
+  clocks:
+    minItems: 1
+    maxItems: 4
+
+  clock-names:
+    minItems: 1
+    items:
+      - const: dclkin.0
+      - const: dclkin.1
+      - const: dclkin.2
+      - const: dclkin.3
+
+  resets:
+    minItems: 1
+    maxItems: 4
+
+  power-domains:
+    maxItems: 1
+
+  channels:
+    description: Number of display channels provided by this VCON instance.
+    minimum: 1
+    maximum: 4
+
+  renesas,dclk-rate:
+    description: Dot clock rate in Hz used to drive the display channels.
+
+  renesas,vsps:
+    description:
+      A list of phandle and channel index tuples to the VSPs that handle the
+      memory interface for the display channels.
+    items:
+      items:
+        - description: phandle to the VSP entity
+        - description: channel index in the VSP
+
+  ports:
+    $ref: /schemas/graph.yaml#/properties/ports
+    description:
+      The connections to the DisplayPort encoders, one port per channel.
+
+  i2c-bus:
+    type: object
+    description: >
+      Empty i2c-bus subnode so DP-MST's I2C-over-AUX adapters (which use this
+      node as of_node) don't make of_i2c scan the OF-graph "ports" node
+      ("of_i2c: modalias failure").
+
+required:
+  - compatible
+  - reg
+  - interrupts
+  - clocks
+  - power-domains
+  - renesas,vsps
+  - ports
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/interrupt-controller/arm-gic.h>
+
+    display@c5020000 {
+        compatible = "renesas,r8a78000-vcon";
+        reg = <0xc5020000 0x1000>,
+              <0xc5021000 0x1000>,
+              <0xc5022000 0x1000>,
+              <0xc5023000 0x1000>;
+        interrupts = <GIC_SPI 665 IRQ_TYPE_LEVEL_HIGH>,
+                     <GIC_SPI 666 IRQ_TYPE_LEVEL_HIGH>,
+                     <GIC_SPI 667 IRQ_TYPE_LEVEL_HIGH>,
+                     <GIC_SPI 668 IRQ_TYPE_LEVEL_HIGH>;
+        interrupt-names = "ch0", "ch1", "ch2", "ch3";
+        clocks = <&scmi_clk 0>, <&scmi_clk 1>,
+                 <&scmi_clk 2>, <&scmi_clk 3>;
+        clock-names = "dclkin.0", "dclkin.1", "dclkin.2", "dclkin.3";
+        power-domains = <&scmi_devpd 0>;
+        renesas,dclk-rate = <550000000>;
+        channels = <4>;
+        renesas,vsps = <&vspd0 0>, <&vspd1 0>, <&vspd2 0>, <&vspd3 0>;
+
+        ports {
+            #address-cells = <1>;
+            #size-cells = <0>;
+
+            port@0 {
+                reg = <0>;
+                vcon_out_dp0_0: endpoint {
+                    remote-endpoint = <&dw_dp0_0_in>;
+                };
+            };
+        };
+    };
