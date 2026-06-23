@@ -193,7 +193,8 @@ struct rvin_dev {
 	struct v4l2_ctrl_handler ctrl_handler;
 
 	struct reset_control *rstc;
-	struct clk *clk;
+	struct clk_bulk_data *clks;
+	int num_clks;
 
 	struct rvin_parallel_entity parallel;
 

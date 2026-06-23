@@ -1198,7 +1198,7 @@ static int __maybe_unused rvin_suspend(struct device *dev)
 {
 	struct rvin_dev *vin = dev_get_drvdata(dev);
 
-	clk_disable_unprepare(vin->clk);
+	clk_bulk_disable_unprepare(vin->num_clks, vin->clks);
 
 	pm_runtime_put_sync(vin->dev);
 
@@ -1217,7 +1217,7 @@ static int __maybe_unused rvin_resume(struct device *dev)
 
 	pm_runtime_get_sync(vin->dev);
 
-	ret = clk_prepare_enable(vin->clk);
+	ret = clk_bulk_prepare_enable(vin->num_clks, vin->clks);
 	if (ret) {
 		dev_err(vin->dev, "clock prepare failed for clock: %s\n",
 			dev_name(vin->dev));
@@ -1573,12 +1573,12 @@ static int rcar_vin_probe(struct platform_device *pdev)
 	if (IS_ERR(vin->base))
 		return PTR_ERR(vin->base);
 
-	vin->clk = devm_clk_get(&pdev->dev, NULL);
-	if (IS_ERR(vin->clk)) {
-		dev_err(&pdev->dev, "failed to get clock%s\n",
-			dev_name(vin->dev));
-		return PTR_ERR(vin->clk);
-	}
+	vin->num_clks = devm_clk_bulk_get_all(&pdev->dev, &vin->clks);
+		if (vin->num_clks < 1) {
+			dev_err(&pdev->dev, "Failed to get clocks%s\n",
+				dev_name(vin->dev));
+			return -EPROBE_DEFER;
+		}
 
 #ifdef MDL_CLK_WA
 	rcar_vin_module_power_reset();
@@ -1648,7 +1648,7 @@ static int rcar_vin_probe(struct platform_device *pdev)
 
 	pm_runtime_get_sync(vin->dev);
 
-	ret = clk_prepare_enable(vin->clk);
+	ret = clk_bulk_prepare_enable(vin->num_clks, vin->clks);
 	if (ret) {
 		dev_err(vin->dev, "clock prepare failed for clock: %s\n",
 			dev_name(vin->dev));
@@ -1671,7 +1671,7 @@ static void rcar_vin_remove(struct platform_device *pdev)
 {
 	struct rvin_dev *vin = platform_get_drvdata(pdev);
 
-	clk_disable_unprepare(vin->clk);
+	clk_bulk_disable_unprepare(vin->num_clks, vin->clks);
 
 	pm_runtime_put_sync(vin->dev);
 
