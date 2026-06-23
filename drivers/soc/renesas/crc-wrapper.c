@@ -28,6 +28,7 @@
 #include <linux/of_reserved_mem.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
+#include <linux/iopoll.h>
 
 #include "crc-wrapper.h"
 
@@ -252,6 +253,8 @@
 
 /* Define global variable */
 DEFINE_MUTEX(lock);
+
+#define WCRC_STOP_TIMEOUT_US 100000
 
 static int dev_chan;
 static dev_t wcrc_devt;
@@ -592,9 +595,8 @@ static irqreturn_t rcar_wcrc_irq(int irq_num, void *ptr)
 	}
 
 	//Clear stop_done in WCRC_XXXX_STS.
-	if ((STOP_DONE & reg_val)) {
+	if ((STOP_DONE & reg_val))
 		wcrc_write(priv->base, WCRC_XXXX_STS(priv->module), STOP_DONE);
-	}
 
 return_irq:
 	return IRQ_HANDLED;
@@ -1227,6 +1229,69 @@ static const struct of_device_id wcrc_of_ids[] = {
 	},
 };
 
+static int rcar_wcrc_stop_and_wait(struct wcrc_device *priv, u32 m_idx)
+{
+	u32 sts_reg, en_reg;
+
+	/* Skip if module was never enabled */
+	en_reg = readl(priv->base + WCRC_XXXX_EN(m_idx));
+	if (!(en_reg & (IN_EN | TRANS_EN | RES_EN | OUT_EN)))
+		return 0;
+
+	/* Skip if already stopped */
+	sts_reg = readl(priv->base + WCRC_XXXX_STS(m_idx));
+	if (sts_reg & STOP_DONE)
+		return 0;
+
+	/* Issue STOP command */
+	wcrc_write(priv->base, WCRC_XXXX_STOP(m_idx), STOP);
+
+	/* Poll until STOP_DONE is set */
+	return readl_poll_timeout(priv->base + WCRC_XXXX_STS(m_idx), sts_reg,
+				   (sts_reg & STOP_DONE), 100, WCRC_STOP_TIMEOUT_US);
+}
+
+static int __maybe_unused rcar_wcrc_suspend(struct device *dev)
+{
+	struct wcrc_device *priv = dev_get_drvdata(dev);
+	int ret;
+
+	ret = rcar_wcrc_stop_and_wait(priv, CRC_M);
+	if (ret)
+		dev_warn(dev, "CRC_M stop timeout, forcing suspend\n");
+
+	ret = rcar_wcrc_stop_and_wait(priv, KCRC_M);
+	if (ret)
+		dev_warn(dev, "KCRC_M stop timeout, forcing suspend\n");
+
+	/* Release DMA channels - hardware will lose state after DeepSTOP.
+	 * Channels must be re-requested after resume.
+	 */
+	rcar_wcrc_release_dma(priv);
+
+	clk_disable_unprepare(priv->clk);
+
+	return 0;
+}
+
+static int __maybe_unused rcar_wcrc_resume(struct device *dev)
+{
+	struct wcrc_device *priv = dev_get_drvdata(dev);
+	int ret;
+
+	ret = clk_prepare_enable(priv->clk);
+	if (ret) {
+		dev_err(dev, "Failed to enable clock on resume: %d\n", ret);
+		return ret;
+	}
+
+	return 0;
+}
+
+static const struct dev_pm_ops rcar_wcrc_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(rcar_wcrc_suspend, rcar_wcrc_resume)
+};
+
 static const struct file_operations fops = {
 	.owner = THIS_MODULE,
 	.open = wcrc_open,
@@ -1483,6 +1548,7 @@ static struct platform_driver wcrc_driver = {
 		.name = DEVNAME,
 		.of_match_table = of_match_ptr(wcrc_of_ids),
 		.owner = THIS_MODULE,
+		.pm = &rcar_wcrc_pm_ops,
 	},
 	.probe = wcrc_probe,
 	.remove = wcrc_remove,

@@ -270,11 +270,31 @@ static void crc_remove(struct platform_device *pdev)
 {
 }
 
+static int __maybe_unused crc_suspend(struct device *dev)
+{
+	struct crc_device *priv = dev_get_drvdata(dev);
+
+	clk_disable_unprepare(priv->clk);
+	return 0;
+}
+
+static int __maybe_unused crc_resume(struct device *dev)
+{
+	struct crc_device *priv = dev_get_drvdata(dev);
+
+	return clk_prepare_enable(priv->clk);
+}
+
+static const struct dev_pm_ops crc_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(crc_suspend, crc_resume)
+};
+
 static struct platform_driver crc_driver = {
 	.driver = {
 		.name = "crc-driver",
 		.of_match_table = of_match_ptr(crc_of_ids),
 		.owner = THIS_MODULE,
+		.pm = &crc_pm_ops,
 	},
 	.probe = crc_probe,
 	.remove = crc_remove,

@@ -206,11 +206,31 @@ static void kcrc_remove(struct platform_device *pdev)
 {
 }
 
+static int __maybe_unused kcrc_suspend(struct device *dev)
+{
+	struct kcrc_device *priv = dev_get_drvdata(dev);
+
+	clk_disable_unprepare(priv->clk);
+	return 0;
+}
+
+static int __maybe_unused kcrc_resume(struct device *dev)
+{
+	struct kcrc_device *priv = dev_get_drvdata(dev);
+
+	return clk_prepare_enable(priv->clk);
+}
+
+static const struct dev_pm_ops kcrc_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(kcrc_suspend, kcrc_resume)
+};
+
 static struct platform_driver kcrc_driver = {
 	.driver = {
 		.name = "kcrc-driver",
 		.of_match_table = of_match_ptr(kcrc_of_ids),
 		.owner = THIS_MODULE,
+		.pm = &kcrc_pm_ops,
 	},
 	.probe = kcrc_probe,
 	.remove = kcrc_remove,
