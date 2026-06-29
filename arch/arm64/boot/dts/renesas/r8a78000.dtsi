@@ -4786,8 +4786,21 @@
 
 		cr52_rproc3: cr52_3 {
 			compatible = "renesas,rcar-gen5-rproc";
-			memory-region = <&cr52_ram3 &vdev0vring0 &vdev0vring1
-					 &vdev0buffer &proc_kick3>;
+			status = "disabled";
+		};
+
+		cr52_rproc4: cr52_4 {
+			compatible = "renesas,rcar-gen5-rproc";
+			status = "disabled";
+		};
+
+		cr52_rproc5: cr52_5 {
+			compatible = "renesas,rcar-gen5-rproc";
+			status = "disabled";
+		};
+
+		cr52_rproc6: cr52_6 {
+			compatible = "renesas,rcar-gen5-rproc";
 			status = "disabled";
 		};
 
@@ -4861,6 +4874,34 @@
 			reg = <0x0 0x18802000 0x0 0x1000>;
 			interrupts = <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>;
 			linux,uio-name = "rpmsg_ipi2";
+			status = "disabled";
+		};
+
+		rpmsg_shm3: rpmsg_shm@3 {
+			compatible = "generic-uio";
+			reg = <0x0 0x90000000 0x0 0x50000>;
+			linux,uio-name = "rpmsg_shm3";
+			status = "disabled";
+		};
+
+		rpmsg_shm4: rpmsg_shm@4 {
+			compatible = "generic-uio";
+			reg = <0x0 0x90050000 0x0 0x50000>;
+			linux,uio-name = "rpmsg_shm4";
+			status = "disabled";
+		};
+
+		rpmsg_shm5: rpmsg_shm@5 {
+			compatible = "generic-uio";
+			reg = <0x0 0x90200000 0x0 0x50000>;
+			linux,uio-name = "rpmsg_shm5";
+			status = "disabled";
+		};
+
+		rpmsg_shm6: rpmsg_shm@6 {
+			compatible = "generic-uio";
+			reg = <0x0 0x90250000 0x0 0x50000>;
+			linux,uio-name = "rpmsg_shm6";
 			status = "disabled";
 		};
 
@@ -5130,7 +5171,7 @@
 		bus-range = <0x00 0xff>;
 		device_type = "pci";
 		linux,pci-domain = <2>;
-		ranges = <0x02000000 0 0xdd000000 0 0xdd000000 0 0x00100000>;
+		ranges = <0x02000000 0 0xdd000000 0 0xdd000000 0 0x01000000>;
 		interrupts = <GIC_SPI 770 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 771 IRQ_TYPE_LEVEL_HIGH>,
 			     <GIC_SPI 772 IRQ_TYPE_LEVEL_HIGH>,
