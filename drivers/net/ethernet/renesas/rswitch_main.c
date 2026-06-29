@@ -2839,20 +2839,22 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 		priv->etha_no_runtime_change = true;
 
 	priv->ptp_priv = rcar_gen4_ptp_alloc(pdev);
-	if (!priv->ptp_priv)
-		return -ENOMEM;
+	if (!priv->ptp_priv) {
+		ret = -ENOMEM;
+		goto err_sw_probe;
+	}
 
 	platform_set_drvdata(pdev, priv);
 	priv->pdev = pdev;
 	ret = info->rswitch_map_addr(pdev, priv);
 	if (ret < 0)
-		return ret;
+		goto err_sw_probe;
 
 	ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(40));
 	if (ret < 0) {
 		ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
 		if (ret < 0)
-			return ret;
+			goto err_sw_probe;
 	}
 
 	priv->gwca.agent_index = priv->info->agent_index_gwca;
@@ -2863,8 +2865,10 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 				    RSWITCH_MAX_NUM_QUEUES);
 	priv->gwca.queues = devm_kcalloc(&pdev->dev, priv->gwca.num_queues,
 					 sizeof(*priv->gwca.queues), GFP_KERNEL);
-	if (!priv->gwca.queues)
-		return -ENOMEM;
+	if (!priv->gwca.queues) {
+		ret = -ENOMEM;
+		goto err_sw_probe;
+	}
 
 	INIT_LIST_HEAD(&priv->port_list);
 
@@ -2872,26 +2876,28 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	pm_runtime_get_sync(&pdev->dev);
 
 	ret = rswitch_init(priv);
-	if (ret < 0) {
-		pm_runtime_put(&pdev->dev);
-		pm_runtime_disable(&pdev->dev);
-		return ret;
-	}
+	if (ret < 0)
+		goto err_pm_runtime;
 
 	if (list_empty(&priv->port_list))
 		dev_warn(&pdev->dev, "could not initialize any ports\n");
 
 	ret = rswitch_register_notifiers(priv);
 	if (ret) {
-		rswitch_deinit(priv);
-		pm_runtime_put(&pdev->dev);
-		pm_runtime_disable(&pdev->dev);
 		dev_err(&pdev->dev, "could not register notifiers\n");
-
-		return ret;
+		goto err_register_notifiers;
 	}
 
 	device_set_wakeup_capable(&pdev->dev, 1);
+
+	return 0;
+err_register_notifiers:
+	rswitch_deinit(priv);
+err_pm_runtime:
+	pm_runtime_put(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
+err_sw_probe:
+	clk_disable_unprepare(priv->clk);
 
 	return ret;
 }
