@@ -115,29 +115,59 @@
 			reg = <0x0 0x96650000 0x0 0x50000>;
 		};
 
-		cr52_ram3: cr52_ram3@90100000 {
-			no-map;
-			reg = <0x0 0x90100000 0x0 0x1000>;
-		};
-
-		vdev0vring0: vdev0vring0@90101000 {
-			no-map;
-			reg = <0x0 0x90101000 0x0 0x4000>;
-		};
-
-		vdev0vring1: vdev0vring1@90105000 {
-			no-map;
-			reg = <0x0 0x90105000 0x0 0x4000>;
-		};
-
-		vdev0buffer: vdev0buffer@90110000 {
-			no-map;
-			reg = <0x0 0x90110000 0x0 0x40000>;
-		};
-
 		cr52_ram2: cr52_ram2@966a0000 {
 			no-map;
 			reg = <0x0 0x966a0000 0x0 0x50000>;
+		};
+
+		cr52_ram3: cr52_ram3@90000000 {
+			no-map;
+			reg = <0x0 0x90000000 0x0 0x1000>;
+		};
+
+		vdev0vring0: vdev0vring0@90001000 {
+			no-map;
+			reg = <0x0 0x90001000 0x0 0x4000>;
+		};
+
+		vdev0vring1: vdev0vring1@90005000 {
+			no-map;
+			reg = <0x0 0x90005000 0x0 0x4000>;
+		};
+
+		vdev0buffer: vdev0buffer@90010000 {
+			no-map;
+			reg = <0x0 0x90010000 0x0 0x40000>;
+		};
+
+		cr52_ram4: cr52_ram4@90050000 {
+			no-map;
+			reg = <0x0 0x90050000 0x0 0x50000>;
+		};
+
+		cr52_ram5: cr52_ram5@90200000 {
+			no-map;
+			reg = <0x0 0x90200000 0x0 0x1000>;
+		};
+
+		vdev2vring0: vdev0vring0@90201000 {
+			no-map;
+			reg = <0x0 0x90201000 0x0 0x4000>;
+		};
+
+		vdev2vring1: vdev0vring1@90205000 {
+			no-map;
+			reg = <0x0 0x90205000 0x0 0x4000>;
+		};
+
+		vdev2buffer: vdev0buffer@90210000 {
+			no-map;
+			reg = <0x0 0x90210000 0x0 0x40000>;
+		};
+
+		cr52_ram6: cr52_ram6@90250000 {
+			no-map;
+			reg = <0x0 0x90250000 0x0 0x50000>;
 		};
 
 		linux,cma@a2600000 {
@@ -158,25 +188,14 @@
 			reg = <0x1c 0x0 0x0 0x40000000>;
 		};
 		
-		ucie_shared: ucie_shared@90000000 {
-		/*
-		 * UCIe shared region covering:
-		 *   0x90000000 - 0x90000FFF  BAR0 test registers  (4 KB)
-		 *   0x90001000 - 0x90100FFF  data buffer for READ/WRITE tests  (1 MB)
-		 *   0x90101000 - 0x90200FFF  second data buffer for COPY test  (1 MB)
-		 * Total: 2 MB + 4 KB = 0x201000 bytes
-		 * The UCIe mapping (UCIE_MAPPING_SIZE) is set to 0x201000 at probe
-		 * so all three sub-regions are accessible from both X5H and AIACC0
-		 * at the same physical address without any per-transfer remapping.
-		 */
-		reg = <0x0 0x90000000 0x0 0x201000>;
-		no-map;
-		};
+	};
 
-		ucie_shared1: ucie_shared1@92000000 {
-			no-map;
-			reg = <0x0 0x92000000 0x0 0x200000>;
-		};
+	ucie_shared0: ucie_shared0@90000000 {
+		reg = <0x0 0x90000000 0x0 0x200000>;
+	};
+
+	ucie_shared1: ucie_shared1@90200000 {
+		reg = <0x0 0x90200000 0x0 0x200000>;
 	};
 
 	ucie_ldr_map_dev: ucie_ldr_map {
@@ -920,11 +939,24 @@
 	status = "okay";
 };
 
+&cr52_rproc5 {
+	memory-region = <&cr52_ram5 &vdev2vring0 &vdev2vring1 &vdev2buffer>;
+	status = "okay";
+};
+
 &rpmsg_shm0 {
 	status = "okay";
 };
 
 &rpmsg_ipi0 {
+	status = "okay";
+};
+
+&rpmsg_shm4 {
+	status = "okay";
+};
+
+&rpmsg_shm6 {
 	status = "okay";
 };
 
@@ -1252,8 +1284,12 @@
 
 &ucie_dummy0 {
 	status = "okay";
-	/* Auto-enable UCIe mapping at probe for shared memory at 0x90000000 */
-	shared-region = <&ucie_shared &ucie_shared1>;
+	shared-region = <&ucie_shared0>;
+};
+
+&ucie_dummy1 {
+	status = "okay";
+	shared-region = <&ucie_shared1>;
 };
 
 &canxl0 {
