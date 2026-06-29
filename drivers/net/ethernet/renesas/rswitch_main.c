@@ -2925,8 +2925,10 @@ static int renesas_eth_sw_suspend(struct device *dev)
 			netif_device_detach(ndev);
 			rswitch_stop(ndev);
 		}
-		if (priv->rdev[i]->serdes->init_count)
+		if (priv->rdev[i]->serdes->init_count) {
 			phy_exit(priv->rdev[i]->serdes);
+			priv->rdev[i]->serdes->init_count = 0;
+		}
 
 		rswitch_txdmac_free(ndev);
 		rswitch_rxdmac_free(ndev);
@@ -2939,7 +2941,8 @@ static int renesas_eth_sw_suspend(struct device *dev)
 			etha_mii->operated = false;
 		}
 	}
-/*	Note: RSW3 specific stuff needs to be checked*/
+
+	clk_disable_unprepare(priv->clk);
 
 	return 0;
 }
@@ -2950,10 +2953,28 @@ static int renesas_eth_sw_resume(struct device *dev)
 	struct net_device *ndev;
 	unsigned int i;
 
+	if (clk_prepare_enable(priv->clk)) {
+		dev_warn(dev, "Failed to enable clock, will use fallback frequency\n");
+		priv->clk = NULL;
+	}
+
+	rswitch_clock_enable(priv);
+	priv->info->bpool_config(priv);
+	rswitch_coma_init(priv);
+	priv->info->rswitch_fwd_init(priv);
+
 	rswitch_for_each_enabled_port(priv, i) {
+		ndev = priv->rdev[i]->ndev;
 		rswitch_rxdmac_alloc(ndev);
 		rswitch_txdmac_alloc(ndev);
-		phy_init(priv->rdev[i]->serdes);
+	}
+
+	rswitch_top_init(priv);
+	rswitch_gwca_hw_init(priv);
+	rswitch_ether_port_init_all(priv);
+	rcar_gen4_ptp_reinit_hw(priv->ptp_priv);
+
+	rswitch_for_each_enabled_port(priv, i) {
 		ndev = priv->rdev[i]->ndev;
 		if (netif_running(ndev)) {
 			rswitch_open(ndev);
