@@ -53,29 +53,18 @@ static void rswitch_reset(struct rswitch_private *priv)
 		iowrite32(RR, priv->addr_coma + RRC);
 		iowrite32(!RR, priv->addr_coma + RRC);
 	} else {
-		int gwca_idx;
-		u32 gwro_offset;
+		int count = 0;
 		int mode;
-		int count;
 
-		if (priv->gwca.agent_index == RSWITCH3_GWCA_IDX_TO_HW_NUM(0)) {
-			gwca_idx = 14;
-			gwro_offset = RSWITCH3_GWCA1_OFFSET;
-		} else {
-			gwca_idx = 13;
-			gwro_offset = RSWITCH3_GWCA0_OFFSET;
-		}
-
-		count = 0;
 		do {
-			mode = ioread32(priv->addr + gwro_offset + 0x4) & OPC;
+			mode = FIELD_GET(OPC, ioread32(priv->addr_gwca + GWMS));
 			if (mode == OPC_OPERATION)
 				break;
 
 			count++;
 			if (!(count % 100))
-				pr_info("rswitch wait for GWMS%d %d==%d\n", gwca_idx, mode,
-					OPC_OPERATION);
+				pr_info("rswitch wait for GWMS%d %d==%d\n",
+					priv->info->gwca_index, mode, OPC_OPERATION);
 			mdelay(10);
 		} while (1);
 	}
@@ -940,7 +929,7 @@ static int rswitch_gwca_hw_init(struct rswitch_private *priv)
 
 	iowrite32(PPPL(GWCA_IPV_NUM), priv->addr_gwca + GWTPC0);
 
-	for (i = 0; i < priv->info->rswitch_num_ports; i++) {
+	for (i = 0; i < priv->num_ports; i++) {
 		err = rswitch_rxdmac_init(priv, i);
 		if (err < 0)
 			return err;
@@ -1326,7 +1315,7 @@ static void rswitch_ts(struct rswitch_private *priv)
 		dma_rmb();
 
 		port = TS_DESC_DPN(__le32_to_cpu(desc->desc.dptrl));
-		if (unlikely(port >= priv->info->rswitch_num_ports))
+		if (unlikely(port >= priv->num_ports))
 			goto next;
 		rdev = priv->rdev[port];
 
@@ -2073,7 +2062,7 @@ static int rswitch_ether_port_init_all(struct rswitch_private *priv)
 err_serdes:
 	rswitch_for_each_enabled_port_continue_reverse(priv, i)
 		phy_exit(priv->rdev[i]->serdes);
-	i = priv->info->rswitch_num_ports;
+	i = priv->num_ports;
 
 err_init_one:
 	rswitch_for_each_enabled_port_continue_reverse(priv, i)
@@ -2118,7 +2107,7 @@ static int rswitch_open(struct net_device *ndev)
 		}
 	}
 
-	if (bitmap_empty(rdev->priv->opened_ports, rdev->priv->info->rswitch_num_ports))
+	if (bitmap_empty(rdev->priv->opened_ports, rdev->priv->num_ports))
 		iowrite32(TS, rdev->priv->addr_gwca + GWTSDIE);
 
 	napi_enable(&rdev->napi);
@@ -2568,9 +2557,8 @@ static int rswitch_device_alloc(struct rswitch_private *priv, unsigned int index
 	struct net_device *ndev;
 	int err;
 
-	if (index >= priv->info->rswitch_num_ports)
+	if (index >= priv->num_ports)
 		return -EINVAL;
-
 	ndev = devm_alloc_etherdev_mqs(&pdev->dev, sizeof(struct rswitch_device),
 				       RSWITCH_PRIOS, 1);
 	if (!ndev)
@@ -2660,13 +2648,13 @@ static int rswitch_init(struct rswitch_private *priv)
 	unsigned int i;
 	int err;
 
-	for (i = 0; i < priv->info->rswitch_num_ports; i++)
+	for (i = 0; i < priv->num_ports; i++)
 		rswitch_etha_init(priv, i);
 
 	if (!parallel_mode)
 		rswitch_clock_enable(priv);
 
-	for (i = 0; i < priv->info->rswitch_num_ports; i++)
+	for (i = 0; i < priv->num_ports; i++)
 		rswitch_etha_read_mac_address(&priv->etha[i]);
 
 	rswitch_reset(priv);
@@ -2691,7 +2679,7 @@ static int rswitch_init(struct rswitch_private *priv)
 			goto err_ts_queue_alloc;
 	}
 
-	for (i = 0; i < priv->info->rswitch_num_ports; i++) {
+	for (i = 0; i < priv->num_ports; i++) {
 		err = rswitch_device_alloc(priv, i);
 		if (err < 0) {
 			for (; i-- > 0; )
@@ -2757,7 +2745,7 @@ err_gwca_request_irq:
 
 err_fwd_init:
 err_ptp_register:
-	for (i = 0; i < priv->info->rswitch_num_ports; i++)
+	for (i = 0; i < priv->num_ports; i++)
 		rswitch_device_free(priv, i);
 
 err_device_alloc:
@@ -2784,7 +2772,7 @@ static void rswitch_deinit(struct rswitch_private *priv)
 		phy_exit(priv->rdev[i]->serdes);
 	}
 
-	for (i = 0; i < priv->info->rswitch_num_ports; i++)
+	for (i = 0; i < priv->num_ports; i++)
 		rswitch_device_free(priv, i);
 
 	rswitch_gwca_ts_queue_free(priv);
@@ -2844,6 +2832,14 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 		goto err_sw_probe;
 	}
 
+	if (!parallel_mode)
+		parallel_mode = of_property_read_bool(pdev->dev.of_node, "parallel_mode");
+
+	if (parallel_mode)
+		priv->num_ports = 1;
+	else
+		priv->num_ports = priv->info->rswitch_num_ports;
+
 	platform_set_drvdata(pdev, priv);
 	priv->pdev = pdev;
 	ret = info->rswitch_map_addr(pdev, priv);
@@ -2858,7 +2854,7 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	}
 
 	priv->gwca.agent_index = priv->info->agent_index_gwca;
-	priv->gwca.num_queues = min(priv->info->rswitch_num_ports * NUM_QUEUES_PER_NDEV,
+	priv->gwca.num_queues = min(priv->num_ports * NUM_QUEUES_PER_NDEV,
 				    RSWITCH_MAX_NUM_QUEUES);
 	/* One extra queue for L2 switch reception */
 	priv->gwca.num_queues = min(priv->gwca.num_queues + 1,
@@ -2872,8 +2868,10 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 
 	INIT_LIST_HEAD(&priv->port_list);
 
-	pm_runtime_enable(&pdev->dev);
-	pm_runtime_get_sync(&pdev->dev);
+	if (!parallel_mode) {
+		pm_runtime_enable(&pdev->dev);
+		pm_runtime_get_sync(&pdev->dev);
+	}
 
 	ret = rswitch_init(priv);
 	if (ret < 0)
@@ -2893,9 +2891,13 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	return 0;
 err_register_notifiers:
 	rswitch_deinit(priv);
+
 err_pm_runtime:
-	pm_runtime_put(&pdev->dev);
-	pm_runtime_disable(&pdev->dev);
+	if (!parallel_mode) {
+		pm_runtime_put(&pdev->dev);
+		pm_runtime_disable(&pdev->dev);
+	}
+
 err_sw_probe:
 	clk_disable_unprepare(priv->clk);
 
@@ -2941,7 +2943,7 @@ static int renesas_eth_sw_suspend(struct device *dev)
 	}
 
 	if (priv->info->rswitch_version != RSW20) {
-		for (i = 0; i < priv->info->rswitch_num_ports; i++) {
+		for (i = 0; i < priv->num_ports; i++) {
 			struct rswitch_etha *etha_mii = &priv->etha_mii[i];
 
 			etha_mii->operated = false;

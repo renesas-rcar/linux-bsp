@@ -49,7 +49,7 @@
 
 #define rswitch_for_each_enabled_port(priv, i)				\
 	for ((i) = rswitch_next_enabled_port(priv, 0);			\
-	     (i) < (priv)->info->rswitch_num_ports;			\
+	     (i) < (priv)->num_ports;					\
 	     (i) = rswitch_next_enabled_port(priv, (i) + 1))
 
 #define rswitch_for_each_enabled_port_continue_reverse(priv, i)	\
@@ -306,6 +306,8 @@ struct rswitch_private {
 	void __iomem *addr_etha;
 	void __iomem *addr_gwca;
 
+	u32 num_ports;
+
 	struct rcar_gen4_ptp_private *ptp_priv;
 
 	struct rswitch_device *rdev[RSWITCH_MAX_NUM_PORTS];
@@ -373,7 +375,7 @@ struct rswitch_switchdev_event_work {
 static inline unsigned int rswitch_next_enabled_port(struct rswitch_private *priv,
 						     unsigned int i)
 {
-	while (i < priv->info->rswitch_num_ports && priv->rdev[i]->disabled)
+	while (i < priv->num_ports && priv->rdev[i]->disabled)
 		i++;
 
 	return i;
