@@ -896,7 +896,7 @@ static int rswitch_gwca_hw_init(struct rswitch_private *priv)
 	if (err < 0)
 		return err;
 
-	iowrite32(0, priv->addr_gwca + GWVCC);
+	iowrite32(FIELD_PREP(VEM, SC_TAG_VLAN), priv->addr_gwca + GWVCC);
 
 	/* GWCA uses only one queue */
 	iowrite32(0, priv->addr_gwca + GWIRC);
@@ -1557,6 +1557,8 @@ static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac,
 		return err;
 
 	iowrite32(FIELD_PREP(DQD, DES_RAM_DP), etha->addr + EATDQDC0);
+
+	iowrite32(FIELD_PREP(VEM, SC_TAG_VLAN), etha->addr + EAVCC);
 
 	/* Drop frames with unknown tags */
 	iowrite32(UT, etha->addr + EARTFC);
