@@ -25,6 +25,8 @@ static void rswitch_change_l2_hw_offloading(struct rswitch_device *rdev,
 					    bool start, bool learning)
 {
 	u32 bits = learning ? MACSSA | MACHLA | MACHMA | MACRUDA : MACDSA;
+	struct rswitch_private *priv = rdev->priv;
+	u8 num_agents = priv->info->rswitch_num_agents;
 	u32 clear = start ? 0 : bits;
 	u32 set = start ? bits : 0;
 
@@ -32,7 +34,12 @@ static void rswitch_change_l2_hw_offloading(struct rswitch_device *rdev,
 	    (!learning && rdev->forwarding_offloaded == start))
 		return;
 
-	rswitch_modify(rdev->priv->addr_mfwd, FWPC0(rdev->port), clear, set);
+	rswitch_modify(priv->addr_mfwd, FWPC0(rdev->port), clear, set);
+
+	clear = start ? PBDV(num_agents) : 0;
+	set = start ? 0 : field_prep(PBDV(num_agents), BIT(priv->gwca.agent_index));
+
+	rswitch_modify(priv->addr_mfwd, FWPBFC(rdev->etha->index), clear, set);
 
 	if (learning)
 		rdev->learning_offloaded = start;
@@ -403,7 +410,7 @@ static int rswitch_port_set_vlan_tag(struct rswitch_etha *etha,
 
 	if (((ioread32(etha->addr + EAVTC) & CTV) == p_vlan->vid) && delete) {
 		rswitch_modify(etha->addr, EAVTC, CTV, 0);
-		rswitch_modify(etha->addr, EAVCC, VEM, 0);
+		rswitch_modify(etha->addr, EAVCC, VEM, FIELD_PREP(VEM, SC_TAG_VLAN));
 	} else if (!delete) {
 		if ((p_vlan->flags & BRIDGE_VLAN_INFO_PVID) &&
 		    (p_vlan->flags & BRIDGE_VLAN_INFO_UNTAGGED))
@@ -434,7 +441,7 @@ static int rswitch_gwca_set_vlan_tag(struct rswitch_private *priv,
 
 	if (((ioread32(priv->addr_gwca + GWVTC) & CTV) == p_vlan->vid) && delete) {
 		rswitch_modify(priv->addr_gwca, GWVTC, CTV, 0);
-		rswitch_modify(priv->addr_gwca, GWVCC, VEM, 0);
+		rswitch_modify(priv->addr_gwca, GWVCC, VEM, FIELD_PREP(VEM, SC_TAG_VLAN));
 	} else  if (!delete) {
 		if ((p_vlan->flags & BRIDGE_VLAN_INFO_PVID) &&
 		    (p_vlan->flags & BRIDGE_VLAN_INFO_UNTAGGED))
@@ -472,7 +479,7 @@ static int rswitch_port_obj_do_add(struct net_device *ndev,
 		return err;
 
 	/* If the default vlan for this port has been set, don't overwrite it. */
-	if (ioread32(etha->addr + EAVCC))
+	if (FIELD_GET(VEM, ioread32(etha->addr + EAVCC)) != SC_TAG_VLAN)
 		return NOTIFY_DONE;
 
 	if (br_vlan_enabled(rdev->brdev))
@@ -504,7 +511,7 @@ static int rswitch_port_obj_do_add_gwca(struct net_device *ndev,
 		return err;
 
 	/* If the default vlan for this port has been set, don't overwrite it. */
-	if (ioread32(priv->addr_gwca + GWVCC))
+	if (FIELD_GET(VEM, ioread32(priv->addr_gwca + GWVCC)) != SC_TAG_VLAN)
 		return NOTIFY_DONE;
 
 	err = rswitch_gwca_set_vlan_tag(priv, p_vlan, false);
