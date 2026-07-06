@@ -1818,25 +1818,32 @@ static void rswitch_adjust_link(struct net_device *ndev)
 {
 	struct rswitch_device *rdev = netdev_priv(ndev);
 	struct phy_device *phydev = ndev->phydev;
+	int err;
 
 	if (phydev->link != rdev->etha->link) {
 		phy_print_status(phydev);
-		if (phydev->link)
-			phy_power_on(rdev->serdes);
-		else if (rdev->serdes->power_count)
-			phy_power_off(rdev->serdes);
+		if (phydev->link) {
+			if (!rdev->serdes->power_count) {
+				phy_power_on(rdev->serdes);
+			} else {
+				phy_power_off(rdev->serdes);
+				phy_power_on(rdev->serdes);
+			}
+			if (phydev->link && !parallel_mode &&
+			    phydev->speed != rdev->etha->speed) {
+				rdev->etha->speed = phydev->speed;
+				err = rswitch_etha_hw_init(rdev->etha,
+							   rdev->ndev->dev_addr,
+							   rdev->priv);
+				if (err < 0) {
+					netdev_err(ndev, "ETHA hw_init failed: %d\n", err);
+					netif_carrier_off(ndev);
+					rdev->etha->link = phydev->link;
 
-		rdev->etha->link = phydev->link;
-
-		if (!parallel_mode &&
-		    !rdev->priv->etha_no_runtime_change &&
-		    phydev->speed != rdev->etha->speed) {
-			rdev->etha->speed = phydev->speed;
-
-			rswitch_etha_hw_init(rdev->etha,
-					     rdev->ndev->dev_addr,
-					     rdev->priv);
-			phy_set_speed(rdev->serdes, rdev->etha->speed);
+					return;
+				}
+				phy_set_speed(rdev->serdes, rdev->etha->speed);
+			}
 		}
 	}
 }
