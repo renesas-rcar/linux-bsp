@@ -13,6 +13,7 @@
 #include <linux/etherdevice.h>
 #include <linux/iopoll.h>
 #include <linux/if_vlan.h>
+#include <net/ip.h>
 #include <linux/ethtool.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -593,9 +594,6 @@ static int rsw3_gwca_queue_format(struct net_device *ndev,
 	iowrite32(GWDCC_BALR | (gq->dir_tx ? GWDCC_DCP(GWCA_IPV_NUM) | GWDCC_DQT : 0) | GWDCC_EDE,
 		  priv->addr + GWDCC_OFFS(gq->index));
 
-	/* Enable Under Switch Minimum Frame Size Padding */
-	iowrite32(GWCKSC_USMFSPE, priv->addr + GWCKSC);
-
 	return 0;
 
 err:
@@ -687,9 +685,6 @@ static int rsw3_gwca_queue_ext_ts_format(struct net_device *ndev,
 	iowrite32(GWDCC_BALR | (gq->dir_tx ? GWDCC_DCP(GWCA_IPV_NUM) | GWDCC_DQT : 0) |
 		  GWDCC_ETS | GWDCC_EDE,
 		  priv->addr + GWDCC_OFFS(gq->index));
-
-	/* Enable Under Switch Minimum Frame Size Padding */
-	iowrite32(GWCKSC_USMFSPE, priv->addr + GWCKSC);
 
 	return 0;
 }
@@ -894,6 +889,10 @@ static int rsw3_gwca_hw_init(struct rsw3_private *priv)
 			return err;
 	}
 
+	/* Enable Under Switch Minimum Frame Size Padding and HW Checksum*/
+	iowrite32(GWCKSC_USMFSPE | GWCKSC_ICMPCKSE | GWCKSC_TCPCKSE | GWCKSC_UDPCKSE |
+		  GWCKSC_IP4CKSE, priv->addr + GWCKSC);
+
 	err = rsw3_gwca_change_mode(priv, GWMC_OPC_DISABLE);
 	if (err < 0)
 		return err;
@@ -973,6 +972,12 @@ static struct sk_buff *rsw3_rx_handle_desc(struct net_device *ndev,
 			skb_reserve(skb, RSWITCH3_HEADROOM);
 			skb_put(skb, pkt_len);
 			gq->pkt_len = pkt_len;
+			if (ndev->features & NETIF_F_RXCSUM) {
+				u64 info1 = le64_to_cpu(desc->info1);
+
+				if (!(info1 & RSW3_RX_INFO1_CKSE))
+					skb->ip_summed = CHECKSUM_UNNECESSARY;
+			}
 			if (die_dt == DT_FSTART) {
 				gq->skb_fstart = skb;
 				skb = NULL;
@@ -2582,6 +2587,8 @@ static int rsw3_device_alloc(struct rsw3_private *priv, unsigned int index)
 	ndev->ethtool_ops = &rsw3_ethtool_ops;
 	ndev->max_mtu = RSWITCH3_MAX_MTU;
 	ndev->min_mtu = ETH_MIN_MTU;
+	ndev->hw_features |= NETIF_F_RXCSUM;
+	ndev->features |= NETIF_F_RXCSUM;
 
 	rdev->np_port = rsw3_get_port_node(rdev);
 	rdev->disabled = !rdev->np_port;

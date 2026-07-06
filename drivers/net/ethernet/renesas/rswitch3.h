@@ -926,6 +926,10 @@ enum rsw3_gwca_mode {
 #define GWDCC_ETS		BIT(9)
 #define GWDCC_EDE		BIT(8)
 #define GWCKSC_USMFSPE		BIT(31)
+#define GWCKSC_ICMPCKSE		BIT(3)
+#define GWCKSC_TCPCKSE		BIT(2)
+#define GWCKSC_UDPCKSE		BIT(1)
+#define GWCKSC_IP4CKSE		BIT(0)
 
 #define GWTRC(queue)		(GWTRC0 + (queue) / 32 * 4)
 #define GWTPC_PPPL(ipv)		BIT(ipv)
@@ -1056,6 +1060,7 @@ enum DIE_DT {
 
 /* For reception */
 #define INFO1_SPN(port)		((u64)(port) << 36ULL)
+#define RSW3_RX_INFO1_CKSE	BIT_ULL(17)
 
 struct rsw3_desc {
 	__le16 info_ds;		/* Descriptor size */
