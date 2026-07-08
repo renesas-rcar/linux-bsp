@@ -535,16 +535,6 @@ static int rcar_gen3_thermal_request_irqs(struct rcar_gen3_thermal_priv *priv,
 	char *irqname;
 	int ret, irq;
 
-	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
-	if (!priv)
-		return -ENOMEM;
-
-	priv->thermal_init = rcar_gen3_thermal_init;
-	if (soc_device_match(r8a7795es1))
-		priv->thermal_init = rcar_gen3_thermal_init_r8a7795es1;
-
-	platform_set_drvdata(pdev, priv);
-
 	/*
 	 * Request 2 (of the 3 possible) IRQs, the driver only needs to
 	 * trigger on the low and high trip points of the current
