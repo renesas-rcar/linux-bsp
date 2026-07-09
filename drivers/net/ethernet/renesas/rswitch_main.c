@@ -2308,6 +2308,30 @@ static struct net_device_stats *rswitch_get_stats(struct net_device *ndev)
 	return &ndev->stats;
 }
 
+void rswitch_update_stats(struct rswitch_device *rdev)
+{
+	void __iomem *addr_etha = rdev->etha->addr;
+	u64 temp;
+
+	rdev->stats.mrufc += ioread32(addr_etha + MRUFC);
+	rdev->stats.mtufc += ioread32(addr_etha + MTUFC);
+	temp = (u64)ioread32(addr_etha + MRXBCEU);
+	rdev->stats.mrxbceu += (temp << 32) + ioread32(addr_etha + MRXBCEL);
+	temp = (u64)ioread32(addr_etha + MTXBCEU);
+	rdev->stats.mtxbceu += (temp << 32) + ioread32(addr_etha + MTXBCEL);
+	temp = (u64)ioread32(addr_etha + MRXBCPU);
+	rdev->stats.mrxbcpu += (temp << 32) + ioread32(addr_etha + MRXBCPL);
+	temp = (u64)ioread32(addr_etha + MTXBCPU);
+	rdev->stats.mtxbcpu += (temp << 32) + ioread32(addr_etha + MTXBCPL);
+	rdev->stats.mrbfc += ioread32(addr_etha + MRBFC);
+	rdev->stats.mtbfc += ioread32(addr_etha + MTBFC);
+	rdev->stats.mrmfc += ioread32(addr_etha + MRMFC);
+	rdev->stats.mtmfc += ioread32(addr_etha + MTMFC);
+	rdev->stats.mrpefc += ioread32(addr_etha + MRPEFC);
+	rdev->stats.mtefc += ioread32(addr_etha + MTEFC);
+	rdev->stats.mrfmefc += ioread32(addr_etha + MRFMEFC);
+}
+
 static int rswitch_hwstamp_get(struct net_device *ndev,
 			       struct kernel_hwtstamp_config *config)
 {

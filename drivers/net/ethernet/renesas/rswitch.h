@@ -257,6 +257,58 @@ struct rswitch_gwca {
 	u32 rx_irq_bits[RSWITCH_NUM_IRQ_REGS];
 };
 
+/* Statistics counters collected by the MAC */
+struct rswitch_rmac_hw_stats {
+	u64 mmpftct;
+	u64 mapftct;
+	u64 mpfrct;
+	u64 mfcict;
+	u64 meeect;
+	u64 mmpcftct0;
+	u64 mmpcftct1;
+	u64 mapcftct0;
+	u64 mapcftct1;
+	u64 mpcfrct0;
+	u64 mpcfrct1;
+	u64 mrovfc;
+	u64 mrhcrcec;
+	u64 mrgfce;
+	u64 mrgfcp;
+	u64 mrbfc;
+	u64 mrmfc;
+	u64 mrufc;
+	u64 mrpefc;
+	u64 mrnefc;
+	u64 mrfmefc;
+	u64 mrffmefc;
+	u64 mrcfcefc;
+	u64 mrfcefc;
+	u64 mrrcfefc;
+	u64 mrfc;
+	u64 mrguefc;
+	u64 mrbuefc;
+	u64 mrgoefc;
+	u64 mrboefc;
+	u64 mrxbceu;
+	u64 mrxbcel;
+	u64 mrxbcpu;
+	u64 mrxbcpl;
+	u64 mtgfce;
+	u64 mtgfcp;
+	u64 mtbfc;
+	u64 mtmfc;
+	u64 mtufc;
+	u64 mtefc;
+	u64 mtxbceu;
+	u64 mtxbcel;
+	u64 mtxbcpu;
+	u64 mtxbcpl;
+	u64 mpbltfcespi;
+	u64 mpbltfcpspi;
+	u64 mpbltfce;
+	u64 mpbltfcp;
+};
+
 #define NUM_QUEUES_PER_NDEV	2
 #define TS_TAGS_PER_PORT	256
 
@@ -280,6 +332,8 @@ struct rswitch_device {
 	struct rswitch_etha *etha_mii;
 	struct device_node *np_port;
 	struct phy *serdes;
+
+	struct rswitch_rmac_hw_stats stats;
 
 	struct net_device *brdev;	/* master bridge device */
 	unsigned int learning_requested : 1;
@@ -386,5 +440,6 @@ void rswitch_modify(void __iomem *addr, u32 reg, u32 clear, u32 set);
 int rswitch_reg_wait(void __iomem *addr, u32 offs, u32 mask, u32 expected);
 int rswitch_gwca_change_mode(struct rswitch_private *priv, enum rswitch_port_mode mode);
 int rswitch_etha_change_mode(struct rswitch_etha *etha, enum rswitch_port_mode mode);
+void rswitch_update_stats(struct rswitch_device *rdev);
 
 #endif	/* #ifndef __RSWITCH_H__ */
