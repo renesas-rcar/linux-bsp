@@ -53,11 +53,11 @@
 
 #define ISPCS_LUT_FILTER_CTRL_CH(n)			(0x3040+(0x100 * n))
 #define CPLX								BIT(31)
-#define LINE_FILTER_LUT_LENGTH_MINUS1		GENMASK(22,16)
-#define FRAME_FILTER_LUT_LENGTH_MINUS1		GENMASK(30,24)
+#define LINE_FILTER_LUT_LENGTH_MINUS1		GENMASK(22, 16)
+#define FRAME_FILTER_LUT_LENGTH_MINUS1		GENMASK(30, 24)
 #define ENABLE_FRAME_FILTER					BIT(13)
 #define ENABLE_LINE_FILTER					BIT(12)
-#define PIXEL_FILTER_LUT_LENGTH_MINUS1		GENMASK(8,0)
+#define PIXEL_FILTER_LUT_LENGTH_MINUS1		GENMASK(8, 0)
 
 /* Hardcoded for enable module clock */
 #define MDLC_BASE		0xC5000000
@@ -77,7 +77,7 @@
 #define MDLC_MPDGS		_MDLC_MPDGS(RCAR_VIN_PDID)
 
 #define MDLC_MSRES(i)		(MDLC_BASE + 0x0900 + (i) * 4)
-#define MDLC_MSRESS(i)	(	MDLC_BASE + 0x0960 + (i) * 4)
+#define MDLC_MSRESS(i)		(MDLC_BASE + 0x0960 + (i) * 4)
 
 /* MDLC hardcode - helper APIs */
 void rcar_isp_module_power_reset(void);
@@ -178,9 +178,9 @@ void rcar_isp_module_power_run(void)
 /* end */
 
 enum rcar_soc_type {
-        RCAR_GEN3,
-        RCAR_GEN4,
-        RCAR_GEN5,
+		RCAR_GEN3,
+		RCAR_GEN4,
+		RCAR_GEN5,
 };
 
 struct rcar_isp_format {
@@ -565,7 +565,7 @@ static void risp_start_gen5(struct rcar_isp *isp, const struct rcar_isp_format *
 		/* Stage 4: LUT based Line Filter */
 		risp_write_cs(isp, ISPCS_LUT_FILTER_CTRL_CH(ch),
 					risp_read_cs(isp, ISPCS_LUT_FILTER_CTRL_CH(ch)) &
-					~CPLX & ~ENABLE_LINE_FILTER &~ENABLE_FRAME_FILTER);
+					~CPLX & ~ENABLE_LINE_FILTER & ~ENABLE_FRAME_FILTER);
 
 		/* Stage 5: Horizontal Clipping Filter <-- Skipped */
 
@@ -869,11 +869,11 @@ static const struct rcar_isp_info rcar_isp_info_gen5 = {
 };
 
 static const struct of_device_id risp_of_id_table[] = {
-	{ .compatible = "renesas,r8a779a0-isp" , .data = &rcar_isp_info_gen3 },
-	{ .compatible = "renesas,r8a779g0-isp" , .data = &rcar_isp_info_gen4 },
+	{ .compatible = "renesas,r8a779a0-isp", .data = &rcar_isp_info_gen3 },
+	{ .compatible = "renesas,r8a779g0-isp", .data = &rcar_isp_info_gen4 },
 	/* Keep above for compatibility with old DTB files. */
-	{ .compatible = "renesas,rcar-gen4-isp" , .data = &rcar_isp_info_gen4 },
-	{ .compatible = "renesas,rcar-gen5-isp" , .data = &rcar_isp_info_gen5 },
+	{ .compatible = "renesas,rcar-gen4-isp", .data = &rcar_isp_info_gen4 },
+	{ .compatible = "renesas,rcar-gen5-isp", .data = &rcar_isp_info_gen5 },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, risp_of_id_table);

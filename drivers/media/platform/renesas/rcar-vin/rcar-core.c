@@ -74,7 +74,7 @@
 #define MDLC_MPDGS		_MDLC_MPDGS(RCAR_VIN_PDID)
 
 #define MDLC_MSRES(i)		(MDLC_BASE + 0x0900 + (i) * 4)
-#define MDLC_MSRESS(i)	(	MDLC_BASE + 0x0960 + (i) * 4)
+#define MDLC_MSRESS(i)		(MDLC_BASE + 0x0960 + (i) * 4)
 
 /* MDLC hardcode - helper APIs */
 void rcar_vin_module_power_reset(void);

@@ -500,11 +500,11 @@ struct rcar_csi2;
 
 #define X5H_PHY0_CORE_DIG_RW_TRIO0_REG(n)					(0x42100 + ((n) * 2)) /* n = 0 - 2 */
 #define X5H_POST_RECEIVED_RESET_THRESH							GENMASK(15, 9)
-#define X5H_DESERIALIZER_DIV_EN_DELAY_DEASS_THRESH				GENMASK(8 ,6)
-#define X5H_DESERIALIZER_DIV_EN_DELAY_THRESH					GENMASK(5 ,3)
-#define X5H_DESERIALIZER_DATA_EN_DELAY_THRESH					GENMASK(2 ,0)
-#define X5H_POST_DET_DELAY_THRESH								GENMASK(15 ,0)
-#define X5H_DESERIALIZER_EN_DELAY_DEASS_THRESH					GENMASK(7 ,0)
+#define X5H_DESERIALIZER_DIV_EN_DELAY_DEASS_THRESH				GENMASK(8, 6)
+#define X5H_DESERIALIZER_DIV_EN_DELAY_THRESH					GENMASK(5, 3)
+#define X5H_DESERIALIZER_DATA_EN_DELAY_THRESH					GENMASK(2, 0)
+#define X5H_POST_DET_DELAY_THRESH						GENMASK(15, 0)
+#define X5H_DESERIALIZER_EN_DELAY_DEASS_THRESH					GENMASK(7, 0)
 
 #define X5H_PHY0_CORE_DIG_RW_TRIO1_REG(n)					(0x42500 + ((n) * 2)) /* n = 0 - 2 */
 
@@ -1742,7 +1742,7 @@ static int rcsi2_calc_mbps(struct rcar_csi2 *priv, unsigned int bpp,
 	if (!priv->remote)
 		return -ENODEV;
 
-	mbps= div_u64(7423000000, MEGA);
+	mbps = div_u64(7423000000, MEGA);
 
 #ifndef CONFIG_VIDEO_RCAR_VIN_VDK
 	source = priv->remote;
@@ -2604,7 +2604,7 @@ static int rcsi2_startup_sequence_x5h(struct rcar_csi2 *priv, int msps)
 	rcsi2_modify(priv, X5H_PHY_CTRL_REG, 0x00001f00, phy_ctrl_data);
 	rcsi2_write(priv, X5H_FORCEPHYMODE_REG, 0x003f0000);
 
-	if(msps >= 3500){
+	if (msps >= 3500) {
 		rcsi2_write(priv, X5H_RDWIDTH_REG, 0x02020202); // divided by 6.25
 	} else {
 		// In order to accommodate instantaneous cycle to cycle clock jitter,
@@ -2648,7 +2648,7 @@ static int rcsi2_startup_sequence_x5h(struct rcar_csi2 *priv, int msps)
 	rcsi2_modify16(priv, X5H_PHY0_PPI_CALIBCTRL_RW_COMMON_ARBT_REG(2), (3 << 0), X5H_ARBT_CALIB_READ_DELTA);
 
 	// Data bus width select
-	if(msps >= 3500){
+	if (msps >= 3500) {
 		rcsi2_modify16(priv, X5H_PHY0_PPI_RW_COMMON_CFG_REG, 0x000A, X5H_GEN2_SEL | X5H_CFG_CLK_DIV_FACTOR); // LUT
 	} else {
 		rcsi2_modify16(priv, X5H_PHY0_PPI_RW_COMMON_CFG_REG, 0x0002, X5H_CFG_CLK_DIV_FACTOR); // LUT
@@ -2687,7 +2687,7 @@ static int rcsi2_startup_sequence_x5h(struct rcar_csi2 *priv, int msps)
 	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(5), 0, X5H_OA_CB_SEL_45OHM_50OHM);
 
 	// Table 4-3 Supported Frequency Ranges – CPHY Mode
-	if(msps >= 3500){
+	if (msps >= 3500) {
 		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(11), (1 << 3), X5H_OA_A2D_16_BUS_EN); //LUT
 		rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_RW_COMMON_REG(0), (1 << 14), X5H_GEN2_SEL_CORE_DIG); //LUT
 	} else {
