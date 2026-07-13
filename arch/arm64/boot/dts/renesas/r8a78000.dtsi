@@ -4252,15 +4252,15 @@
 					};
 				};
 
-				port@9 {
-					reg = <9>;
+				port@3 {
+					reg = <3>;
 					isp0vin010: endpoint {
 						remote-endpoint = <&vin010isp0>;
 					};
 				};
 
-				port@17 {
-					reg = <0x17>;
+				port@4 {
+					reg = <4>;
 					isp0vin020: endpoint {
 						remote-endpoint = <&vin020isp0>;
 					};
@@ -4307,15 +4307,15 @@
 					};
 				};
 
-				port@9 {
-					reg = <9>;
+				port@3 {
+					reg = <3>;
 					isp1vin040: endpoint {
 						remote-endpoint = <&vin040isp1>;
 					};
 				};
 
-				port@17 {
-					reg = <0x17>;
+				port@4 {
+					reg = <4>;
 					isp1vin050: endpoint {
 						remote-endpoint = <&vin050isp1>;
 					};
@@ -4362,15 +4362,15 @@
 					};
 				};
 
-				port@9 {
-					reg = <9>;
+				port@3 {
+					reg = <3>;
 					isp2vin070: endpoint {
 						remote-endpoint = <&vin070isp2>;
 					};
 				};
 
-				port@17 {
-					reg = <0x17>;
+				port@4 {
+					reg = <4>;
 					isp2vin080: endpoint {
 						remote-endpoint = <&vin080isp2>;
 					};
@@ -4417,15 +4417,15 @@
 					};
 				};
 
-				port@9 {
-					reg = <9>;
+				port@3 {
+					reg = <3>;
 					isp3vin100: endpoint {
 						remote-endpoint = <&vin100isp3>;
 					};
 				};
 
-				port@17 {
-					reg = <0x17>;
+				port@4 {
+					reg = <4>;
 					isp3vin110: endpoint {
 						remote-endpoint = <&vin110isp3>;
 					};
