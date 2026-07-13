@@ -1140,18 +1140,56 @@ static int rvin_isp_setup_links(struct rvin_group *group)
 		struct media_pad *source_pad, *sink_pad;
 		struct media_entity *source, *sink;
 		struct rvin_dev *vin = group->vin[i];
-		unsigned int max_num_source = num_channel / RVIN_ISP_MAX;
-		unsigned int source_slot = i / max_num_source;
-		unsigned int source_idx = i % max_num_source + 1;
+		struct fwnode_handle *ep = NULL, *remote_ep;
+		struct v4l2_fwnode_endpoint vep = { .bus_type = V4L2_MBUS_CSI2_DPHY };
+		struct v4l2_fwnode_endpoint rep = { .bus_type = V4L2_MBUS_CSI2_DPHY };
+		unsigned int source_slot, source_idx, id;
 
 		if (!vin)
 			continue;
+
+		/*
+		 * The VIN's own port@2 endpoint id selects which ISP it is
+		 * wired to (matches group->remotes[]), and the remote
+		 * endpoint's parent port reg is the ISP's output pad index.
+		 */
+		for (id = 0; id < RVIN_ISP_MAX; id++) {
+			ep = fwnode_graph_get_endpoint_by_id(dev_fwnode(vin->dev),
+						2, id, 0);
+			if (ep)
+				break;
+		}
+		if (!ep)
+			continue;
+
+		if (v4l2_fwnode_endpoint_parse(ep, &vep)) {
+			fwnode_handle_put(ep);
+			continue;
+		}
+		source_slot = vep.base.id;
+
+		remote_ep = fwnode_graph_get_remote_endpoint(ep);
+		fwnode_handle_put(ep);
+		if (!remote_ep)
+			continue;
+
+		ret = v4l2_fwnode_endpoint_parse(remote_ep, &rep);
+		fwnode_handle_put(remote_ep);
+		if (ret)
+			continue;
+		source_idx = rep.base.port;
 
 		/* Check that ISP is part of the group. */
 		if (!group->remotes[source_slot].subdev)
 			continue;
 
 		source = &group->remotes[source_slot].subdev->entity;
+		if (source_idx >= source->num_pads) {
+			vin_err(vin, "Invalid ISP source pad %u for %s\n",
+				source_idx, vin->vdev.entity.name);
+			continue;
+		}
+
 		source_pad = &source->pads[source_idx];
 
 		sink = &vin->vdev.entity;
