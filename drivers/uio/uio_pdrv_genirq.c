@@ -131,7 +131,7 @@ static irqreturn_t uio_pdrv_genirq_handler(int irq, struct uio_info *dev_info)
 	return IRQ_HANDLED;
 }
 
-/**
+/*
  * Changes the drivers power state
  * if value == 0, calls pm_runtime_put_sync
  * if value == 1, calls pm_runtime_get_sync
@@ -147,8 +147,8 @@ static int priv_set_pwr(struct uio_info *info, int value)
 		return ret;
 	}
 
-	if (((value == 0) && priv->pwr_cnt > 0) || ((value != 0)
-		    && priv->pwr_cnt == 0)) {
+	if ((value == 0 && priv->pwr_cnt > 0) ||
+	    (value != 0 && priv->pwr_cnt == 0)) {
 		if (value == 0)
 			ret = local_pm_runtime_put_sync(priv);
 		else
@@ -161,7 +161,7 @@ static int priv_set_pwr(struct uio_info *info, int value)
 	return ret;
 }
 
-/**
+/*
  * Gets the power status of the driver, priv->pwr_cnt is returned
  */
 static int priv_get_pwr(struct uio_info *info)
@@ -179,7 +179,7 @@ static int priv_get_pwr(struct uio_info *info)
 	return priv->pwr_cnt;
 }
 
-/**
+/*
  * Changes the drivers clock state
  * if value == 0, calls local_clk_disable
  * if value == 1, calls local_clk_enable
@@ -206,7 +206,7 @@ static int priv_set_clk(struct uio_info *info, int value)
 	return ret;
 }
 
-/**
+/*
  * Gets the clock status of the driver
  * Returns priv->clk_cnt
  */
@@ -420,9 +420,8 @@ static int uio_pdrv_genirq_irqcontrol(struct uio_info *dev_info, s32 irq_on)
 	} else {
 		irq_en[dev_info->irq]--;
 		if (!irq_en[dev_info->irq]) {
-			if (!__test_and_set_bit(UIO_IRQ_DISABLED, &priv->flags)) {
+			if (!__test_and_set_bit(UIO_IRQ_DISABLED, &priv->flags))
 				disable_irq_nosync(dev_info->irq);
-			}
 		}
 	}
 	spin_unlock_irqrestore(&priv->lock, flags);
@@ -590,7 +589,7 @@ static int uio_pdrv_genirq_probe(struct platform_device *pdev)
 		pm_runtime_put_sync(&pdev->dev);
 		pm_runtime_disable(&pdev->dev);
 		priv->pd = 1;
-        }
+	}
 
 	ret = devm_add_action_or_reset(&pdev->dev, uio_pdrv_genirq_cleanup,
 				       &pdev->dev);
