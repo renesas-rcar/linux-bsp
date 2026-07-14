@@ -548,9 +548,14 @@ void sci_port_enable(struct sci_port *sci_port)
 		clk_prepare_enable(sci_port->clks[i]);
 		sci_port->clk_rates[i] = clk_get_rate(sci_port->clks[i]);
 	}
-#if defined(CONFIG_ARCH_R8A78000) && defined(CONFIG_RCAR_SCP_FIXUP)
-	sci_port->clk_rates[SCI_FCK] = 266660000;
-#endif /* CONFIG_ARCH_R8A78000 && CONFIG_RCAR_SCP_FIXUP */
+
+#if defined(CONFIG_ARCH_R8A78000)
+	if (sci_port->clk_rates[SCI_FCK] == 0) {
+		dev_warn(sci_port->port.dev,
+				 "Failed to get sci_fck clock rate, using fallback 266.66 MHz.\n");
+		sci_port->clk_rates[SCI_FCK] = 266660000;
+	}
+#endif /* CONFIG_ARCH_R8A78000 */
 	sci_port->port.uartclk = sci_port->clk_rates[SCI_FCK];
 }
 
