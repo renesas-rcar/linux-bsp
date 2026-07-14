@@ -2035,7 +2035,7 @@ static int rsw3_open(struct net_device *ndev)
 	spin_unlock_irqrestore(&rdev->priv->lock, flags);
 
 	phy_start(ndev->phydev);
-	netif_start_queue(ndev);
+	netif_tx_start_all_queues(ndev);
 
 	return 0;
 }
