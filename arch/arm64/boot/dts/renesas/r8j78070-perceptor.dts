@@ -14,3 +14,519 @@
 	compatible = "renesas,perceptor", "renesas,r8j78070",
 		     "renesas,r8a78000";
 };
+
+&mmc0 {
+	status = "disabled";
+};
+
+&mfis {
+	status = "disabled";
+};
+
+&cr52_rproc1 {
+	status = "disabled";
+};
+
+&rpmsg_shm0 {
+	status = "disabled";
+};
+
+&rpmsg_ipi0 {
+	status = "disabled";
+};
+
+&cmt0 {
+	status = "disabled";
+};
+
+&cmt1 {
+	status = "disabled";
+};
+
+&cmt2 {
+	status = "disabled";
+};
+
+&cmt3 {
+	status = "disabled";
+};
+
+&tmu0 {
+	status = "disabled";
+};
+
+&tmu1 {
+	status = "disabled";
+};
+
+&tmu2 {
+	status = "disabled";
+};
+
+&tmu3 {
+	status = "disabled";
+};
+
+&tmu4 {
+	status = "disabled";
+};
+
+&i3c0 {
+	status = "disabled";
+};
+
+&rpc {
+	status = "disabled";
+};
+
+&pciec40 {
+	status = "disabled";
+};
+
+&pciec60 {
+	status = "disabled";
+};
+
+&pciec60_ep {
+	status = "disabled";
+};
+
+&pciec61 {
+	status = "disabled";
+};
+
+&pciec61_ep {
+	status = "disabled";
+};
+
+&rcar_sound {
+	status = "disabled";
+};
+
+&tsnes3 {
+	status = "disabled";
+};
+
+&usb30 {
+	status = "disabled";
+};
+
+&usb31 {
+	status = "disabled";
+};
+
+&usb20 {
+	status = "disabled";
+};
+
+&usb21 {
+	status = "disabled";
+};
+
+&dp0 {
+	status = "disabled";
+};
+
+&dp1 {
+	status = "disabled";
+};
+
+&dp2 {
+	status = "disabled";
+};
+
+&vcon_group0 {
+	status = "disabled";
+};
+
+&vcon_group1 {
+	status = "disabled";
+};
+
+&vcon_group2 {
+	status = "disabled";
+};
+
+&rwdt {
+	status = "disabled";
+};
+
+&wwdt0 {
+	status = "disabled";
+};
+
+&wwdt1 {
+	status = "disabled";
+};
+
+&wwdt2 {
+	status = "disabled";
+};
+
+&wwdt3 {
+	status = "disabled";
+};
+
+&wwdt4 {
+	status = "disabled";
+};
+
+&wwdt5 {
+	status = "disabled";
+};
+
+&wwdt6 {
+	status = "disabled";
+};
+
+&wwdt7 {
+	status = "disabled";
+};
+
+&wwdt8 {
+	status = "disabled";
+};
+
+&wwdt9 {
+	status = "disabled";
+};
+
+&wwdt10 {
+	status = "disabled";
+};
+
+&wwdt11 {
+	status = "disabled";
+};
+
+&wwdt12 {
+	status = "disabled";
+};
+
+&wwdt13 {
+	status = "disabled";
+};
+
+&wwdt14 {
+	status = "disabled";
+};
+
+&wwdt15 {
+	status = "disabled";
+};
+
+&wwdt16 {
+	status = "disabled";
+};
+
+&wwdt17 {
+	status = "disabled";
+};
+
+&wwdt18 {
+	status = "disabled";
+};
+
+&wwdt19 {
+	status = "disabled";
+};
+
+&wwdt20 {
+	status = "disabled";
+};
+
+&crc0 {
+	status = "disabled";
+};
+
+&crc1 {
+	status = "disabled";
+};
+
+&crc2 {
+	status = "disabled";
+};
+
+&crc3 {
+	status = "disabled";
+};
+
+&crc4 {
+	status = "disabled";
+};
+
+&crc5 {
+	status = "disabled";
+};
+
+&crc6 {
+	status = "disabled";
+};
+
+&crc7 {
+	status = "disabled";
+};
+
+&crc8 {
+	status = "disabled";
+};
+
+&crc9 {
+	status = "disabled";
+};
+
+&crc10 {
+	status = "disabled";
+};
+
+&kcrc0 {
+	status = "disabled";
+};
+
+&kcrc1 {
+	status = "disabled";
+};
+
+&kcrc2 {
+	status = "disabled";
+};
+
+&kcrc3 {
+	status = "disabled";
+};
+
+&kcrc4 {
+	status = "disabled";
+};
+
+&kcrc5 {
+	status = "disabled";
+};
+
+&kcrc6 {
+	status = "disabled";
+};
+
+&kcrc7 {
+	status = "disabled";
+};
+
+&kcrc8 {
+	status = "disabled";
+};
+
+&kcrc9 {
+	status = "disabled";
+};
+
+&kcrc10 {
+	status = "disabled";
+};
+
+&wcrc0 {
+	status = "disabled";
+};
+
+&wcrc1 {
+	status = "disabled";
+};
+
+&wcrc2 {
+	status = "disabled";
+};
+
+&wcrc3 {
+	status = "disabled";
+};
+
+&wcrc4 {
+	status = "disabled";
+};
+
+&wcrc5 {
+	status = "disabled";
+};
+
+&wcrc6 {
+	status = "disabled";
+};
+
+&wcrc7 {
+	status = "disabled";
+};
+
+&wcrc8 {
+	status = "disabled";
+};
+
+&wcrc9 {
+	status = "disabled";
+};
+
+&wcrc10 {
+	status = "disabled";
+};
+
+&ufs0 {
+	status = "disabled";
+};
+
+&ufs1 {
+	status = "disabled";
+};
+
+&vspi0 {
+	status = "disabled";
+};
+
+&vspi1 {
+	status = "disabled";
+};
+
+&vspi2 {
+	status = "disabled";
+};
+
+&vspi3 {
+	status = "disabled";
+};
+
+&vspb0 {
+	status = "disabled";
+};
+
+&vspb1 {
+	status = "disabled";
+};
+
+&vspb2 {
+	status = "disabled";
+};
+
+&vspb3 {
+	status = "disabled";
+};
+
+&vspb4 {
+	status = "disabled";
+};
+
+&canfd_0 {
+	status = "disabled";
+};
+
+&canfd_1 {
+	status = "disabled";
+};
+
+&canxl0 {
+	status = "disabled";
+};
+
+&canxl1 {
+	status = "disabled";
+};
+
+&rtca {
+	status = "disabled";
+};
+
+&gsx {
+	status = "disabled";
+};
+
+&vin000 {
+	status = "disabled";
+};
+
+&vin001 {
+	status = "disabled";
+};
+
+&vin010 {
+	status = "disabled";
+};
+
+&vin020 {
+	status = "disabled";
+};
+
+&vin030 {
+	status = "disabled";
+};
+
+&vin031 {
+	status = "disabled";
+};
+
+&vin040 {
+	status = "disabled";
+};
+
+&vin050 {
+	status = "disabled";
+};
+
+&vin060 {
+	status = "disabled";
+};
+
+&vin061 {
+	status = "disabled";
+};
+
+&vin070 {
+	status = "disabled";
+};
+
+&vin080 {
+	status = "disabled";
+};
+
+&vin090 {
+	status = "disabled";
+};
+
+&vin091 {
+	status = "disabled";
+};
+
+&vin100 {
+	status = "disabled";
+};
+
+&vin110 {
+	status = "disabled";
+};
+
+&csi40 {
+	status = "disabled";
+};
+
+&csi41 {
+	status = "disabled";
+};
+
+&csi42 {
+	status = "disabled";
+};
+
+&csi43 {
+	status = "disabled";
+};
+
+&isp0 {
+	status = "disabled";
+};
+
+&isp1 {
+	status = "disabled";
+};
+
+&isp2 {
+	status = "disabled";
+};
+
+&isp3 {
+	status = "disabled";
+};
