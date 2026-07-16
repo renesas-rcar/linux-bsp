@@ -2654,7 +2654,6 @@ out_rxdmac:
 out_get_params:
 	of_node_put(rdev->np_port);
 	netif_napi_del(&rdev->napi);
-	free_netdev(ndev);
 
 	return err;
 }
@@ -2671,11 +2670,11 @@ static void rswitch_device_free(struct rswitch_private *priv, unsigned int index
 	}
 	of_node_put(rdev->np_port);
 	netif_napi_del(&rdev->napi);
-	free_netdev(ndev);
 }
 
 static int rswitch_init(struct rswitch_private *priv)
 {
+	struct platform_device *pdev = priv->pdev;
 	unsigned int i;
 	int err;
 
@@ -2749,12 +2748,9 @@ static int rswitch_init(struct rswitch_private *priv)
 		goto err_ether_port_init_all;
 
 	rswitch_for_each_enabled_port(priv, i) {
-		err = register_netdev(priv->rdev[i]->ndev);
-		if (err) {
-			rswitch_for_each_enabled_port_continue_reverse(priv, i)
-				unregister_netdev(priv->rdev[i]->ndev);
+		err = devm_register_netdev(&pdev->dev, priv->rdev[i]->ndev);
+		if (err)
 			goto err_register_netdev;
-		}
 	}
 
 	rswitch_for_each_enabled_port(priv, i)
@@ -2797,8 +2793,6 @@ static void rswitch_deinit(struct rswitch_private *priv)
 
 	rswitch_for_each_enabled_port(priv, i) {
 		struct rswitch_device *rdev = priv->rdev[i];
-
-		unregister_netdev(rdev->ndev);
 		rswitch_ether_port_deinit_one(rdev);
 		phy_exit(priv->rdev[i]->serdes);
 	}
