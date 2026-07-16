@@ -1943,7 +1943,8 @@ static int rswitch_phy_device_init(struct rswitch_device *rdev)
 
 	err = 0;
 out:
-	of_node_put(phy);
+	if (phy != rdev->np_port)
+		of_node_put(phy);
 
 	return err;
 }
@@ -2015,10 +2016,11 @@ static int rswitch_ether_port_init_one(struct rswitch_device *rdev)
 
 	return 0;
 
-err_serdes_set_params:
-	rswitch_phy_device_deinit(rdev);
 err_phy_device_init:
 	rswitch_mii_unregister(rdev);
+
+err_serdes_set_params:
+	rswitch_phy_device_deinit(rdev);
 
 	return err;
 }
@@ -2048,7 +2050,7 @@ static int rswitch_ether_port_init_all(struct rswitch_private *priv)
 
 		err = rswitch_ether_port_init_one(priv->rdev[i]);
 		if (err)
-			goto err_init_one;
+			return err;
 	}
 
 	rswitch_for_each_enabled_port(priv, i) {
@@ -2072,10 +2074,6 @@ err_serdes:
 	rswitch_for_each_enabled_port_continue_reverse(priv, i)
 		phy_exit(priv->rdev[i]->serdes);
 	i = priv->num_ports;
-
-err_init_one:
-	rswitch_for_each_enabled_port_continue_reverse(priv, i)
-		rswitch_ether_port_deinit_one(priv->rdev[i]);
 
 	return err;
 }
@@ -2841,7 +2839,6 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 		return PTR_ERR(info);
 
 	priv->clk = devm_clk_get(&pdev->dev, NULL);
-
 	if (IS_ERR(priv->clk)) {
 		dev_warn(&pdev->dev, "no input clock; will use fallback frequency for PSMCS (%pe)\n",
 			 priv->clk);
@@ -2858,12 +2855,6 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	attr = soc_device_match(rswitch_soc_no_speed_change);
 	if (attr)
 		priv->etha_no_runtime_change = true;
-
-	priv->ptp_priv = rcar_gen4_ptp_alloc(pdev);
-	if (!priv->ptp_priv) {
-		ret = -ENOMEM;
-		goto err_sw_probe;
-	}
 
 	if (!parallel_mode)
 		parallel_mode = of_property_read_bool(pdev->dev.of_node, "parallel_mode");
