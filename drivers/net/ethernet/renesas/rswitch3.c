@@ -1233,12 +1233,8 @@ static void rswitch_rmac_setting(struct rswitch_etha *etha, const u8 *mac)
 	rswitch_modify(etha->addr, MPIC, MPIC_PIS | MPIC_LSC,
 			FIELD_PREP(MPIC_PIS, pis) | FIELD_PREP(MPIC_LSC, lsc));
 	/* Set MIOC Bit(3)*/
-	if (etha->connect_to_xpcs) {
-		if (etha->index >= 5 && etha->index <= 7)
-			iowrite32(MIOC_BIT3_SET, etha->addr + MIOC);
-		else
-			pr_err("%s: Invalid port %d for XPCS connection\n", __func__, etha->index);
-	}
+	if (etha->index >= 5 && etha->index <= 7)
+		iowrite32(MIOC_BIT3_SET, etha->addr + MIOC);
 }
 
 static void rswitch_etha_enable_mii(struct rswitch_etha *etha)
@@ -1257,7 +1253,7 @@ static void rswitch_etha_init_tsn_egress_path(struct rswitch_etha *etha)
 	iowrite32(0, etha->addr + EATDQSC);
 	iowrite32(0, etha->addr + EATDQAC);
 	iowrite32(0, etha->addr + EATPEC);
-	iowrite32(0, etha->addr + MIOC);
+	rswitch_modify(etha->addr, MIOC, ~MIOC_BIT3_SET, 0);
 
 	for (q = 0; q < RSWITCH3_NUM_PRIOS; q++) {
 		iowrite32(RSWITCH3_TSNA_QUEUE_DEPTH, etha->addr + EATDQDC(q));
@@ -1289,7 +1285,6 @@ static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
 
 	rswitch_rmac_setting(etha, mac);
 	rswitch_etha_enable_mii(etha);
-	rswitch_etha_init_tsn_egress_path(etha);
 
 	/* Disable function to use vpf environemnt
 	err = rswitch_etha_wait_link_verification(etha);
@@ -2105,9 +2100,14 @@ int rswitch_attach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port,
 	if (!rswitch_agent_clock_is_enabled(priv->addr, rsw_port))
 		rswitch_agent_clock_ctrl(priv->addr, rsw_port, 1);
 
-	ret = rswitch_etha_hw_init_tsn_internal(priv, rsw_port, mac);
-		if (ret)
-			goto out_unlock;
+	if (priv->rdev[rsw_port] && priv->rdev[rsw_port]->ndev &&
+		netif_running(priv->rdev[rsw_port]->ndev)) {
+		dev_err(dev,
+			"cannot attach tsnes%u: external port %s is up; link it down first\n",
+			tsnes_id, netdev_name(priv->rdev[rsw_port]->ndev));
+		ret = -EBUSY;
+		goto out_unlock;
+	}
 
 	if (tsnes_id <= 2) {
 		selector_etha = &priv->etha[rsw_port];
@@ -2118,6 +2118,12 @@ int rswitch_attach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port,
 		val = ioread32(selector_etha->addr + MIOC);
 		val &= ~MIOC_BIT3_SET;
 		iowrite32(val, selector_etha->addr + MIOC);
+	}
+
+	if (!(selector_etha)) {
+		ret = rswitch_etha_hw_init_tsn_internal(priv, rsw_port, mac);
+		if (ret)
+			goto out_unlock;
 	}
 
 	priv->tsnes_attached |= BIT(tsnes_id);
@@ -2134,6 +2140,7 @@ EXPORT_SYMBOL_GPL(rswitch_attach_tsnes);
 void rswitch_detach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port)
 {
 	struct rswitch_private *priv = dev_get_drvdata(dev);
+	struct rswitch_etha *etha = &priv->etha[rsw_port];
 
 	if (!priv || tsnes_id >= RSWITCH3_NUM_TSNES)
 		return;
@@ -2148,6 +2155,8 @@ void rswitch_detach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port)
 
 	priv->tsnes_attached &= ~BIT(tsnes_id);
 	priv->tsnes_fwd_mask[tsnes_id] = 0;
+
+	rswitch_modify(etha->addr, MIOC, 0, MIOC_BIT3_SET);
 
 out_unlock:
 	mutex_unlock(&priv->tsnes_lock);
