@@ -368,12 +368,10 @@ static struct scmi_desc scmi_mailbox_desc = {
 	.max_msg = 20, /* Limited by MBOX_TX_QUEUE_LEN */
 #if defined(CONFIG_ARCH_R8A78000)
 	.max_msg_size = 220,
+	.atomic_enabled = IS_ENABLED(CONFIG_SCMI_FULL_HW_VIRTUALIZATION),
 #else
 	.max_msg_size = 128,
 #endif
-#if defined(CONFIG_ARCH_R8A78000) && defined(CONFIG_RCAR_SCP_FIXUP)
-	.atomic_enabled = IS_ENABLED(CONFIG_SCMI_FULL_HW_VIRTUALIZATION),
-#endif /* CONFIG_ARCH_R8A78000 && CONFIG_RCAR_SCP_FIXUP */
 };
 
 static const struct of_device_id scmi_of_match[] = {
