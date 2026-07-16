@@ -815,8 +815,16 @@ static int scmi_clock_enable(const struct scmi_protocol_handle *ph, u32 clk_id,
 	if (IS_ERR(clk))
 		return PTR_ERR(clk);
 
-	if (clk->state_ctrl_forbidden)
+	if (clk->state_ctrl_forbidden) {
+#if defined(CONFIG_ARCH_R8A78000)
+		dev_warn_once(ph->dev,
+			      "clk_id %u (%s): enable request ignored, state control not allowed by firmware\n",
+			      clk_id, clk->name);
+		return 0;
+#else
 		return -EACCES;
+#endif
+	}
 
 	return ci->clock_config_set(ph, clk_id, CLK_STATE_ENABLE,
 				    NULL_OEM_TYPE, 0, atomic);
@@ -832,8 +840,16 @@ static int scmi_clock_disable(const struct scmi_protocol_handle *ph, u32 clk_id,
 	if (IS_ERR(clk))
 		return PTR_ERR(clk);
 
-	if (clk->state_ctrl_forbidden)
+	if (clk->state_ctrl_forbidden) {
+#if defined(CONFIG_ARCH_R8A78000)
+		dev_warn_once(ph->dev,
+			      "clk_id %u (%s): disable request ignored, state control not allowed by firmware\n",
+			      clk_id, clk->name);
+		return 0;
+#else
 		return -EACCES;
+#endif
+	}
 
 	return ci->clock_config_set(ph, clk_id, CLK_STATE_DISABLE,
 				    NULL_OEM_TYPE, 0, atomic);
