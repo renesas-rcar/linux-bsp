@@ -239,6 +239,18 @@ static int rcar_gen5_usb_probe(struct platform_device *pdev)
 		return PTR_ERR(priv->resets);
 	}
 
+	ret = reset_control_assert(priv->resets);
+	if (ret) {
+		dev_err(dev, "Failed to assert reset: %d\n", ret);
+		goto err_pm;
+	}
+
+	ret = reset_control_deassert(priv->resets);
+	if (ret) {
+		dev_err(dev, "Failed to deassert reset: %d\n", ret);
+		goto err_pm;
+	}
+
 	priv->clk = devm_clk_get(dev, NULL);
 	if (IS_ERR(priv->clk)) {
 		dev_err(dev, "Failed to get clk control\n");
@@ -248,7 +260,7 @@ static int rcar_gen5_usb_probe(struct platform_device *pdev)
 	ret = clk_prepare_enable(priv->clk);
 	if (ret) {
 		dev_err(dev, "Failed to enable clock: %d\n", ret);
-		return ret;
+		goto err_pm;
 	}
 
 	priv->usb3_phy = devm_phy_optional_get(dev, "usb3-phy");
