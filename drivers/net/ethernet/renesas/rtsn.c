@@ -27,9 +27,11 @@
 #include "rtsn.h"
 #include "rcar_gen4_ptp.h"
 
-int rswitch3_attach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port,
-			  u32 fwd_mask, const u8 *mac);
-void rswitch3_detach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port);
+/* Temporarily disable this to keep the code compiling
+ * int rswitch3_attach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port,
+ * u32 fwd_mask, const u8 *mac);
+ * void rswitch3_detach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port);
+ */
 
 struct rtsn_private {
 	struct net_device *ndev;
@@ -233,10 +235,11 @@ static int rtsn_attach_rswitch(struct rtsn_private *priv)
 	if (ret || !priv->rswitch_dev)
 		return ret;
 
-	ret = rswitch3_attach_tsnes(priv->rswitch_dev, priv->tsnes_id,
-					priv->rswitch_port,
-					priv->rswitch_fwd_mask,
-					priv->ndev->dev_addr);
+	/* ret = rswitch3_attach_tsnes(priv->rswitch_dev, priv->tsnes_id,
+	 *	priv->rswitch_port,
+	 *	priv->rswitch_fwd_mask,
+	 *	priv->ndev->dev_addr);
+	 */
 	if (ret)
 		return dev_err_probe(dev, ret,
 					"failed to attach tsnes%u to rswitch interface %u\n",
@@ -253,7 +256,7 @@ static void rtsn_detach_rswitch(struct rtsn_private *priv)
 		return;
 
 	if (priv->rswitch_dev)
-		rswitch3_detach_tsnes(priv->rswitch_dev, priv->tsnes_id, priv->rswitch_port);
+		/* rswitch3_detach_tsnes(priv->rswitch_dev, priv->tsnes_id, priv->rswitch_port); */
 	priv->rswitch_attached = false;
 }
 

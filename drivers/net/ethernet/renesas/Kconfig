@@ -58,6 +58,9 @@ config RENESAS_ETHER_SWITCH
 	select RENESAS_GEN4_PTP
 	help
 	  Renesas Ethernet Switch device driver.
+	  This driver supports the following SoCs:
+		- R8A779Fx
+ 		- R8A78000.
 
 config RENESAS_GEN4_PTP
 	tristate "Renesas R-Car Gen4 gPTP support" if COMPILE_TEST
@@ -77,17 +80,5 @@ config RTSN
 	select RENESAS_GEN4_PTP
 	help
 	  Renesas Ethernet-TSN device driver.
-
-config RENESAS_ETHER_SWITCH3
-	tristate "Renesas Ethernet Switch support"
-	depends on ARCH_RENESAS || COMPILE_TEST
-	select CRC32
-	select MII
-	select PHYLINK
-	select RENESAS_GEN4_PTP
-	help
-	  Renesas Ethernet Switch3 device driver.
-	  This driver supports the following SoCs:
-		- R8A78000.
 
 endif # NET_VENDOR_RENESAS
