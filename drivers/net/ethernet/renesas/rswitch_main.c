@@ -48,18 +48,18 @@ void rswitch_modify(void __iomem *addr, enum rswitch_reg reg, u32 clear, u32 set
 /* Common Agent block (COMA) */
 static void rswitch_reset(struct rswitch_private *priv)
 {
-	iowrite32(RRC_RR, priv->addr + RRC);
-	iowrite32(RRC_RR_CLR, priv->addr + RRC);
+	iowrite32(RR, priv->addr + RRC);
+	iowrite32(!RR, priv->addr + RRC);
 }
 
 static void rswitch_clock_enable(struct rswitch_private *priv)
 {
-	iowrite32(RCEC_ACE_DEFAULT | RCEC_RCE, priv->addr + RCEC);
+	iowrite32(RCEC_ACE_DEFAULT | RCE, priv->addr + RCEC);
 }
 
 static void rswitch_clock_disable(struct rswitch_private *priv)
 {
-	iowrite32(RCDC_RCD, priv->addr + RCDC);
+	iowrite32(RCD, priv->addr + RCDC);
 }
 
 static bool rswitch_agent_clock_is_enabled(void __iomem *coma_addr,
@@ -67,7 +67,7 @@ static bool rswitch_agent_clock_is_enabled(void __iomem *coma_addr,
 {
 	u32 val = ioread32(coma_addr + RCEC);
 
-	if (val & RCEC_RCE)
+	if (val & RCE)
 		return (val & BIT(port)) ? true : false;
 	else
 		return false;
@@ -80,7 +80,7 @@ static void rswitch_agent_clock_ctrl(void __iomem *coma_addr, unsigned int port,
 
 	if (enable) {
 		val = ioread32(coma_addr + RCEC);
-		iowrite32(val | RCEC_RCE | BIT(port), coma_addr + RCEC);
+		iowrite32(val | RCE | BIT(port), coma_addr + RCEC);
 	} else {
 		val = ioread32(coma_addr + RCDC);
 		iowrite32(val | BIT(port), coma_addr + RCDC);
@@ -92,12 +92,12 @@ static int rswitch_bpool_config(struct rswitch_private *priv)
 	u32 val;
 
 	val = ioread32(priv->addr + CABPIRM);
-	if (val & CABPIRM_BPR)
+	if (val & BPR)
 		return 0;
 
-	iowrite32(CABPIRM_BPIOG, priv->addr + CABPIRM);
+	iowrite32(BPIOG, priv->addr + CABPIRM);
 
-	return rswitch_reg_wait(priv->addr, CABPIRM, CABPIRM_BPR, CABPIRM_BPR);
+	return rswitch_reg_wait(priv->addr, CABPIRM, BPR, BPR);
 }
 
 static void rswitch_coma_init(struct rswitch_private *priv)
@@ -127,45 +127,45 @@ static int rswitch_fwd_init(struct rswitch_private *priv)
 		/* Disable all port features */
 		iowrite32(0, priv->addr + FWPC0(i));
 		/* Disallow L3 forwarding and direct descriptor forwarding */
-		iowrite32(FIELD_PREP(FWCP1_LTHFW, all_ports_mask),
+		iowrite32(FIELD_PREP(LTHFM, all_ports_mask),
 			  priv->addr + FWPC1(i));
 		/* Disallow L2 forwarding */
-		iowrite32(FIELD_PREP(FWPC2_LTWFW, all_ports_mask),
+		iowrite32(FIELD_PREP(LTWFM, all_ports_mask),
 			  priv->addr + FWPC2(i));
 		/* Disallow port based forwarding */
 		iowrite32(0, priv->addr + FWPBFC(i));
 	}
 
 	/* Configure MAC table aging */
-	rswitch_modify(priv->addr, FWMACAGUSPC, FWMACAGUSPC_MACAGUSP,
-		       FIELD_PREP(FWMACAGUSPC_MACAGUSP, RSW_AGEING_CLK_PER_US));
+	rswitch_modify(priv->addr, FWMACAGUSPC, MACAGUSP,
+		       FIELD_PREP(MACAGUSP, RSW_AGEING_CLK_PER_US));
 
-	reg_val = FIELD_PREP(FWMACAGC_MACAGT, RSW_AGEING_TIME);
-	reg_val |= FWMACAGC_MACAGE | FWMACAGC_MACAGSL;
+	reg_val = FIELD_PREP(MACAGT, RSW_AGEING_TIME);
+	reg_val |= MACAGE | MACAGSL;
 	iowrite32(reg_val, priv->addr + FWMACAGC);
 
 	/* For enabled ETHA ports, setup port based forwarding */
 	rswitch_for_each_enabled_port(priv, i) {
 		/* Port based forwarding from port i to GWCA port */
-		rswitch_modify(priv->addr, FWPBFC(i), FWPBFC_PBDV,
-			       FIELD_PREP(FWPBFC_PBDV, BIT(priv->gwca.index)));
+		rswitch_modify(priv->addr, FWPBFC(i), PBDV,
+			       FIELD_PREP(PBDV, BIT(priv->gwca.index)));
 		/* Within GWCA port, forward to Rx queue for port i */
 		iowrite32(priv->rdev[i]->rx_queue->index,
 			  priv->addr + FWPBFCSDC(GWCA_INDEX, i));
 	}
 
 	/* For GWCA port, allow direct descriptor forwarding */
-	rswitch_modify(priv->addr, FWPC1(priv->gwca.index), 0, FWPC1_DDE);
+	rswitch_modify(priv->addr, FWPC1(priv->gwca.index), 0, DDE);
 
 	/* Initialize hardware L2 forwarding table */
 
 	/* Allow entire table to be used for "un-secure" entries */
-	rswitch_modify(priv->addr, FWMACHEC, 0, FWMACHEC_MACHMUE_MASK);
+	rswitch_modify(priv->addr, FWMACHEC, 0, MACHMUE);
 
 	/* Initialize MAC hash table */
-	iowrite32(FWMACTIM_MACTIOG, priv->addr + FWMACTIM);
+	iowrite32(MACTIOG, priv->addr + FWMACTIM);
 
-	ret = rswitch_reg_wait(priv->addr, FWMACTIM, FWMACTIM_MACTIOG, 0);
+	ret = rswitch_reg_wait(priv->addr, FWMACTIM, MACTIOG, 0);
 	if (ret)
 		return ret;
 
@@ -180,7 +180,7 @@ static int rswitch_fwd_init(struct rswitch_private *priv)
 
 /* Gateway CPU agent block (GWCA) */
 int rswitch_gwca_change_mode(struct rswitch_private *priv,
-			     enum rswitch_gwca_mode mode)
+			     enum rswitch_port_mode mode)
 {
 	int ret;
 
@@ -190,13 +190,13 @@ int rswitch_gwca_change_mode(struct rswitch_private *priv,
 		spin_unlock(&priv->agent_lock);
 	}
 
-	iowrite32(GWMC_OPC_DISABLE, priv->addr + GWMC);
+	iowrite32(OPC_DISABLE, priv->addr + GWMC);
 
-	ret = rswitch_reg_wait(priv->addr, GWMS, GWMS_OPS_MASK, GWMC_OPC_DISABLE);
+	ret = rswitch_reg_wait(priv->addr, GWMS, OPC, OPC_DISABLE);
 	if (ret < 0)
 		return ret;
 
-	if (mode == GWMC_OPC_DISABLE) {
+	if (mode == OPC_DISABLE) {
 		spin_lock(&priv->agent_lock);
 		rswitch_agent_clock_ctrl(priv->addr, priv->gwca.index, 0);
 		spin_unlock(&priv->agent_lock);
@@ -206,21 +206,21 @@ int rswitch_gwca_change_mode(struct rswitch_private *priv,
 
 	iowrite32(mode, priv->addr + GWMC);
 
-	return rswitch_reg_wait(priv->addr, GWMS, GWMS_OPS_MASK, mode);
+	return rswitch_reg_wait(priv->addr, GWMS, OPC, mode);
 }
 
 static int rswitch_gwca_mcast_table_reset(struct rswitch_private *priv)
 {
-	iowrite32(GWMTIRM_MTIOG, priv->addr + GWMTIRM);
+	iowrite32(MTIOG, priv->addr + GWMTIRM);
 
-	return rswitch_reg_wait(priv->addr, GWMTIRM, GWMTIRM_MTR, GWMTIRM_MTR);
+	return rswitch_reg_wait(priv->addr, GWMTIRM, MTR, MTR);
 }
 
 static int rswitch_gwca_axi_ram_reset(struct rswitch_private *priv)
 {
-	iowrite32(GWARIRM_ARIOG, priv->addr + GWARIRM);
+	iowrite32(ARIOG, priv->addr + GWARIRM);
 
-	return rswitch_reg_wait(priv->addr, GWARIRM, GWARIRM_ARR, GWARIRM_ARR);
+	return rswitch_reg_wait(priv->addr, GWARIRM, ARR, ARR);
 }
 
 static bool rswitch_is_any_data_irq(struct rswitch_private *priv, u32 *dis, bool tx)
@@ -457,8 +457,8 @@ static int rswitch_gwca_queue_format(struct net_device *ndev,
 	linkfix->die_dt = DT_LINKFIX;
 	rswitch_desc_set_dptr(linkfix, gq->ring_dma);
 
-	iowrite32(GWDCC_BALR | (gq->dir_tx ? GWDCC_DCP(GWCA_IPV_NUM) | GWDCC_DQT : 0) | GWDCC_EDE,
-		  priv->addr + GWDCC_OFFS(gq->index));
+	iowrite32(BALR | (gq->dir_tx ? DCP(GWCA_IPV_NUM) | DQT : 0) | EDE,
+		  priv->addr + GWDCC(gq->index));
 
 	return 0;
 
@@ -558,9 +558,8 @@ static int rswitch_gwca_queue_ext_ts_format(struct device *dev,
 	linkfix->die_dt = DT_LINKFIX;
 	rswitch_desc_set_dptr(linkfix, gq->ring_dma);
 
-	iowrite32(GWDCC_BALR | (gq->dir_tx ? GWDCC_DCP(GWCA_IPV_NUM) | GWDCC_DQT : 0) |
-		  GWDCC_ETS | GWDCC_EDE,
-		  priv->addr + GWDCC_OFFS(gq->index));
+	iowrite32(BALR | (gq->dir_tx ? DCP(GWCA_IPV_NUM) | DQT : 0) | ETS | EDE,
+		  priv->addr + GWDCC(gq->index));
 
 	return 0;
 }
@@ -741,7 +740,7 @@ static int rswitch_gwca_hw_init(struct rswitch_private *priv)
 	unsigned int i;
 	int err;
 
-	err = rswitch_gwca_change_mode(priv, GWMC_OPC_CONFIG);
+	err = rswitch_gwca_change_mode(priv, OPC_CONFIG);
 	if (err < 0)
 		return err;
 
@@ -762,11 +761,11 @@ static int rswitch_gwca_hw_init(struct rswitch_private *priv)
 	iowrite32(upper_32_bits(priv->gwca.linkfix_table_dma), priv->addr + GWDCBAC0);
 	iowrite32(lower_32_bits(priv->gwca.ts_queue.ring_dma), priv->addr + GWTDCAC10);
 	iowrite32(upper_32_bits(priv->gwca.ts_queue.ring_dma), priv->addr + GWTDCAC00);
-	iowrite32(GWMDNC_TSDMN(1) | GWMDNC_TXDMN(0x1e) | GWMDNC_RXDMN(0x1f),
+	iowrite32(FIELD_PREP(TSDMN, 1) | FIELD_PREP(TXDMN, 0x1e) | FIELD_PREP(RXDMN, 0x1f),
 		  priv->addr + GWMDNC);
-	iowrite32(GWCA_TS_IRQ_BIT, priv->addr + GWTSDCC0);
+	iowrite32(TE, priv->addr + GWTSDCC0);
 
-	iowrite32(GWTPC_PPPL(GWCA_IPV_NUM), priv->addr + GWTPC0);
+	iowrite32(PPPL(GWCA_IPV_NUM), priv->addr + GWTPC0);
 
 	for (i = 0; i < RSWITCH_NUM_PORTS; i++) {
 		err = rswitch_rxdmac_init(priv, i);
@@ -781,20 +780,20 @@ static int rswitch_gwca_hw_init(struct rswitch_private *priv)
 	if (err < 0)
 		return err;
 
-	return rswitch_gwca_change_mode(priv, GWMC_OPC_OPERATION);
+	return rswitch_gwca_change_mode(priv, OPC_OPERATION);
 }
 
 static int rswitch_gwca_hw_deinit(struct rswitch_private *priv)
 {
 	int err;
 
-	err = rswitch_gwca_change_mode(priv, GWMC_OPC_RESET);
+	err = rswitch_gwca_change_mode(priv, OPC_RESET);
 	if (err < 0)
 		return err;
 
 	rswitch_shared_rx_queue_free(priv);
 
-	return rswitch_gwca_change_mode(priv, GWMC_OPC_DISABLE);
+	return rswitch_gwca_change_mode(priv, OPC_DISABLE);
 }
 
 static int rswitch_gwca_halt(struct rswitch_private *priv)
@@ -1177,8 +1176,8 @@ static irqreturn_t rswitch_gwca_ts_irq(int irq, void *dev_id)
 {
 	struct rswitch_private *priv = dev_id;
 
-	if (ioread32(priv->addr + GWTSDIS) & GWCA_TS_IRQ_BIT) {
-		iowrite32(GWCA_TS_IRQ_BIT, priv->addr + GWTSDIS);
+	if (ioread32(priv->addr + GWTSDIS) & TS) {
+		iowrite32(TS, priv->addr + GWTSDIS);
 		rswitch_ts(priv);
 
 		return IRQ_HANDLED;
@@ -1201,7 +1200,7 @@ static int rswitch_gwca_ts_request_irqs(struct rswitch_private *priv)
 
 /* Ethernet TSN Agent block (ETHA) and Ethernet MAC IP block (RMAC) */
 int rswitch_etha_change_mode(struct rswitch_etha *etha,
-			     enum rswitch_etha_mode mode)
+			     enum rswitch_port_mode mode)
 {
 	int ret;
 
@@ -1211,12 +1210,12 @@ int rswitch_etha_change_mode(struct rswitch_etha *etha,
 		spin_unlock(&etha->priv->agent_lock);
 	}
 
-	iowrite32(EAMC_OPC_DISABLE, etha->addr + EAMC);
-	ret = rswitch_reg_wait(etha->addr, EAMS, EAMS_OPS_MASK, EAMC_OPC_DISABLE);
+	iowrite32(OPC_DISABLE, etha->addr + EAMC);
+	ret = rswitch_reg_wait(etha->addr, EAMS, OPC, OPC_DISABLE);
 	if (ret < 0)
 		return ret;
 
-	if (mode == EAMC_OPC_DISABLE) {
+	if (mode == OPC_DISABLE) {
 		spin_lock(&etha->priv->agent_lock);
 		rswitch_agent_clock_ctrl(etha->coma_addr, etha->index, 0);
 		spin_unlock(&etha->priv->agent_lock);
@@ -1226,7 +1225,7 @@ int rswitch_etha_change_mode(struct rswitch_etha *etha,
 
 	iowrite32(mode, etha->addr + EAMC);
 
-	return rswitch_reg_wait(etha->addr, EAMS, EAMS_OPS_MASK, mode);
+	return rswitch_reg_wait(etha->addr, EAMS, OPC, mode);
 }
 
 static void rswitch_etha_read_mac_address(struct rswitch_etha *etha)
@@ -1252,9 +1251,9 @@ static void rswitch_etha_write_mac_address(struct rswitch_etha *etha, const u8 *
 
 static int rswitch_etha_wait_link_verification(struct rswitch_etha *etha)
 {
-	iowrite32(MLVC_PLV, etha->addr + MLVC);
+	iowrite32(PLV, etha->addr + MLVC);
 
-	return rswitch_reg_wait(etha->addr, MLVC, MLVC_PLV, 0);
+	return rswitch_reg_wait(etha->addr, MLVC, PLV, 0);
 }
 
 static void rswitch_rmac_setting(struct rswitch_etha *etha, const u8 *mac)
@@ -1265,48 +1264,48 @@ static void rswitch_rmac_setting(struct rswitch_etha *etha, const u8 *mac)
 
 	switch (etha->phy_interface) {
 	case PHY_INTERFACE_MODE_SGMII:
-		pis = MPIC_PIS_GMII;
+		pis = PIS_GMII;
 		break;
 	case PHY_INTERFACE_MODE_USXGMII:
 	case PHY_INTERFACE_MODE_5GBASER:
-		pis = MPIC_PIS_XGMII;
+		pis = PIS_XGMII;
 		break;
 	default:
-		pis = FIELD_GET(MPIC_PIS, ioread32(etha->addr + MPIC));
+		pis = FIELD_GET(PIS, ioread32(etha->addr + MPIC));
 		break;
 	}
 
 	switch (etha->speed) {
 	case 100:
-		lsc = MPIC_LSC_100M;
+		lsc = LSC_100M;
 		break;
 	case 1000:
-		lsc = MPIC_LSC_1G;
+		lsc = LSC_1G;
 		break;
 	case 2500:
-		lsc = MPIC_LSC_2_5G;
+		lsc = LSC_2_5G;
 		break;
 	default:
-		lsc = FIELD_GET(MPIC_LSC, ioread32(etha->addr + MPIC));
+		lsc = FIELD_GET(LSC, ioread32(etha->addr + MPIC));
 		break;
 	}
 
-	rswitch_modify(etha->addr, MPIC, MPIC_PIS | MPIC_LSC,
-		       FIELD_PREP(MPIC_PIS, pis) | FIELD_PREP(MPIC_LSC, lsc));
+	rswitch_modify(etha->addr, MPIC, PIS | LSC,
+		       FIELD_PREP(PIS, pis) | FIELD_PREP(LSC, lsc));
 }
 
 static void rswitch_etha_enable_mii(struct rswitch_etha *etha)
 {
-	rswitch_modify(etha->addr, MPIC, MPIC_PSMCS | MPIC_PSMHT,
-		       FIELD_PREP(MPIC_PSMCS, etha->psmcs) |
-		       FIELD_PREP(MPIC_PSMHT, 0x06));
+	rswitch_modify(etha->addr, MPIC, PSMCS | PSMHT,
+		       FIELD_PREP(PSMCS, etha->psmcs) |
+		       FIELD_PREP(PSMHT, 0x06));
 }
 
 static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
 {
 	int err;
 
-	err = rswitch_etha_change_mode(etha, EAMC_OPC_CONFIG);
+	err = rswitch_etha_change_mode(etha, OPC_CONFIG);
 	if (err < 0)
 		return err;
 
@@ -1323,11 +1322,7 @@ static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
 	if (err < 0)
 		return err;
 
-	err = rswitch_etha_change_mode(etha, EAMC_OPC_DISABLE);
-	if (err < 0)
-		return err;
-
-	return rswitch_etha_change_mode(etha, EAMC_OPC_OPERATION);
+	return rswitch_etha_change_mode(etha, OPC_OPERATION);
 }
 
 static int rswitch_etha_mpsm_op(struct rswitch_etha *etha, bool read,
@@ -1338,21 +1333,21 @@ static int rswitch_etha_mpsm_op(struct rswitch_etha *etha, bool read,
 	u32 val;
 	int ret;
 
-	val = MPSM_PSME |
-	      FIELD_PREP(MPSM_MFF, mmf) |
-	      FIELD_PREP(MPSM_PDA, pda) |
-	      FIELD_PREP(MPSM_PRA, pra) |
-	      FIELD_PREP(MPSM_POP, pop) |
-	      FIELD_PREP(MPSM_PRD, prd);
+	val = PSME |
+	      FIELD_PREP(MFF, mmf) |
+	      FIELD_PREP(PDA, pda) |
+	      FIELD_PREP(PRA, pra) |
+	      FIELD_PREP(POP, pop) |
+	      FIELD_PREP(PRD, prd);
 	iowrite32(val, etha->addr + MPSM);
 
-	ret = rswitch_reg_wait(etha->addr, MPSM, MPSM_PSME, 0);
+	ret = rswitch_reg_wait(etha->addr, MPSM, PSME, 0);
 	if (ret)
 		return ret;
 
 	if (read) {
 		val = ioread32(etha->addr + MPSM);
-		ret = FIELD_GET(MPSM_PRD, val);
+		ret = FIELD_GET(PRD, val);
 	}
 
 	return ret;
@@ -1364,13 +1359,13 @@ static int rswitch_etha_mii_read_c45(struct mii_bus *bus, int addr, int devad,
 	struct rswitch_etha *etha = bus->priv;
 	int ret;
 
-	ret = rswitch_etha_mpsm_op(etha, false, MPSM_MMF_C45, addr, devad,
-				   MPSM_POP_ADDRESS, regad);
+	ret = rswitch_etha_mpsm_op(etha, false, MMF_C45, addr, devad,
+				   POP_ADDRESS, regad);
 	if (ret)
 		return ret;
 
-	return rswitch_etha_mpsm_op(etha, true, MPSM_MMF_C45, addr, devad,
-				    MPSM_POP_READ_C45, 0);
+	return rswitch_etha_mpsm_op(etha, true, MMF_C45, addr, devad,
+				    POP_READ_C45, 0);
 }
 
 static int rswitch_etha_mii_write_c45(struct mii_bus *bus, int addr, int devad,
@@ -1379,21 +1374,21 @@ static int rswitch_etha_mii_write_c45(struct mii_bus *bus, int addr, int devad,
 	struct rswitch_etha *etha = bus->priv;
 	int ret;
 
-	ret = rswitch_etha_mpsm_op(etha, false, MPSM_MMF_C45, addr, devad,
-				   MPSM_POP_ADDRESS, regad);
+	ret = rswitch_etha_mpsm_op(etha, false, MMF_C45, addr, devad,
+				   POP_ADDRESS, regad);
 	if (ret)
 		return ret;
 
-	return rswitch_etha_mpsm_op(etha, false, MPSM_MMF_C45, addr, devad,
-				    MPSM_POP_WRITE, val);
+	return rswitch_etha_mpsm_op(etha, false, MMF_C45, addr, devad,
+				    POP_WRITE, val);
 }
 
 static int rswitch_etha_mii_read_c22(struct mii_bus *bus, int phyad, int regad)
 {
 	struct rswitch_etha *etha = bus->priv;
 
-	return rswitch_etha_mpsm_op(etha, true, MPSM_MMF_C22, phyad, regad,
-				    MPSM_POP_READ_C22, 0);
+	return rswitch_etha_mpsm_op(etha, true, MMF_C22, phyad, regad,
+				    POP_READ_C22, 0);
 }
 
 static int rswitch_etha_mii_write_c22(struct mii_bus *bus, int phyad,
@@ -1401,8 +1396,8 @@ static int rswitch_etha_mii_write_c22(struct mii_bus *bus, int phyad,
 {
 	struct rswitch_etha *etha = bus->priv;
 
-	return rswitch_etha_mpsm_op(etha, false, MPSM_MMF_C22, phyad, regad,
-				    MPSM_POP_WRITE, val);
+	return rswitch_etha_mpsm_op(etha, false, MMF_C22, phyad, regad,
+				    POP_WRITE, val);
 }
 
 /* Call of_node_put(port) after done */
@@ -1728,7 +1723,7 @@ static int rswitch_open(struct net_device *ndev)
 	unsigned long flags;
 
 	if (bitmap_empty(rdev->priv->opened_ports, RSWITCH_NUM_PORTS))
-		iowrite32(GWCA_TS_IRQ_BIT, rdev->priv->addr + GWTSDIE);
+		iowrite32(TS, rdev->priv->addr + GWTSDIE);
 
 	napi_enable(&rdev->napi);
 
@@ -1777,7 +1772,7 @@ static int rswitch_stop(struct net_device *ndev)
 		rswitch_update_l2_offload(rdev->priv);
 
 	if (bitmap_empty(rdev->priv->opened_ports, RSWITCH_NUM_PORTS))
-		iowrite32(GWCA_TS_IRQ_BIT, rdev->priv->addr + GWTSDID);
+		iowrite32(TS, rdev->priv->addr + GWTSDID);
 
 	for_each_set_bit(tag, rdev->ts_skb_used, TS_TAGS_PER_PORT) {
 		ts_skb = xchg(&rdev->ts_skb[tag], NULL);

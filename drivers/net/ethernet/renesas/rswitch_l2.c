@@ -24,8 +24,7 @@ static bool rdev_for_l2_offload(struct rswitch_device *rdev)
 static void rswitch_change_l2_hw_offloading(struct rswitch_device *rdev,
 					    bool start, bool learning)
 {
-	u32 bits = learning ? FWPC0_MACSSA | FWPC0_MACHLA | FWPC0_MACHMA | FWPC0_MACRUDA :
-			      FWPC0_MACDSA;
+	u32 bits = learning ? MACSSA | MACHLA | MACHMA | MACRUDA : MACDSA;
 	u32 clear = start ? 0 : bits;
 	u32 set = start ? bits : 0;
 
@@ -85,7 +84,7 @@ static void rswitch_update_l2_hw_forwarding(struct rswitch_private *priv)
 			 * Do not allow L2 forwarding to self for hw port.
 			 */
 			rswitch_modify(priv->addr, FWPC2(rdev->port),
-				       FIELD_PREP(FWPC2_LTWFW, ~(fwd_mask | BIT(rdev->port))),
+				       FIELD_PREP(LTWFM, ~(fwd_mask | BIT(rdev->port))),
 				       0);
 		}
 
@@ -101,9 +100,9 @@ static void rswitch_update_l2_hw_forwarding_gwca(struct rswitch_private *priv)
 	struct rswitch_device *rdev;
 	u32 fwpc0_set, fwpc0_clr, fwpc2_set, fwpc2_clr;
 
-	fwpc0_clr = FWPC0_MACSSA | FWPC0_MACDSA | FWPC0_MACRUDA;
+	fwpc0_clr = MACSSA | MACDSA | MACRUDA;
 	fwpc0_set = fwpc0_clr;
-	fwpc2_clr = FIELD_PREP(FWPC2_LTWFW, BIT(AGENT_INDEX_GWCA));
+	fwpc2_clr = FIELD_PREP(LTWFM, BIT(AGENT_INDEX_GWCA));
 	fwpc2_set = fwpc2_clr;
 
 	(priv->offload_brdev) ? (fwpc0_clr = 0, fwpc2_set = 0)
@@ -217,11 +216,11 @@ static int rswitch_update_ageing_time(struct rswitch_private *priv, clock_t time
 {
 	u32 reg_val;
 
-	if (!FIELD_FIT(FWMACAGC_MACAGT, time))
+	if (!FIELD_FIT(MACAGT, time))
 		return -EINVAL;
 
-	reg_val = FIELD_PREP(FWMACAGC_MACAGT, time);
-	reg_val |= FWMACAGC_MACAGE | FWMACAGC_MACAGSL;
+	reg_val = FIELD_PREP(MACAGT, time);
+	reg_val |= MACAGE | MACAGSL;
 	iowrite32(reg_val, priv->addr + FWMACAGC);
 
 	return 0;
@@ -232,10 +231,10 @@ static void rswitch_update_vlan_filtering(struct rswitch_private *priv,
 {
 	if (vlan_filtering)
 		rswitch_modify(priv->addr, FWPC0(AGENT_INDEX_GWCA),
-			       0, FWPC0_VLANSA | FWPC0_VLANRU);
+			       0, VLANSA | VLANRU);
 	else
 		rswitch_modify(priv->addr, FWPC0(AGENT_INDEX_GWCA),
-			       FWPC0_VLANSA | FWPC0_VLANRU, 0);
+			       VLANSA | VLANRU, 0);
 }
 
 static int rswitch_handle_port_attr_set(struct net_device *ndev,
@@ -347,7 +346,7 @@ static int rswitch_port_set_vlan_tag(struct rswitch_etha *etha,
 	u32 vem_val;
 	int err;
 
-	err = rswitch_etha_change_mode(etha, EAMC_OPC_CONFIG);
+	err = rswitch_etha_change_mode(etha, OPC_CONFIG);
 	if (err < 0)
 		return err;
 
@@ -368,7 +367,7 @@ static int rswitch_port_set_vlan_tag(struct rswitch_etha *etha,
 		rswitch_modify(etha->addr, EAVTC, CTV, FIELD_PREP(CTV, p_vlan->vid));
 	}
 
-	return rswitch_etha_change_mode(etha, EAMC_OPC_OPERATION);
+	return rswitch_etha_change_mode(etha, OPC_OPERATION);
 }
 
 static int rswitch_gwca_set_vlan_tag(struct rswitch_private *priv,
@@ -378,7 +377,7 @@ static int rswitch_gwca_set_vlan_tag(struct rswitch_private *priv,
 	u32 vem_val;
 	int err;
 
-	err = rswitch_gwca_change_mode(priv, GWMC_OPC_CONFIG);
+	err = rswitch_gwca_change_mode(priv, OPC_CONFIG);
 	if (err < 0)
 		return err;
 
@@ -399,7 +398,7 @@ static int rswitch_gwca_set_vlan_tag(struct rswitch_private *priv,
 		rswitch_modify(priv->addr, GWVTC, CTV, FIELD_PREP(CTV, p_vlan->vid));
 	}
 
-	return rswitch_gwca_change_mode(priv, GWMC_OPC_OPERATION);
+	return rswitch_gwca_change_mode(priv, OPC_OPERATION);
 }
 
 static int rswitch_port_obj_do_add(struct net_device *ndev,
@@ -411,7 +410,7 @@ static int rswitch_port_obj_do_add(struct net_device *ndev,
 	int err;
 
 	/* Set Rswitch VLAN mode */
-	iowrite32(br_vlan_enabled(rdev->brdev) ? FIELD_PREP(FWGC_SVM, C_TAG) : 0,
+	iowrite32(br_vlan_enabled(rdev->brdev) ? FIELD_PREP(SVM, C_TAG) : 0,
 		  priv->addr + FWGC);
 
 	err = rswitch_write_vlan_table(priv, p_vlan->vid, etha->index);
@@ -423,10 +422,10 @@ static int rswitch_port_obj_do_add(struct net_device *ndev,
 		return NOTIFY_DONE;
 
 	if (br_vlan_enabled(rdev->brdev))
-		rswitch_modify(priv->addr, FWPC0(etha->index), 0, FWPC0_VLANSA | FWPC0_VLANRU);
+		rswitch_modify(priv->addr, FWPC0(etha->index), 0, VLANSA | VLANRU);
 
 	rswitch_modify(priv->addr, FWPC2(AGENT_INDEX_GWCA),
-		       FIELD_PREP(FWPC2_LTWFW, BIT(etha->index)),
+		       FIELD_PREP(LTWFM, BIT(etha->index)),
 		       0);
 
 	return rswitch_port_set_vlan_tag(etha, p_vlan, false);
@@ -442,7 +441,7 @@ static int rswitch_port_obj_do_add_gwca(struct net_device *ndev,
 		return NOTIFY_DONE;
 
 	/* Set Rswitch VLAN mode */
-	iowrite32(br_vlan_enabled(ndev) ? FIELD_PREP(FWGC_SVM, C_TAG) : 0, priv->addr + FWGC);
+	iowrite32(br_vlan_enabled(ndev) ? FIELD_PREP(SVM, C_TAG) : 0, priv->addr + FWGC);
 
 	err = rswitch_write_vlan_table(priv, p_vlan->vid, AGENT_INDEX_GWCA);
 	if (err < 0)
@@ -467,11 +466,11 @@ static int rswitch_port_obj_do_del(struct net_device *ndev,
 	if (err < 0)
 		return err;
 
-	rswitch_modify(priv->addr, FWPC0(etha->index), FWPC0_VLANSA | FWPC0_VLANRU, 0);
+	rswitch_modify(priv->addr, FWPC0(etha->index), VLANSA | VLANRU, 0);
 	rswitch_modify(priv->addr, FWPC2(AGENT_INDEX_GWCA), 0,
-		       FIELD_PREP(FWPC2_LTWFW, BIT(etha->index)));
+		       FIELD_PREP(LTWFM, BIT(etha->index)));
 	rswitch_modify(priv->addr, FWPC2(rdev->port),
-		       0, FIELD_PREP(FWPC2_LTWFW, GENMASK(RSWITCH_NUM_AGENTS - 1, 0)));
+		       0, FIELD_PREP(LTWFM, GENMASK(RSWITCH_NUM_AGENTS - 1, 0)));
 
 	return rswitch_erase_vlan_table(priv, p_vlan->vid, etha->index);
 }
@@ -486,9 +485,7 @@ static int rswitch_port_obj_do_del_gwca(struct net_device *ndev,
 	if (err < 0)
 		return err;
 
-	rswitch_modify(priv->addr, FWPC0(AGENT_INDEX_GWCA),
-		       FWPC0_VLANSA | FWPC0_VLANRU,
-		       0);
+	rswitch_modify(priv->addr, FWPC0(AGENT_INDEX_GWCA), VLANSA | VLANRU, 0);
 
 	return rswitch_erase_vlan_table(priv, p_vlan->vid, AGENT_INDEX_GWCA);
 }
@@ -598,7 +595,7 @@ static int rswitch_gwca_write_mac_address(struct rswitch_private *priv, const u8
 {
 	int err;
 
-	err = rswitch_gwca_change_mode(priv, GWMC_OPC_CONFIG);
+	err = rswitch_gwca_change_mode(priv, OPC_CONFIG);
 	if (err < 0)
 		return err;
 
@@ -606,7 +603,7 @@ static int rswitch_gwca_write_mac_address(struct rswitch_private *priv, const u8
 	iowrite32((mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5],
 		  priv->addr + GWMAC1);
 
-	return rswitch_gwca_change_mode(priv, GWMC_OPC_OPERATION);
+	return rswitch_gwca_change_mode(priv, OPC_OPERATION);
 }
 
 static int rswitch_add_addr_to_mactable(struct rswitch_private *priv, const u8 *mac)
@@ -614,18 +611,18 @@ static int rswitch_add_addr_to_mactable(struct rswitch_private *priv, const u8 *
 	u32 index = priv->gwca.l2_shared_rx_queue->index;
 	int err;
 
-	rswitch_modify(priv->addr, FWMACTL0, FWMACTL0_ED, 0);
+	rswitch_modify(priv->addr, FWMACTL0, MACED, 0);
 	iowrite32((mac[0] << 8) | mac[1], priv->addr + FWMACTL1);
 	iowrite32((mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5],
 		  priv->addr + FWMACTL2);
-	iowrite32(FWMACTL3_DSLV | FWMACTL3_SSLV,
+	iowrite32(MACDSLVL | MACSSLVL,
 		  priv->addr + FWMACTL3);
-	iowrite32(FIELD_PREP(FWMACTL4_CSDL, index),
+	iowrite32(FIELD_PREP(MACCSDL, index),
 		  priv->addr + FWMACTL4(GWCA_INDEX));
-	iowrite32(FIELD_PREP(FWMACTL5_DV, BIT(AGENT_INDEX_GWCA)),
+	iowrite32(FIELD_PREP(MACDVL, BIT(AGENT_INDEX_GWCA)),
 		  priv->addr + FWMACTL5);
 
-	err = rswitch_reg_wait(priv->addr, FWMACTLR, FWMACTLR_L, 0);
+	err = rswitch_reg_wait(priv->addr, FWMACTLR, MACTL, 0);
 	if (err < 0)
 		return err;
 
@@ -639,18 +636,18 @@ static int rswitch_del_addr_from_mactable(struct rswitch_private *priv, const u8
 {
 	int err;
 
-	rswitch_modify(priv->addr, FWMACTL0, 0, FWMACTL0_ED);
+	rswitch_modify(priv->addr, FWMACTL0, 0, MACED);
 	iowrite32((mac[0] << 8) | mac[1], priv->addr + FWMACTL1);
 	iowrite32((mac[2] << 24) | (mac[3] << 16) | (mac[4] << 8) | mac[5],
 		  priv->addr + FWMACTL2);
-	iowrite32(FWMACTL3_DSLV | FWMACTL3_SSLV,
+	iowrite32(MACDSLVL | MACSSLVL,
 		  priv->addr + FWMACTL3);
-	iowrite32(FIELD_PREP(FWMACTL4_CSDL, BIT(0)),
+	iowrite32(FIELD_PREP(MACCSDL, BIT(0)),
 		  priv->addr + FWMACTL4(GWCA_INDEX));
-	iowrite32(FIELD_PREP(FWMACTL5_DV, BIT(AGENT_INDEX_GWCA)),
+	iowrite32(FIELD_PREP(MACDVL, BIT(AGENT_INDEX_GWCA)),
 		  priv->addr + FWMACTL5);
 
-	err = rswitch_reg_wait(priv->addr, FWMACTLR, FWMACTLR_L, 0);
+	err = rswitch_reg_wait(priv->addr, FWMACTLR, MACTL, 0);
 	if (err < 0)
 		return err;
 
