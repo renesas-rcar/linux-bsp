@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0
 /* Renesas Ethernet Switch device driver
  *
- * Copyright (C) 2022 Renesas Electronics Corporation
+ * Copyright (C) 2022-2026 Renesas Electronics Corporation
  */
 
 #include <linux/clk.h>
 #include <linux/dma-mapping.h>
 #include <linux/err.h>
 #include <linux/etherdevice.h>
+#include <linux/ethtool.h>
+#include <linux/ip.h>
 #include <linux/iopoll.h>
 #include <linux/kernel.h>
+#include <linux/list.h>
 #include <linux/module.h>
 #include <linux/net_tstamp.h>
 #include <linux/of.h>
@@ -25,6 +28,9 @@
 #include <linux/sys_soc.h>
 
 #include "rswitch.h"
+#include "rswitch_l2.h"
+
+#define RSWITCH_GPTP_OFFSET_S4 0x00018000
 
 static int rswitch_reg_wait(void __iomem *addr, u32 offs, u32 mask, u32 expected)
 {
@@ -34,7 +40,7 @@ static int rswitch_reg_wait(void __iomem *addr, u32 offs, u32 mask, u32 expected
 					 1, RSWITCH_TIMEOUT_US);
 }
 
-static void rswitch_modify(void __iomem *addr, enum rswitch_reg reg, u32 clear, u32 set)
+void rswitch_modify(void __iomem *addr, enum rswitch_reg reg, u32 clear, u32 set)
 {
 	iowrite32((ioread32(addr + reg) & ~clear) | set, addr + reg);
 }
@@ -109,10 +115,11 @@ static void rswitch_top_init(struct rswitch_private *priv)
 }
 
 /* Forwarding engine block (MFWD) */
-static void rswitch_fwd_init(struct rswitch_private *priv)
+static int rswitch_fwd_init(struct rswitch_private *priv)
 {
 	u32 all_ports_mask = GENMASK(RSWITCH_NUM_AGENTS - 1, 0);
 	unsigned int i;
+	u32 reg_val;
 
 	/* Start with empty configuration */
 	for (i = 0; i < RSWITCH_NUM_AGENTS; i++) {
@@ -128,6 +135,14 @@ static void rswitch_fwd_init(struct rswitch_private *priv)
 		iowrite32(0, priv->addr + FWPBFC(i));
 	}
 
+	/* Configure MAC table aging */
+	rswitch_modify(priv->addr, FWMACAGUSPC, FWMACAGUSPC_MACAGUSP,
+		       FIELD_PREP(FWMACAGUSPC_MACAGUSP, RSW_AGEING_CLK_PER_US));
+
+	reg_val = FIELD_PREP(FWMACAGC_MACAGT, RSW_AGEING_TIME);
+	reg_val |= FWMACAGC_MACAGE | FWMACAGC_MACAGSL;
+	iowrite32(reg_val, priv->addr + FWMACAGC);
+
 	/* For enabled ETHA ports, setup port based forwarding */
 	rswitch_for_each_enabled_port(priv, i) {
 		/* Port based forwarding from port i to GWCA port */
@@ -140,6 +155,16 @@ static void rswitch_fwd_init(struct rswitch_private *priv)
 
 	/* For GWCA port, allow direct descriptor forwarding */
 	rswitch_modify(priv->addr, FWPC1(priv->gwca.index), FWPC1_DDE, FWPC1_DDE);
+
+	/* Initialize hardware L2 forwarding table */
+
+	/* Allow entire table to be used for "unsecure" entries */
+	rswitch_modify(priv->addr, FWMACHEC, 0, FWMACHEC_MACHMUE_MASK);
+
+	/* Initialize MAC hash table */
+	iowrite32(FWMACTIM_MACTIOG, priv->addr + FWMACTIM);
+
+	return rswitch_reg_wait(priv->addr, FWMACTIM, FWMACTIM_MACTIOG, 0);
 }
 
 /* Gateway CPU agent block (GWCA) */
@@ -820,7 +845,7 @@ static bool rswitch_rx(struct net_device *ndev, int *quota)
 		if (!skb)
 			goto out;
 
-		get_ts = rdev->priv->ptp_priv->tstamp_rx_ctrl & RCAR_GEN4_RXTSTAMP_TYPE_V2_L2_EVENT;
+		get_ts = rdev->priv->tstamp_rx_ctrl != HWTSTAMP_FILTER_NONE;
 		if (get_ts) {
 			struct skb_shared_hwtstamps *shhwtstamps;
 			struct timespec64 ts;
@@ -1200,42 +1225,29 @@ static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac)
 	return rswitch_etha_change_mode(etha, EAMC_OPC_OPERATION);
 }
 
-static int rswitch_etha_set_access(struct rswitch_etha *etha, bool read,
-				   int phyad, int devad, int regad, int data)
+static int rswitch_etha_mpsm_op(struct rswitch_etha *etha, bool read,
+				unsigned int mmf, unsigned int pda,
+				unsigned int pra, unsigned int pop,
+				unsigned int prd)
 {
-	int pop = read ? MDIO_READ_C45 : MDIO_WRITE_C45;
 	u32 val;
 	int ret;
 
-	if (devad == 0xffffffff)
-		return -ENODEV;
+	val = MPSM_PSME |
+	      FIELD_PREP(MPSM_MFF, mmf) |
+	      FIELD_PREP(MPSM_PDA, pda) |
+	      FIELD_PREP(MPSM_PRA, pra) |
+	      FIELD_PREP(MPSM_POP, pop) |
+	      FIELD_PREP(MPSM_PRD, prd);
+	iowrite32(val, etha->addr + MPSM);
 
-	writel(MMIS1_CLEAR_FLAGS, etha->addr + MMIS1);
-
-	val = MPSM_PSME | MPSM_MFF_C45;
-	iowrite32((regad << 16) | (devad << 8) | (phyad << 3) | val, etha->addr + MPSM);
-
-	ret = rswitch_reg_wait(etha->addr, MMIS1, MMIS1_PAACS, MMIS1_PAACS);
+	ret = rswitch_reg_wait(etha->addr, MPSM, MPSM_PSME, 0);
 	if (ret)
 		return ret;
 
-	rswitch_modify(etha->addr, MMIS1, MMIS1_PAACS, MMIS1_PAACS);
-
 	if (read) {
-		writel((pop << 13) | (devad << 8) | (phyad << 3) | val, etha->addr + MPSM);
-
-		ret = rswitch_reg_wait(etha->addr, MMIS1, MMIS1_PRACS, MMIS1_PRACS);
-		if (ret)
-			return ret;
-
-		ret = (ioread32(etha->addr + MPSM) & MPSM_PRD_MASK) >> 16;
-
-		rswitch_modify(etha->addr, MMIS1, MMIS1_PRACS, MMIS1_PRACS);
-	} else {
-		iowrite32((data << 16) | (pop << 13) | (devad << 8) | (phyad << 3) | val,
-			  etha->addr + MPSM);
-
-		ret = rswitch_reg_wait(etha->addr, MMIS1, MMIS1_PWACS, MMIS1_PWACS);
+		val = ioread32(etha->addr + MPSM);
+		ret = FIELD_GET(MPSM_PRD, val);
 	}
 
 	return ret;
@@ -1245,16 +1257,47 @@ static int rswitch_etha_mii_read_c45(struct mii_bus *bus, int addr, int devad,
 				     int regad)
 {
 	struct rswitch_etha *etha = bus->priv;
+	int ret;
 
-	return rswitch_etha_set_access(etha, true, addr, devad, regad, 0);
+	ret = rswitch_etha_mpsm_op(etha, false, MPSM_MMF_C45, addr, devad,
+				   MPSM_POP_ADDRESS, regad);
+	if (ret)
+		return ret;
+
+	return rswitch_etha_mpsm_op(etha, true, MPSM_MMF_C45, addr, devad,
+				    MPSM_POP_READ_C45, 0);
 }
 
 static int rswitch_etha_mii_write_c45(struct mii_bus *bus, int addr, int devad,
 				      int regad, u16 val)
 {
 	struct rswitch_etha *etha = bus->priv;
+	int ret;
 
-	return rswitch_etha_set_access(etha, false, addr, devad, regad, val);
+	ret = rswitch_etha_mpsm_op(etha, false, MPSM_MMF_C45, addr, devad,
+				   MPSM_POP_ADDRESS, regad);
+	if (ret)
+		return ret;
+
+	return rswitch_etha_mpsm_op(etha, false, MPSM_MMF_C45, addr, devad,
+				    MPSM_POP_WRITE, val);
+}
+
+static int rswitch_etha_mii_read_c22(struct mii_bus *bus, int phyad, int regad)
+{
+	struct rswitch_etha *etha = bus->priv;
+
+	return rswitch_etha_mpsm_op(etha, true, MPSM_MMF_C22, phyad, regad,
+				    MPSM_POP_READ_C22, 0);
+}
+
+static int rswitch_etha_mii_write_c22(struct mii_bus *bus, int phyad,
+				      int regad, u16 val)
+{
+	struct rswitch_etha *etha = bus->priv;
+
+	return rswitch_etha_mpsm_op(etha, false, MPSM_MMF_C22, phyad, regad,
+				    MPSM_POP_WRITE, val);
 }
 
 /* Call of_node_put(port) after done */
@@ -1269,17 +1312,14 @@ static struct device_node *rswitch_get_port_node(struct rswitch_device *rdev)
 	if (!ports)
 		return NULL;
 
-	for_each_child_of_node(ports, port) {
+	for_each_available_child_of_node(ports, port) {
 		err = of_property_read_u32(port, "reg", &index);
 		if (err < 0) {
 			port = NULL;
 			goto out;
 		}
-		if (index == rdev->etha->index) {
-			if (!of_device_is_available(port))
-				port = NULL;
+		if (index == rdev->etha->index)
 			break;
-		}
 	}
 
 out:
@@ -1339,6 +1379,8 @@ static int rswitch_mii_register(struct rswitch_device *rdev)
 	mii_bus->priv = rdev->etha;
 	mii_bus->read_c45 = rswitch_etha_mii_read_c45;
 	mii_bus->write_c45 = rswitch_etha_mii_write_c45;
+	mii_bus->read = rswitch_etha_mii_read_c22;
+	mii_bus->write = rswitch_etha_mii_write_c22;
 	mii_bus->parent = &rdev->priv->pdev->dev;
 
 	mdio_np = of_get_child_by_name(rdev->np_port, "mdio");
@@ -1585,8 +1627,11 @@ static int rswitch_open(struct net_device *ndev)
 
 	netif_start_queue(ndev);
 
+	if (rdev->brdev)
+		rswitch_update_l2_offload(rdev->priv);
+
 	return 0;
-};
+}
 
 static int rswitch_stop(struct net_device *ndev)
 {
@@ -1607,12 +1652,13 @@ static int rswitch_stop(struct net_device *ndev)
 
 	napi_disable(&rdev->napi);
 
+	if (rdev->brdev)
+		rswitch_update_l2_offload(rdev->priv);
+
 	if (bitmap_empty(rdev->priv->opened_ports, RSWITCH_NUM_PORTS))
 		iowrite32(GWCA_TS_IRQ_BIT, rdev->priv->addr + GWTSDID);
 
-	for (tag = find_first_bit(rdev->ts_skb_used, TS_TAGS_PER_PORT);
-	     tag < TS_TAGS_PER_PORT;
-	     tag = find_next_bit(rdev->ts_skb_used, TS_TAGS_PER_PORT, tag + 1)) {
+	for_each_set_bit(tag, rdev->ts_skb_used, TS_TAGS_PER_PORT) {
 		ts_skb = xchg(&rdev->ts_skb[tag], NULL);
 		clear_bit(tag, rdev->ts_skb_used);
 		if (ts_skb)
@@ -1620,7 +1666,7 @@ static int rswitch_stop(struct net_device *ndev)
 	}
 
 	return 0;
-};
+}
 
 static bool rswitch_ext_desc_set_info1(struct rswitch_device *rdev,
 				       struct sk_buff *skb,
@@ -1749,88 +1795,77 @@ static struct net_device_stats *rswitch_get_stats(struct net_device *ndev)
 	return &ndev->stats;
 }
 
-static int rswitch_hwstamp_get(struct net_device *ndev, struct ifreq *req)
+static int rswitch_hwstamp_get(struct net_device *ndev,
+			       struct kernel_hwtstamp_config *config)
 {
 	struct rswitch_device *rdev = netdev_priv(ndev);
-	struct rcar_gen4_ptp_private *ptp_priv;
-	struct hwtstamp_config config;
+	struct rswitch_private *priv = rdev->priv;
 
-	ptp_priv = rdev->priv->ptp_priv;
+	config->flags = 0;
+	config->tx_type = priv->tstamp_tx_ctrl;
+	config->rx_filter = priv->tstamp_rx_ctrl;
 
-	config.flags = 0;
-	config.tx_type = ptp_priv->tstamp_tx_ctrl ? HWTSTAMP_TX_ON :
-						    HWTSTAMP_TX_OFF;
-	switch (ptp_priv->tstamp_rx_ctrl & RCAR_GEN4_RXTSTAMP_TYPE) {
-	case RCAR_GEN4_RXTSTAMP_TYPE_V2_L2_EVENT:
-		config.rx_filter = HWTSTAMP_FILTER_PTP_V2_L2_EVENT;
-		break;
-	case RCAR_GEN4_RXTSTAMP_TYPE_ALL:
-		config.rx_filter = HWTSTAMP_FILTER_ALL;
-		break;
-	default:
-		config.rx_filter = HWTSTAMP_FILTER_NONE;
-		break;
-	}
-
-	return copy_to_user(req->ifr_data, &config, sizeof(config)) ? -EFAULT : 0;
+	return 0;
 }
 
-static int rswitch_hwstamp_set(struct net_device *ndev, struct ifreq *req)
+static int rswitch_hwstamp_set(struct net_device *ndev,
+			       struct kernel_hwtstamp_config *config,
+			       struct netlink_ext_ack *extack)
 {
 	struct rswitch_device *rdev = netdev_priv(ndev);
-	u32 tstamp_rx_ctrl = RCAR_GEN4_RXTSTAMP_ENABLED;
-	struct hwtstamp_config config;
-	u32 tstamp_tx_ctrl;
+	enum hwtstamp_rx_filters tstamp_rx_ctrl;
+	enum hwtstamp_tx_types tstamp_tx_ctrl;
 
-	if (copy_from_user(&config, req->ifr_data, sizeof(config)))
-		return -EFAULT;
-
-	if (config.flags)
+	if (config->flags)
 		return -EINVAL;
 
-	switch (config.tx_type) {
+	switch (config->tx_type) {
 	case HWTSTAMP_TX_OFF:
-		tstamp_tx_ctrl = 0;
-		break;
 	case HWTSTAMP_TX_ON:
-		tstamp_tx_ctrl = RCAR_GEN4_TXTSTAMP_ENABLED;
+		tstamp_tx_ctrl = config->tx_type;
 		break;
 	default:
 		return -ERANGE;
 	}
 
-	switch (config.rx_filter) {
+	switch (config->rx_filter) {
 	case HWTSTAMP_FILTER_NONE:
-		tstamp_rx_ctrl = 0;
-		break;
 	case HWTSTAMP_FILTER_PTP_V2_L2_EVENT:
-		tstamp_rx_ctrl |= RCAR_GEN4_RXTSTAMP_TYPE_V2_L2_EVENT;
+		tstamp_rx_ctrl = config->rx_filter;
 		break;
 	default:
-		config.rx_filter = HWTSTAMP_FILTER_ALL;
-		tstamp_rx_ctrl |= RCAR_GEN4_RXTSTAMP_TYPE_ALL;
+		config->rx_filter = HWTSTAMP_FILTER_ALL;
+		tstamp_rx_ctrl = HWTSTAMP_FILTER_ALL;
 		break;
 	}
 
-	rdev->priv->ptp_priv->tstamp_tx_ctrl = tstamp_tx_ctrl;
-	rdev->priv->ptp_priv->tstamp_rx_ctrl = tstamp_rx_ctrl;
+	rdev->priv->tstamp_tx_ctrl = tstamp_tx_ctrl;
+	rdev->priv->tstamp_rx_ctrl = tstamp_rx_ctrl;
 
-	return copy_to_user(req->ifr_data, &config, sizeof(config)) ? -EFAULT : 0;
+	return 0;
 }
 
-static int rswitch_eth_ioctl(struct net_device *ndev, struct ifreq *req, int cmd)
+static int rswitch_get_port_parent_id(struct net_device *ndev,
+				      struct netdev_phys_item_id *ppid)
 {
-	if (!netif_running(ndev))
-		return -EINVAL;
+	struct rswitch_device *rdev = netdev_priv(ndev);
+	const char *name;
 
-	switch (cmd) {
-	case SIOCGHWTSTAMP:
-		return rswitch_hwstamp_get(ndev, req);
-	case SIOCSHWTSTAMP:
-		return rswitch_hwstamp_set(ndev, req);
-	default:
-		return phy_mii_ioctl(ndev->phydev, req, cmd);
-	}
+	name = dev_name(&rdev->priv->pdev->dev);
+	ppid->id_len = min_t(size_t, strlen(name), sizeof(ppid->id));
+	memcpy(ppid->id, name, ppid->id_len);
+
+	return 0;
+}
+
+static int rswitch_get_phys_port_name(struct net_device *ndev,
+				      char *name, size_t len)
+{
+	struct rswitch_device *rdev = netdev_priv(ndev);
+
+	snprintf(name, len, "tsn%d", rdev->port);
+
+	return 0;
 }
 
 static const struct net_device_ops rswitch_netdev_ops = {
@@ -1838,10 +1873,19 @@ static const struct net_device_ops rswitch_netdev_ops = {
 	.ndo_stop = rswitch_stop,
 	.ndo_start_xmit = rswitch_start_xmit,
 	.ndo_get_stats = rswitch_get_stats,
-	.ndo_eth_ioctl = rswitch_eth_ioctl,
+	.ndo_eth_ioctl = phy_do_ioctl_running,
+	.ndo_get_port_parent_id = rswitch_get_port_parent_id,
+	.ndo_get_phys_port_name = rswitch_get_phys_port_name,
 	.ndo_validate_addr = eth_validate_addr,
 	.ndo_set_mac_address = eth_mac_addr,
+	.ndo_hwtstamp_get = rswitch_hwstamp_get,
+	.ndo_hwtstamp_set = rswitch_hwstamp_set,
 };
+
+bool is_rdev(const struct net_device *ndev)
+{
+	return (ndev->netdev_ops == &rswitch_netdev_ops);
+}
 
 static int rswitch_get_ts_info(struct net_device *ndev, struct kernel_ethtool_ts_info *info)
 {
@@ -1942,6 +1986,8 @@ static int rswitch_device_alloc(struct rswitch_private *priv, unsigned int index
 	if (err < 0)
 		goto out_txdmac;
 
+	list_add_tail(&rdev->list, &priv->port_list);
+
 	return 0;
 
 out_txdmac:
@@ -1961,6 +2007,7 @@ static void rswitch_device_free(struct rswitch_private *priv, unsigned int index
 	struct rswitch_device *rdev = priv->rdev[index];
 	struct net_device *ndev = rdev->ndev;
 
+	list_del(&rdev->list);
 	rswitch_txdmac_free(ndev);
 	rswitch_rxdmac_free(ndev);
 	of_node_put(rdev->np_port);
@@ -2007,7 +2054,9 @@ static int rswitch_init(struct rswitch_private *priv)
 		}
 	}
 
-	rswitch_fwd_init(priv);
+	err = rswitch_fwd_init(priv);
+	if (err < 0)
+		goto err_fwd_init;
 
 	err = rcar_gen4_ptp_register(priv->ptp_priv, RCAR_GEN4_PTP_REG_LAYOUT,
 				     clk_get_rate(priv->clk));
@@ -2056,6 +2105,7 @@ err_gwca_ts_request_irq:
 err_gwca_request_irq:
 	rcar_gen4_ptp_unregister(priv->ptp_priv);
 
+err_fwd_init:
 err_ptp_register:
 	for (i = 0; i < RSWITCH_NUM_PORTS; i++)
 		rswitch_device_free(priv, i);
@@ -2090,6 +2140,7 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
+
 	spin_lock_init(&priv->lock);
 
 	priv->clk = devm_clk_get(&pdev->dev, NULL);
@@ -2110,7 +2161,7 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->addr))
 		return PTR_ERR(priv->addr);
 
-	priv->ptp_priv->addr = priv->addr + RCAR_GEN4_GPTP_OFFSET_S4;
+	priv->ptp_priv->addr = priv->addr + RSWITCH_GPTP_OFFSET_S4;
 
 	ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(40));
 	if (ret < 0) {
@@ -2127,6 +2178,8 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	if (!priv->gwca.queues)
 		return -ENOMEM;
 
+	INIT_LIST_HEAD(&priv->port_list);
+
 	pm_runtime_enable(&pdev->dev);
 	pm_runtime_get_sync(&pdev->dev);
 
@@ -2134,6 +2187,15 @@ static int renesas_eth_sw_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		pm_runtime_put(&pdev->dev);
 		pm_runtime_disable(&pdev->dev);
+		return ret;
+	}
+
+	if (list_empty(&priv->port_list))
+		dev_warn(&pdev->dev, "could not initialize any ports\n");
+
+	ret = rswitch_register_notifiers();
+	if (ret) {
+		dev_err(&pdev->dev, "could not register notifiers\n");
 		return ret;
 	}
 
@@ -2170,6 +2232,7 @@ static void renesas_eth_sw_remove(struct platform_device *pdev)
 {
 	struct rswitch_private *priv = platform_get_drvdata(pdev);
 
+	rswitch_unregister_notifiers();
 	rswitch_deinit(priv);
 
 	pm_runtime_put(&pdev->dev);
@@ -2220,7 +2283,7 @@ static DEFINE_SIMPLE_DEV_PM_OPS(renesas_eth_sw_pm_ops, renesas_eth_sw_suspend,
 
 static struct platform_driver renesas_eth_sw_driver_platform = {
 	.probe = renesas_eth_sw_probe,
-	.remove_new = renesas_eth_sw_remove,
+	.remove = renesas_eth_sw_remove,
 	.driver = {
 		.name = "renesas_eth_sw",
 		.pm = pm_sleep_ptr(&renesas_eth_sw_pm_ops),
