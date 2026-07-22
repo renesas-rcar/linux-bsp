@@ -40,6 +40,13 @@
 #define RSWITCH_NUM_AGENTS_RSW3		15
 #define RSWITCH_NUM_PORTS_RSW3		13
 #define AGENT_INDEX_GWCA_RSW3		(RSWITCH_NUM_PORTS_RSW3 + GWCA_INDEX_RSW3)
+#define RSWITCH3_NUM_PRIOS		8
+#define RSWITCH3_NUM_TSNES		8
+#define RSWITCH3_TSNES_PORT_BASE	5
+#define RSWITCH3_TSNA_DESC_RAM_DEPTH	2048
+#define RSWITCH3_TSNA_QUEUE_DEPTH	(RSWITCH3_TSNA_DESC_RAM_DEPTH / \
+					 RSWITCH3_NUM_PRIOS)
+#define PBR_PRIO_TSNA			0xf
 
 #define RSWITCH_ETHA_SIZE		0x00002000
 #define RSWITCH_GWCA_SIZE		0x00002000
@@ -394,6 +401,10 @@ struct rswitch_private {
 	enum hwtstamp_rx_filters tstamp_rx_ctrl;
 
 	struct rswitch_switchdev_event_work *switchdev_work;
+
+	struct mutex tsnes_lock; /* Protects TSN-ES */
+	unsigned long tsnes_attached;
+	u32 tsnes_fwd_mask[RSWITCH3_NUM_TSNES];
 };
 
 struct rswitch_hw_info {
@@ -441,5 +452,8 @@ int rswitch_reg_wait(void __iomem *addr, u32 offs, u32 mask, u32 expected);
 int rswitch_gwca_change_mode(struct rswitch_private *priv, enum rswitch_port_mode mode);
 int rswitch_etha_change_mode(struct rswitch_etha *etha, enum rswitch_port_mode mode);
 void rswitch_update_stats(struct rswitch_device *rdev);
+int rswitch_attach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port,
+			 u32 fwd_mask, const u8 *mac);
+void rswitch_detach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port);
 
 #endif	/* #ifndef __RSWITCH_H__ */

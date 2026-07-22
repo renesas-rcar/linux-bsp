@@ -452,6 +452,10 @@ enum rswitch3_reg {
 
 /* bit field definitions for FWPC3 */
 
+/* bit field definitions for FWPBFC1 */
+#define PBRP				GENMASK(19, 16)
+#define PBHLD				BIT(10)
+
 /* bit field definitions for FWMACAGUSPC */
 #define RSW3_MACAGUSP			GENMASK(9, 0)
 

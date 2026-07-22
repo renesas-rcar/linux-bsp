@@ -432,6 +432,7 @@ enum rswitch_reg {
 
 	EAMC		= 0x0000,
 	EAMS		= 0x0004,
+	EATDRC		= 0x0008,
 	EAIRC		= 0x0010,
 	EATDQSC		= 0x0014,
 	EATDQC		= 0x0018,
@@ -725,6 +726,20 @@ enum vlan_egress_mode {
 #define EATMFSC(q)		(EATMFSC0 + (q) * 0x4)
 #define MFS			GENMASK(15, 0)
 
+/* bit field definitions for EATDQDCq */
+#define EATDQDC(q)		(EATDQDC0 + (q) * 0x04)
+
+/* bit field definitions for EATDQMq */
+#define EATDQM(q)		(EATDQM0 + (q) * 0x04)
+
+/* bit field definitions for EATDQMLMq */
+#define EATDQMLM(q)		(EATDQMLM0 + (q) * 0x04)
+
+/* bit field definitions for EATDQC */
+#define TCTDQD			BIT(8)
+#define TDQP			GENMASK(23, 16)
+#define TDQD			GENMASK(7, 0)
+
 /* bit field definitions for EACAEC/EACOEM */
 #define	CE			GENMASK(7, 0)
 
@@ -788,6 +803,29 @@ enum rswitch_lsc_mode {
 #define PLV			BIT(16)
 #define PASE			BIT(8)
 #define LVT			GENMASK(6, 0)
+
+/* bit field definitions for MIOC */
+#define FORCE_PHY_LINK		BIT(5)
+
+/* bit field definitions for MRAFC */
+#define UCENE			BIT(0)
+#define MCENE			BIT(1)
+#define BCENE			BIT(2)
+#define NDAREE			BIT(7)
+#define SDSFREE			BIT(8)
+#define NSAREE			BIT(9)
+#define MSAREE			BIT(10)
+#define UCENP			BIT(16)
+#define MCENP			BIT(17)
+#define BCENP			BIT(18)
+#define NDAREP			BIT(23)
+#define SDSFREP			BIT(24)
+#define NSAREP			BIT(25)
+#define MSAREP			BIT(26)
+#define RX_ACCEPT		(UCENE | MCENE | BCENE | UCENP | MCENP | BCENP)
+#define RX_PROMISC		(RX_ACCEPT | \
+				 NDAREE | SDSFREE | NSAREE | MSAREE | \
+				 NDAREP | SDSFREP | NSAREP | MSAREP)
 
 /* bit field definitions for MXGMIIC */
 #define RXBFM			GENMASK(18, 16)
@@ -896,7 +934,6 @@ enum switch_vlan_mode {
 #define FWPC2(i)		(FWPC20 + (i) * 0x10)
 #define LTWFM(num_agents)	GENMASK(16 + (num_agents) - 1, 16)
 
-/* bit field definitions for  */
 /* bit field definitions for FWPBFC */
 #define FWPBFC(i)		(FWPBFC0 + (i) * 0x10)
 #define PBDV(num_agents)	GENMASK((num_agents) - 1, 0)

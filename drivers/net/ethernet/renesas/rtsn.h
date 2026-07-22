@@ -534,4 +534,8 @@ enum EXT_INFO_DS_BIT {
 	TXC = 0x4000,
 };
 
+int rswitch_attach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port,
+			 u32 fwd_mask, const u8 *mac);
+void rswitch_detach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port);
+
 #endif
