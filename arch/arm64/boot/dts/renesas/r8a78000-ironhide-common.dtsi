@@ -1388,7 +1388,17 @@
 };
 
 &tsnes3 {
+	phy-mode = "gmii";
+	max-speed = <2500>;
+	renesas,tsnes-id = <3>;
+	renesas,rswitch = <&rswitch3>;
+	renesas,rswitch-interface = <8>;
+	renesas,rswitch-forward-ports = <4>;
 	status = "okay";
+	fixed-link {
+		speed = <2500>;
+		full-duplex;
+	};
 };
 
 &usb30 {
