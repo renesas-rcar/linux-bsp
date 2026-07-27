@@ -327,6 +327,7 @@ enum rtsn_reg {
 #define MTRC_DEFAULT	0x00020000
 #define RTSN_NUM_PRIOS	8
 
+#define TFS_JUMBO		0xD0
 #define TFS(n)			(TFS0 + (n) * 0x04)
 #define TCF(n)			(TCF0 + (n) * 0x04)
 #define TMS(n)			(TMS0 + (n) * 0x04)
@@ -418,9 +419,17 @@ enum rtsn_reg {
 
 #define TX_CHAIN_ADDR_OFFSET	(sizeof(struct rtsn_desc) * TX_CHAIN_IDX)
 #define RX_CHAIN_ADDR_OFFSET	(sizeof(struct rtsn_desc) * RX_CHAIN_IDX)
-
-#define PKT_BUF_SZ		1584
+#define PKT_BUF_SZ		3584
 #define RTSN_ALIGN		128
+#define RTSN_HEADROOM		(NET_SKB_PAD + NET_IP_ALIGN)
+#define RTSN_TAILROOM		SKB_DATA_ALIGN(sizeof(struct skb_shared_info))
+#define RTSN_BUF_SIZE		SKB_DATA_ALIGN(RTSN_HEADROOM + PKT_BUF_SZ + \
+							RTSN_TAILROOM + RTSN_ALIGN)
+#define RTSN_MAP_BUF_SIZE	(RTSN_BUF_SIZE - RTSN_HEADROOM)
+
+#define RTSN_MAX_FRAME_SZ		16384
+#define RTSN_MAX_RX_DESC_PER_FRAME	(DIV_ROUND_UP(RTSN_MAX_FRAME_SZ, PKT_BUF_SZ) + 1)
+#define RTSN_MAX_MTU			9600
 
 enum rtsn_mode {
 	OCR_OPC_DISABLE,
@@ -465,6 +474,8 @@ enum DIE_DT {
 
 	DT_MASK		= 0xf0,
 	D_DIE		= 0x08,
+	D_AXIE		= 0x04,
+	D_DSE		= 0x02,
 };
 
 struct rtsn_desc {
