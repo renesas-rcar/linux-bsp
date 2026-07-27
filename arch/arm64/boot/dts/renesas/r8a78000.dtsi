@@ -5155,17 +5155,7 @@
 				<&scmi_clk X5H_CLOCK_ID_RSW3TSNTES3>;
 			clock-names = "rsw3tsn", "tsnes";
 			renesas,gptp-domain = "a";
-			phy-mode = "gmii";
-			max-speed = <2500>;
-			renesas,tsnes-id = <3>;
-			renesas,rswitch = <&rswitch3>;
-			renesas,rswitch-if = <8>;
-			renesas,rswitch-forward-ports = <4>;
 			status = "disabled";
-			fixed-link {
-				speed = <2500>;
-				full-duplex;
-			};
 		};
 
 		msiof0: spi@c1700000 {
