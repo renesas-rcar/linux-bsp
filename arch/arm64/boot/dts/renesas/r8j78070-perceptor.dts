@@ -76,15 +76,15 @@
 };
 
 &rpc {
-	status = "disabled";
+	status = "okay";
 };
 
 &pciec40 {
-	status = "disabled";
+	status = "okay";
 };
 
 &pciec60 {
-	status = "disabled";
+	status = "okay";
 };
 
 &pciec60_ep {
@@ -368,11 +368,11 @@
 };
 
 &ufs0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &ufs1 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vspi0 {
