@@ -482,6 +482,7 @@ enum rswitch_reg {
 	EADQOECN	= 0x040c,
 	EADQSECN	= 0x0410,
 	EACKSECN	= 0x0414,
+	EALDCN		= 0x041c,
 	EAEIS0		= 0x0500,
 	EAEIE0		= 0x0504,
 	EAEID0		= 0x0508,
@@ -492,6 +493,22 @@ enum rswitch_reg {
 	EAEIE2		= 0x0524,
 	EAEID2		= 0x0528,
 	EASCR		= 0x0580,
+	EARFCNEO0	= 0x0700,
+	EARFCNEO1	= 0x0704,
+	EARFCNEO2	= 0x0708,
+	EARFCNEO3	= 0x070c,
+	EARFCNEO4	= 0x0710,
+	EARFCNEO5	= 0x0714,
+	EARFCNEO6	= 0x0718,
+	EARFCNPO0	= 0x071c,
+	EARFCNPO1	= 0x0720,
+	EARFCNPO2	= 0x0724,
+	EARFCNPO3	= 0x0728,
+	EARFCNPO4	= 0x072c,
+	EARFCNPO5	= 0x0730,
+	EARFCNPO6	= 0x0734,
+	EADQOECNP0	= 0x0740,
+	EADQOECNCT	= 0x0760,
 
 	MPSM		= 0x1000,
 	MPIC		= 0x1004,
@@ -753,6 +770,8 @@ enum vlan_egress_mode {
 /* bit field definitions for EACAIVCq */
 #define	EACAULC(q)		(EACAULC0 + (q) * 0x4)
 #define CUL			GENMASK(30, 0)
+
+#define	EADQOECNP(q)		(EADQOECNP0 + (q) * 0x4)
 
 /* bit field definitions for MPIC */
 enum rswitch_pis_mode {

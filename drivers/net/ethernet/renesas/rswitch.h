@@ -266,54 +266,92 @@ struct rswitch_gwca {
 
 /* Statistics counters collected by the MAC */
 struct rswitch_rmac_hw_stats {
-	u64 mmpftct;
-	u64 mapftct;
-	u64 mpfrct;
-	u64 mfcict;
-	u64 meeect;
-	u64 mmpcftct0;
+	u64 mmpftct;		/* MAC manual pause frame transmit counter */
+	u64 mapftct;		/* MAC automatic pause frame transmit counter */
+	u64 mpfrct;		/* MAC pause frame receive counter */
+	u64 mfcict;		/* MAC false carrier indication counter */
+	u64 meeect;		/* MAC energy efficient Ethernet counter */
+	u64 mmpcftct0;		/* MAC manual PFC frame transmit counter t (t=0..PAS_LVL_N-1) */
 	u64 mmpcftct1;
-	u64 mapcftct0;
+	u64 mapcftct0;		/* MAC automatic PFC frame transmit counter t (t=0..PAS_LVL_N-1) */
 	u64 mapcftct1;
-	u64 mpcfrct0;
+	u64 mpcfrct0;		/* MAC PFC frame receive counter t (t=0..FRM_PRIO_N -1) */
 	u64 mpcfrct1;
-	u64 mrovfc;
-	u64 mrhcrcec;
-	u64 mrgfce;
-	u64 mrgfcp;
-	u64 mrbfc;
-	u64 mrmfc;
-	u64 mrufc;
-	u64 mrpefc;
-	u64 mrnefc;
-	u64 mrfmefc;
-	u64 mrffmefc;
-	u64 mrcfcefc;
-	u64 mrfcefc;
-	u64 mrrcfefc;
-	u64 mrfc;
-	u64 mrguefc;
-	u64 mrbuefc;
-	u64 mrgoefc;
-	u64 mrboefc;
-	u64 mrxbceu;
-	u64 mrxbcel;
-	u64 mrxbcpu;
-	u64 mrxbcpl;
-	u64 mtgfce;
-	u64 mtgfcp;
-	u64 mtbfc;
-	u64 mtmfc;
-	u64 mtufc;
-	u64 mtefc;
-	u64 mtxbceu;
-	u64 mtxbcel;
-	u64 mtxbcpu;
-	u64 mtxbcpl;
+	u64 mrovfc;		/* Receive overflow Counter */
+	u64 mrhcrcec;		/* Receive Header-CRC (PCH-CRC) error Counter */
+	u64 mrgfce;		/* Received good frame counter E-frames */
+	u64 mrgfcp;		/* Received good frame counter P-frames */
+	u64 mrbfc;		/* Received good broadcast frame counter */
+	u64 mrmfc;		/* Received good multicast frame counter */
+	u64 mrufc;		/* Received good unicast frame counter */
+	u64 mrpefc;		/* Received PHY error frame counter */
+	u64 mrnefc;		/* Received nibble error frame counter */
+	u64 mrfmefc;		/* Received FCS/mCRC error frame counter */
+	u64 mrffmefc;		/* Received final fragment missing error frame count */
+	u64 mrcfcefc;		/* Received C-fragment count error frame counter */
+	u64 mrfcefc;		/* Received fragment count error frame counter */
+	u64 mrrcfefc;		/* Received RMAC filter error frame counter */
+	u64 mrfc;		/* Received frame counter */
+	u64 mrguefc;		/* Received good undersize error frame counter */
+	u64 mrbuefc;		/* Received bad undersize error frame counter */
+	u64 mrgoefc;		/* Received good oversize error frame counter */
+	u64 mrboefc;		/* Received bad oversize error frame counter */
+	u64 mrxbceu;		/* Received byte counter E-frames Lower */
+	u64 mrxbcel;		/* Received byte counter E-frames Upper */
+	u64 mrxbcpu;		/* Received byte counter P-frames Upper */
+	u64 mrxbcpl;		/* Received byte counter P-frames Lower */
+	u64 mtgfce;		/* Transmitted good frame counter E-frames */
+	u64 mtgfcp;		/* Transmitted good frame counter P-frames */
+	u64 mtbfc;		/* Transmitted broadcast frame counter */
+	u64 mtmfc;		/* Transmitted multicast frame counter */
+	u64 mtufc;		/* Transmitted unicast frame counter */
+	u64 mtefc;		/* Transmitted error frame counter */
+	u64 mtxbceu;		/* Transmitted byte counter E-frames Upper */
+	u64 mtxbcel;		/* Transmitted byte counter E-frames Lower */
+	u64 mtxbcpu;		/* Transmitted byte counter P-frames Upper */
+	u64 mtxbcpl;		/* Transmitted byte counter P-frames Lower */
+	/* PHY Broken Link Transmitted Frame Counter E-frame per Source Port i ( i=0..PORT_N-1) */
 	u64 mpbltfcespi;
+	/* PHY Broken Link Transmitted Frame Counter P-frame per Source Port i ( i=0..PORT_N-1) */
 	u64 mpbltfcpspi;
-	u64 mpbltfce;
-	u64 mpbltfcp;
+	u64 mpbltfce;		/* PHY Broken Link Transmitted Frame Counter E-frame */
+	u64 mpbltfcp;		/* PHY Broken Link Transmitted Frame Counter P-frame */
+};
+
+/* Statistics counters collected by the Ethernet Agent */
+struct rswitch_etha_hw_stats {
+	u32 eausmfsecn;		/* Ethernet Agent Switch Minimum Frame Size Error CouNter */
+	u32 eatfecn;		/* Ethernet Agent TAG Filtering Error CouNter */
+	u32 eafsecn;		/* Ethernet Agent Frame Size Error CouNter */
+	u32 eadqoecn;		/* Ethernet Agent Descriptor Queue Overflow Error CouNter */
+	u32 eadqsecn;		/* Ethernet Agent Descriptor Queue Security Error CouNter */
+	u32 eacksecn;		/* Ethernet Agent ChecKSum Error CouNter */
+	u32 ealdcn;		/* Ethernet Agent Lost Descriptor CouNter */
+	u32 earfcneo0;		/* Ethernet Agent Received Frame CouNter E-frame per Octets 0 */
+	u32 earfcneo1;		/* Ethernet Agent Received Frame CouNter E-frame per Octets 1 */
+	u32 earfcneo2;		/* Ethernet Agent Received Frame CouNter E-frame per Octets 2 */
+	u32 earfcneo3;		/* Ethernet Agent Received Frame CouNter E-frame per Octets 3 */
+	u32 earfcneo4;		/* Ethernet Agent Received Frame CouNter E-frame per Octets 4 */
+	u32 earfcneo5;		/* Ethernet Agent Received Frame CouNter E-frame per Octets 5 */
+	u32 earfcneo6;		/* Ethernet Agent Received Frame CouNter E-frame per Octets 6 */
+	u32 earfcnpo0;		/* Ethernet Agent Received Frame CouNter P-frame per Octets 0 */
+	u32 earfcnpo1;		/* Ethernet Agent Received Frame CouNter P-frame per Octets 1 */
+	u32 earfcnpo2;		/* Ethernet Agent Received Frame CouNter P-frame per Octets 2 */
+	u32 earfcnpo3;		/* Ethernet Agent Received Frame CouNter P-frame per Octets 3 */
+	u32 earfcnpo4;		/* Ethernet Agent Received Frame CouNter P-frame per Octets 4 */
+	u32 earfcnpo5;		/* Ethernet Agent Received Frame CouNter P-frame per Octets 5 */
+	u32 earfcnpo6;		/* Ethernet Agent Received Frame CouNter P-frame per Octets 6 */
+	/* Ethernet Agent Descriptor Queue Overflow Error CouNter Priority q (q=0..FRM_PRIO_N-1) */
+	u32 eadqoecnp0;
+	u32 eadqoecnp1;
+	u32 eadqoecnp2;
+	u32 eadqoecnp3;
+	u32 eadqoecnp4;
+	u32 eadqoecnp5;
+	u32 eadqoecnp6;
+	u32 eadqoecnp7;
+	/* Ethernet Agent Descriptor Queue Overflow Error CouNter Cut Through */
+	u32 eadqoecnct;
 };
 
 #define NUM_QUEUES_PER_NDEV	2
@@ -340,7 +378,8 @@ struct rswitch_device {
 	struct device_node *np_port;
 	struct phy *serdes;
 
-	struct rswitch_rmac_hw_stats stats;
+	struct rswitch_rmac_hw_stats r_stats;
+	struct rswitch_etha_hw_stats e_stats;
 
 	struct net_device *brdev;	/* master bridge device */
 	unsigned int learning_requested : 1;

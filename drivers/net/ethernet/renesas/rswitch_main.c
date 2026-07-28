@@ -2455,33 +2455,171 @@ err_kfree:
 	return ret;
 }
 
-static struct net_device_stats *rswitch_get_stats(struct net_device *ndev)
-{
-	return &ndev->stats;
-}
-
 void rswitch_update_stats(struct rswitch_device *rdev)
 {
 	void __iomem *addr_etha = rdev->etha->addr;
 	u64 temp;
 
-	rdev->stats.mrufc += ioread32(addr_etha + MRUFC);
-	rdev->stats.mtufc += ioread32(addr_etha + MTUFC);
+	/* Receive overflow Counter */
+	rdev->r_stats.mrovfc += ioread32(addr_etha + MROVFC);
+	/* Receive Header-CRC (PCH-CRC) error Counter */
+	rdev->r_stats.mrhcrcec += ioread32(addr_etha + MRHCRCEC);
+	/* Received good frame counter E-frames */
+	rdev->r_stats.mrgfce += ioread32(addr_etha + MRGFCE);
+	/* Received good frame counter P-frames */
+	rdev->r_stats.mrgfcp += ioread32(addr_etha + MRGFCP);
+	/* Received good broadcast frame counter */
+	rdev->r_stats.mrbfc += ioread32(addr_etha + MRBFC);
+	/* Received good multicast frame counter */
+	rdev->r_stats.mrmfc += ioread32(addr_etha + MRMFC);
+	/* Received good unicast frame counter */
+	rdev->r_stats.mrufc += ioread32(addr_etha + MRUFC);
+	/* Received PHY error frame counter */
+	rdev->r_stats.mrpefc += ioread32(addr_etha + MRPEFC);
+	/* Received nibble error frame counter */
+	rdev->r_stats.mrnefc += ioread32(addr_etha + MRNEFC);
+	/* Received FCS/mCRC error frame counter */
+	rdev->r_stats.mrfmefc += ioread32(addr_etha + MRFMEFC);
+	/* Received final fragment missing error frame count */
+	rdev->r_stats.mrffmefc += ioread32(addr_etha + MRFFMEFC);
+	/* Received C-fragment count error frame counter */
+	rdev->r_stats.mrcfcefc += ioread32(addr_etha + MRCFCEFC);
+	/* Received fragment count error frame counter */
+	rdev->r_stats.mrfcefc += ioread32(addr_etha + MRFCEFC);
+	/* Received RMAC filter error frame counter */
+	rdev->r_stats.mrrcfefc += ioread32(addr_etha + MRRCFEFC);
+	/* Received frame counter */
+	rdev->r_stats.mrfc += ioread32(addr_etha + MRFC);
+	/* Received good undersize error frame counter */
+	rdev->r_stats.mrguefc += ioread32(addr_etha + MRGUEFC);
+	/* Received bad undersize error frame counter */
+	rdev->r_stats.mrbuefc += ioread32(addr_etha + MRBUEFC);
+	/* Received good oversize error frame counter */
+	rdev->r_stats.mrgoefc += ioread32(addr_etha + MRGOEFC);
+	/* Received bad oversize error frame counter */
+	rdev->r_stats.mrboefc += ioread32(addr_etha + MRBOEFC);
+	/* Received byte counter E-frames */
 	temp = (u64)ioread32(addr_etha + MRXBCEU);
-	rdev->stats.mrxbceu += (temp << 32) + ioread32(addr_etha + MRXBCEL);
-	temp = (u64)ioread32(addr_etha + MTXBCEU);
-	rdev->stats.mtxbceu += (temp << 32) + ioread32(addr_etha + MTXBCEL);
+	rdev->r_stats.mrxbceu += (temp << 32) + ioread32(addr_etha + MRXBCEL);
+	/* Received byte counter P-frames */
 	temp = (u64)ioread32(addr_etha + MRXBCPU);
-	rdev->stats.mrxbcpu += (temp << 32) + ioread32(addr_etha + MRXBCPL);
+	rdev->r_stats.mrxbcpu += (temp << 32) + ioread32(addr_etha + MRXBCPL);
+
+	/* Transmitted good frame counter E-frames */
+	rdev->r_stats.mtgfce += ioread32(addr_etha + MTGFCE);
+	/* Transmitted good frame counter P-frames */
+	rdev->r_stats.mtgfcp += ioread32(addr_etha + MTGFCP);
+	/* Transmitted broadcast frame counter */
+	rdev->r_stats.mtbfc += ioread32(addr_etha + MTBFC);
+	/* Transmitted multicast frame counter */
+	rdev->r_stats.mtmfc += ioread32(addr_etha + MTMFC);
+	/* Transmitted unicast frame counter */
+	rdev->r_stats.mtufc += ioread32(addr_etha + MTUFC);
+	/* Transmitted error frame counter */
+	rdev->r_stats.mtefc += ioread32(addr_etha + MTEFC);
+	/* Transmitted byte counter E-frames Upper */
+	temp = (u64)ioread32(addr_etha + MTXBCEU);
+	rdev->r_stats.mtxbceu += (temp << 32) + ioread32(addr_etha + MTXBCEL);
+	/* Transmitted byte counter P-frames Upper */
 	temp = (u64)ioread32(addr_etha + MTXBCPU);
-	rdev->stats.mtxbcpu += (temp << 32) + ioread32(addr_etha + MTXBCPL);
-	rdev->stats.mrbfc += ioread32(addr_etha + MRBFC);
-	rdev->stats.mtbfc += ioread32(addr_etha + MTBFC);
-	rdev->stats.mrmfc += ioread32(addr_etha + MRMFC);
-	rdev->stats.mtmfc += ioread32(addr_etha + MTMFC);
-	rdev->stats.mrpefc += ioread32(addr_etha + MRPEFC);
-	rdev->stats.mtefc += ioread32(addr_etha + MTEFC);
-	rdev->stats.mrfmefc += ioread32(addr_etha + MRFMEFC);
+	rdev->r_stats.mtxbcpu += (temp << 32) + ioread32(addr_etha + MTXBCPL);
+
+	/* Ethernet Agent Switch Minimum Frame Size Error CouNter */
+	rdev->e_stats.eausmfsecn += ioread32(addr_etha + EAUSMFSECN);
+	/* Ethernet Agent TAG Filtering Error CouNter */
+	rdev->e_stats.eatfecn += ioread32(addr_etha + EATFECN);
+	/* Ethernet Agent Frame Size Error CouNter */
+	rdev->e_stats.eafsecn += ioread32(addr_etha + EAFSECN);
+	/* Ethernet Agent Descriptor Queue Overflow Error CouNter */
+	rdev->e_stats.eadqoecn += ioread32(addr_etha + EADQOECN);
+	/* Ethernet Agent Descriptor Queue Security Error CouNter */
+	rdev->e_stats.eadqsecn += ioread32(addr_etha + EADQSECN);
+	/* Ethernet Agent ChecKSum Error CouNter */
+	rdev->e_stats.eacksecn += ioread32(addr_etha + EACKSECN);
+	/* Ethernet Agent Lost Descriptor CouNter */
+	rdev->e_stats.ealdcn += ioread32(addr_etha + EALDCN);
+	/* Ethernet Agent Received Frame CouNter E-frame per Octets 0 */
+	rdev->e_stats.earfcneo0 += ioread32(addr_etha + EARFCNEO0);
+	/* Ethernet Agent Received Frame CouNter E-frame per Octets 1 */
+	rdev->e_stats.earfcneo1 += ioread32(addr_etha + EARFCNEO1);
+	/* Ethernet Agent Received Frame CouNter E-frame per Octets 2 */
+	rdev->e_stats.earfcneo2 += ioread32(addr_etha + EARFCNEO2);
+	/* Ethernet Agent Received Frame CouNter E-frame per Octets 3 */
+	rdev->e_stats.earfcneo3 += ioread32(addr_etha + EARFCNEO3);
+	/* Ethernet Agent Received Frame CouNter E-frame per Octets 4 */
+	rdev->e_stats.earfcneo4 += ioread32(addr_etha + EARFCNEO4);
+	/* Ethernet Agent Received Frame CouNter E-frame per Octets 5 */
+	rdev->e_stats.earfcneo5 += ioread32(addr_etha + EARFCNEO5);
+	/* Ethernet Agent Received Frame CouNter E-frame per Octets 6 */
+	rdev->e_stats.earfcneo6 += ioread32(addr_etha + EARFCNEO6);
+	/* Ethernet Agent Received Frame CouNter P-frame per Octets 0 */
+	rdev->e_stats.earfcnpo0 += ioread32(addr_etha + EARFCNPO0);
+	/* Ethernet Agent Received Frame CouNter P-frame per Octets 1 */
+	rdev->e_stats.earfcnpo1 += ioread32(addr_etha + EARFCNPO1);
+	/* Ethernet Agent Received Frame CouNter P-frame per Octets 2 */
+	rdev->e_stats.earfcnpo2 += ioread32(addr_etha + EARFCNPO2);
+	/* Ethernet Agent Received Frame CouNter P-frame per Octets 3 */
+	rdev->e_stats.earfcnpo3 += ioread32(addr_etha + EARFCNPO3);
+	/* Ethernet Agent Received Frame CouNter P-frame per Octets 4 */
+	rdev->e_stats.earfcnpo4 += ioread32(addr_etha + EARFCNPO4);
+	/* Ethernet Agent Received Frame CouNter P-frame per Octets 5 */
+	rdev->e_stats.earfcnpo5 += ioread32(addr_etha + EARFCNPO5);
+	/* Ethernet Agent Received Frame CouNter P-frame per Octets 6 */
+	rdev->e_stats.earfcnpo6 += ioread32(addr_etha + EARFCNPO6);
+	/* Ethernet Agent Descriptor Queue Overflow Error CouNter Priority q (q=0..FRM_PRIO_N-1) */
+	rdev->e_stats.eadqoecnp0 += ioread32(addr_etha + EADQOECNP(0));
+	rdev->e_stats.eadqoecnp1 += ioread32(addr_etha + EADQOECNP(1));
+	rdev->e_stats.eadqoecnp2 += ioread32(addr_etha + EADQOECNP(2));
+	rdev->e_stats.eadqoecnp3 += ioread32(addr_etha + EADQOECNP(3));
+	rdev->e_stats.eadqoecnp4 += ioread32(addr_etha + EADQOECNP(4));
+	rdev->e_stats.eadqoecnp5 += ioread32(addr_etha + EADQOECNP(5));
+	rdev->e_stats.eadqoecnp6 += ioread32(addr_etha + EADQOECNP(6));
+	rdev->e_stats.eadqoecnp7 += ioread32(addr_etha + EADQOECNP(7));
+	/* Ethernet Agent Descriptor Queue Overflow Error CouNter Cut Through */
+	rdev->e_stats.eadqoecnct += ioread32(addr_etha + EADQOECNCT);
+}
+
+static void rswitch_get_stats64(struct net_device *ndev,
+				struct rtnl_link_stats64 *storage)
+{
+	struct rswitch_device *rdev = netdev_priv(ndev);
+
+	rswitch_update_stats(rdev);
+
+	storage->rx_packets = rdev->r_stats.mrfc;
+	storage->tx_packets = rdev->r_stats.mtufc + rdev->r_stats.mtmfc +
+			      rdev->r_stats.mtbfc;
+	storage->rx_bytes = rdev->r_stats.mrxbceu + rdev->r_stats.mtxbcpu;
+	storage->tx_bytes = rdev->r_stats.mtxbceu + rdev->r_stats.mtxbcpu;
+	storage->rx_errors = rdev->r_stats.mrpefc;
+	storage->tx_errors = rdev->r_stats.mtefc;
+	storage->rx_dropped = ndev->stats.rx_dropped;
+	storage->tx_dropped = ndev->stats.tx_dropped;
+
+	storage->multicast = rdev->r_stats.mrmfc + rdev->r_stats.mtmfc;
+	//storage->collisions = ndev->stats.__collisions;
+
+	/* detailed rx_errors: */
+
+	storage->rx_length_errors = rdev->r_stats.mrguefc + rdev->r_stats.mrbuefc +
+				    rdev->r_stats.mrgoefc + rdev->r_stats.mrboefc;
+	storage->rx_over_errors = rdev->r_stats.mrovfc; //receive buffer overflow
+
+	storage->rx_crc_errors = rdev->r_stats.mrfmefc + rdev->r_stats.mrhcrcec;
+	storage->rx_frame_errors = rdev->r_stats.mrnefc +
+				   rdev->r_stats.mrguefc + rdev->r_stats.mrbuefc +
+				   rdev->r_stats.mrgoefc + rdev->r_stats.mrboefc;
+
+/*
+ *	storage->rx_fifo_errors = rdev->stats.;
+ *	storage->rx_missed_errors = rdev->stats.;
+ */
+	/* detailed tx_errors */
+	storage->tx_aborted_errors = ndev->stats.tx_aborted_errors;
+	storage->tx_carrier_errors = ndev->stats.tx_carrier_errors;
+	storage->tx_fifo_errors = ndev->stats.tx_fifo_errors;
+	storage->tx_heartbeat_errors = ndev->stats.tx_heartbeat_errors;
+	storage->tx_window_errors = ndev->stats.tx_window_errors;
 }
 
 static int rswitch_hwstamp_get(struct net_device *ndev,
@@ -2561,7 +2699,7 @@ static const struct net_device_ops rswitch_netdev_ops = {
 	.ndo_open = rswitch_open,
 	.ndo_stop = rswitch_stop,
 	.ndo_start_xmit = rswitch_start_xmit,
-	.ndo_get_stats = rswitch_get_stats,
+	.ndo_get_stats64 = rswitch_get_stats64,
 	.ndo_eth_ioctl = phy_do_ioctl_running,
 	.ndo_setup_tc = rswitch_setup_tc,
 	.ndo_get_port_parent_id = rswitch_get_port_parent_id,

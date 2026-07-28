@@ -37,54 +37,47 @@ struct rswitch_stats {
 }
 
 static const struct rswitch_stats rswitch_gstrings_stats[] = {
-	RSWITCH_STAT("rx_packets", stats.mrufc),
-	RSWITCH_STAT("tx_packets", stats.mtufc),
-	RSWITCH_STAT("rx_bytes_e_frame", stats.mrxbceu),
-	RSWITCH_STAT("tx_bytes_e_frame", stats.mtxbceu),
-	RSWITCH_STAT("rx_bytes_p_frame", stats.mrxbcpu),
-	RSWITCH_STAT("tx_bytes_p_frame", stats.mtxbcpu),
-	RSWITCH_STAT("rx_broadcast", stats.mrbfc),
-	RSWITCH_STAT("tx_broadcast", stats.mtbfc),
-	RSWITCH_STAT("rx_multicast", stats.mrmfc),
-	RSWITCH_STAT("tx_multicast", stats.mtmfc),
-	RSWITCH_STAT("rx_errors", stats.mrpefc),
-	RSWITCH_STAT("tx_errors", stats.mtefc),
+	RSWITCH_STAT("rx_over_errors", r_stats.mrovfc),
+	RSWITCH_STAT("rx_header_crc_errors", r_stats.mrhcrcec),
+	RSWITCH_STAT("rx_broadcast", r_stats.mrbfc),
+	RSWITCH_STAT("rx_multicast", r_stats.mrmfc),
+	RSWITCH_STAT("rx_unicast", r_stats.mrufc),
+	RSWITCH_STAT("rx_phy_errors", r_stats.mrpefc),
+	RSWITCH_STAT("rx_nibble_err_frm_cnt", r_stats.mrnefc),
+	RSWITCH_STAT("rx_fcs_errors", r_stats.mrfmefc),
+	RSWITCH_STAT("rx_ff_missing_errors", r_stats.mrffmefc),
+	RSWITCH_STAT("rx_c-frag_cnt_errors", r_stats.mrcfcefc),
+	RSWITCH_STAT("rx_frag_cnt_errors", r_stats.mrfcefc),
+	RSWITCH_STAT("rx_RMAC_filter_errors", r_stats.mrrcfefc),
+	RSWITCH_STAT("rx_frames", r_stats.mrfc),
+	RSWITCH_STAT("rx_good_undersize_err", r_stats.mrguefc),
+	RSWITCH_STAT("rx_bad_undersize_err", r_stats.mrbuefc),
+	RSWITCH_STAT("rx_good_oversize_err", r_stats.mrgoefc),
+	RSWITCH_STAT("rx_bad_oversize_err", r_stats.mrboefc),
+	RSWITCH_STAT("rx_byte_e-frm_cnt", r_stats.mrxbceu),
+	RSWITCH_STAT("rx_byte_p-frm_cnt", r_stats.mrxbcpu),
+
+	RSWITCH_STAT("tx_bytes_e_frame", r_stats.mtxbceu),
+	RSWITCH_STAT("tx_bytes_p_frame", r_stats.mtxbcpu),
+	RSWITCH_STAT("tx_broadcast", r_stats.mtbfc),
+	RSWITCH_STAT("tx_multicast", r_stats.mtmfc),
+	RSWITCH_STAT("tx_unicast", r_stats.mtufc),
+	RSWITCH_STAT("tx_errors", r_stats.mtefc),
+	RSWITCH_STAT("tx_byte_e-frm_cnt", r_stats.mtxbceu),
+	RSWITCH_STAT("tx_byte_p-frm_cnt", r_stats.mtxbcpu),
+
 	RSWITCH_NETDEV_STAT("tx_dropped", stats.tx_dropped),
-	/* { "multicast", RSWITCH_STATS, (stats.mprc) }, */
-	/* { "collisions", RSWITCH_STATS, (stats.colc) }, */
-	/* { "rx_length_errors", RSWITCH_STATS, (stats.rlerrc) }, */
-	RSWITCH_NETDEV_STAT("rx_over_errors", stats.rx_over_errors),
-	RSWITCH_STAT("rx_crc_errors", stats.mrfmefc),
+	RSWITCH_NETDEV_STAT("collisions", stats.__collisions),
 	RSWITCH_NETDEV_STAT("rx_frame_errors", stats.rx_frame_errors),
-	/* { "rx_no_buffer_count", RSWITCH_STATS, (stats.rnbc) }, */
-	/* { "rx_missed_errors", RSWITCH_STATS, (stats.mpc) }, */
-	/* { "tx_aborted_errors", RSWITCH_STATS, (stats.ecol) }, */
-	/* { "tx_carrier_errors", RSWITCH_STATS, (stats.tncrs) }, */
 	RSWITCH_NETDEV_STAT("tx_fifo_errors", stats.tx_fifo_errors),
 	RSWITCH_NETDEV_STAT("tx_heartbeat_errors", stats.tx_heartbeat_errors),
-	/* { "tx_window_errors", RSWITCH_STATS, (stats.latecol) }, */
-	/* { "tx_abort_late_coll", RSWITCH_STATS, (stats.latecol) }, */
-	/* { "tx_deferred_ok", RSWITCH_STATS, (stats.dc) }, */
-	/* { "tx_single_coll_ok", RSWITCH_STATS, (stats.scc) }, */
-	/* { "tx_multi_coll_ok", RSWITCH_STATS, (stats.mcc) }, */
-	/* { "tx_timeout_count", RSWITCH_STATS, (tx_timeout_count) }, */
-	/* { "tx_restart_queue", RSWITCH_STATS, (restart_queue) }, */
-	/* { "rx_long_length_errors", RSWITCH_STATS, (stats.roc) }, */
-	/* { "rx_short_length_errors", RSWITCH_STATS, (stats.ruc) }, */
-	/* { "rx_align_errors", RSWITCH_STATS, (stats.algnerrc) }, */
-	/* { "tx_tcp_seg_good", RSWITCH_STATS, (stats.tsctc) }, */
-	/* { "tx_tcp_seg_failed", RSWITCH_STATS, (stats.tsctfc) }, */
-	/* { "rx_flow_control_xon", RSWITCH_STATS, (stats.xonrxc) }, */
-	/* { "rx_flow_control_xoff", RSWITCH_STATS, (stats.xoffrxc) }, */
-	/* { "tx_flow_control_xon", RSWITCH_STATS, (stats.xontxc) }, */
-	/* { "tx_flow_control_xoff", RSWITCH_STATS, (stats.xofftxc) }, */
-	/* { "rx_long_byte_count", RSWITCH_STATS, (stats.gorcl) }, */
-	/* { "rx_csum_offload_good", RSWITCH_STATS, (hw_csum_good) }, */
-	/* { "rx_csum_offload_errors", RSWITCH_STATS, (hw_csum_err) }, */
-	/* { "alloc_rx_buff_failed", RSWITCH_STATS, (alloc_rx_buff_failed) }, */
-	/* { "tx_smbus", RSWITCH_STATS, (stats.mgptc) }, */
-	/* { "rx_smbus", RSWITCH_STATS, (stats.mgprc) }, */
-	/* { "dropped_smbus", RSWITCH_STATS, (stats.mgpdc) }, */
+	RSWITCH_STAT("eth_agent_minimum_frm_size_err", e_stats.eausmfsecn),
+	RSWITCH_STAT("eth_agent_TAG_flt_err", e_stats.eatfecn),
+	RSWITCH_STAT("eth_agent_frm_size_err", e_stats.eafsecn),
+	RSWITCH_STAT("eth_agent_dsq_overflow_err", e_stats.eadqoecn),
+	RSWITCH_STAT("eth_agent_dsq_security_err", e_stats.eadqsecn),
+	RSWITCH_STAT("eth_agent_chk_sum_err", e_stats.eacksecn),
+	RSWITCH_STAT("eth_agent_lost_desc", e_stats.ealdcn),
 };
 
 #define RSWITCH_QUEUE_STATS_LEN 0
@@ -166,7 +159,6 @@ static void rswitch_get_ethtool_stats(struct net_device *ndev,
 		else
 			data[i] += *(u32 *)p;
 	}
-/* BUG_ON(i != E1000_STATS_LEN); */
 }
 
 static void rswitch_get_strings(struct net_device *ndev, u32 stringset,
@@ -182,7 +174,6 @@ static void rswitch_get_strings(struct net_device *ndev, u32 stringset,
 			       ETH_GSTRING_LEN);
 			p += ETH_GSTRING_LEN;
 		}
-		/* BUG_ON(p - data != E1000_STATS_LEN * ETH_GSTRING_LEN); */
 		break;
 	}
 }
