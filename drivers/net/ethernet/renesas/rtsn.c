@@ -217,6 +217,8 @@ static int rtsn_link_rswitch(struct rtsn_private *priv)
 	return 0;
 }
 
+#ifdef CONFIG_RENESAS_ETHER_SWITCH
+
 static int rtsn_attach_rswitch(struct rtsn_private *priv)
 {
 	struct device *dev = &priv->pdev->dev;
@@ -268,6 +270,7 @@ static void rtsn_unlink_rswitch(struct rtsn_private *priv)
 		priv->rswitch_dev = NULL;
 	}
 }
+#endif
 
 static void rtsn_ctrl_data_irq(struct rtsn_private *priv, bool enable)
 {
@@ -1466,6 +1469,7 @@ static int rtsn_open_common(struct net_device *ndev, bool attach_rswitch)
 		return ret;
 	}
 
+#ifdef CONFIG_RENESAS_ETHER_SWITCH
 	if (attach_rswitch) {
 		ret = rtsn_attach_rswitch(priv);
 		if (ret) {
@@ -1475,6 +1479,7 @@ static int rtsn_open_common(struct net_device *ndev, bool attach_rswitch)
 			return ret;
 		}
 	}
+#endif
 
 	if (priv->fixed_link) {
 		netif_carrier_off(ndev);
@@ -1514,8 +1519,11 @@ static int rtsn_stop_common(struct net_device *ndev, bool detach_rswitch)
 	napi_disable(&priv->napi);
 	rtsn_change_mode(priv, OCR_OPC_DISABLE);
 	rtsn_deinit(priv);
+
+#ifdef CONFIG_RENESAS_ETHER_SWITCH
 	if (detach_rswitch)
 		rtsn_detach_rswitch(priv);
+#endif
 
 	return 0;
 }
@@ -1942,7 +1950,9 @@ static int rtsn_probe(struct platform_device *pdev)
 	return 0;
 
 error_rswitch:
+#ifdef CONFIG_RENESAS_ETHER_SWITCH
 	rtsn_unlink_rswitch(priv);
+#endif
 error_mdio:
 	rtsn_mdio_free(priv);
 error_ptp:
@@ -1964,7 +1974,9 @@ static void rtsn_remove(struct platform_device *pdev)
 
 	unregister_netdev(priv->ndev);
 	rtsn_mdio_free(priv);
+#ifdef CONFIG_RENESAS_ETHER_SWITCH
 	rtsn_unlink_rswitch(priv);
+#endif
 	rcar_gen4_ptp_unregister(priv->ptp_priv);
 	rtsn_change_mode(priv, OCR_OPC_DISABLE);
 	netif_napi_del(&priv->napi);

@@ -76,6 +76,7 @@ config RTSN
 	tristate "Renesas Ethernet-TSN support"
 	depends on ARCH_RENESAS || COMPILE_TEST
 	depends on PTP_1588_CLOCK
+	depends on RENESAS_ETHER_SWITCH || !RENESAS_ETHER_SWITCH
 	select CRC32
 	select PHYLIB
 	select RENESAS_GEN4_PTP
