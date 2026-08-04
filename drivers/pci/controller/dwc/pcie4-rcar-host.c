@@ -136,7 +136,7 @@ static int rcar_gen5_pcie_link_up(struct dw_pcie *pci)
 	u32 val, mask;
 
 	val = readl(rcar_pcie4->base + PCIEINTSTS0);
-	mask = GENMASK(7,6);
+	mask = GENMASK(7, 6);
 
 	rcar_gen5_pcie_check_speed(pci);
 
