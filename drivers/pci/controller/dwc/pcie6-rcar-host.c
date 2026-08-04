@@ -326,10 +326,10 @@ static int rcar_gen5_pcie6_resume_noirq(struct device *dev)
 	}
 
 	ret = dw_pcie6_setup_rc(pp);
-        if (ret < 0) {
-                dev_err(dev, "Failed to init RC: %d\n", ret);
-                return ret;
-        }
+	if (ret < 0) {
+		dev_err(dev, "Failed to init RC: %d\n", ret);
+		return ret;
+	}
 
 	if (IS_ENABLED(CONFIG_PCI_MSI)) {
 		val = readl(rcar_pcie6->base + 0x2C0);

@@ -468,7 +468,7 @@ static void rcar_gen5_pcie6_retrain_link(struct dw_pcie6 *pci)
 		if (!(lnksta & PCI_EXP_LNKSTA_LT))
 			break;
 		mdelay(1);
-	}	
+	}
 }
 
 static void rcar_gen5_pcie6_check_speed(struct dw_pcie6 *pci)
@@ -515,7 +515,7 @@ int rcar_gen5_pcie6_get_link_speed(struct device_node *node)
 
 	if (of_property_read_u32(node, "max-link-speed", &max_link_speed) ||
 		max_link_speed == 0 || max_link_speed > 6)
-			return -EINVAL;
+		return -EINVAL;
 
 	return max_link_speed;
 }
