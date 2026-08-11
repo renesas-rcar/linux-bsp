@@ -1295,18 +1295,6 @@
 		clock-frequency = <100000000>;
 	};
 
-	dummy_clk_sgasyncd16: dummy_clk_sgasyncd16 {
-		compatible = "fixed-clock";
-		#clock-cells = <0>;
-		clock-frequency = <66666666>;
-	};
-
-	dummy_clk_s0asyncd8: dummy_clk_s0asyncd8 {
-		compatible = "fixed-clock";
-		#clock-cells = <0>;
-		clock-frequency = <100000000>;
-	};
-
 	dummy_tcki: dummy_tcki {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
@@ -2918,7 +2906,7 @@
 			reg = <0 0xc0740000 0 0x10>;
 			#pwm-cells = <2>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_PWM0>,
-				 <&dummy_clk_sgasyncd16>;
+				 <&scmi_clk X5H_CLOCK_ID_CLK_SGAD16_PERW_BUS>;
 			clock-names = "bus_clk", "counter_clk";
 			status = "disabled";
 		};
@@ -2928,7 +2916,7 @@
 			reg = <0 0xc0741000 0 0x10>;
 			#pwm-cells = <2>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_PWM0>,
-				 <&dummy_clk_sgasyncd16>;
+				 <&scmi_clk X5H_CLOCK_ID_CLK_SGAD16_PERW_BUS>;
 			clock-names = "bus_clk", "counter_clk";
 			status = "disabled";
 		};
@@ -2938,7 +2926,7 @@
 			reg = <0 0xc0742000 0 0x10>;
 			#pwm-cells = <2>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_PWM0>,
-				 <&dummy_clk_sgasyncd16>;
+				 <&scmi_clk X5H_CLOCK_ID_CLK_SGAD16_PERW_BUS>;
 			clock-names = "bus_clk", "counter_clk";
 			status = "disabled";
 		};
@@ -2948,7 +2936,7 @@
 			reg = <0 0xc0743000 0 0x10>;
 			#pwm-cells = <2>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_PWM0>,
-				 <&dummy_clk_sgasyncd16>;
+				 <&scmi_clk X5H_CLOCK_ID_CLK_SGAD16_PERW_BUS>;
 			clock-names = "bus_clk", "counter_clk";
 			status = "disabled";
 		};
@@ -2958,7 +2946,7 @@
 			reg = <0 0xc0780000 0 0x10>;
 			#pwm-cells = <2>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_PWM0>,
-				 <&dummy_clk_s0asyncd8>;
+				 <&scmi_clk X5H_CLOCK_ID_CLK_S0AD8_PERW_BUS>;
 			clock-names = "bus_clk", "counter_clk";
 			status = "disabled";
 		};
@@ -2968,7 +2956,7 @@
 			reg = <0 0xc0781000 0 0x10>;
 			#pwm-cells = <2>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_PWM0>,
-				 <&dummy_clk_s0asyncd8>;
+				 <&scmi_clk X5H_CLOCK_ID_CLK_S0AD8_PERW_BUS>;
 			clock-names = "bus_clk", "counter_clk";
 			status = "disabled";
 		};
@@ -2978,7 +2966,7 @@
 			reg = <0 0xc0782000 0 0x10>;
 			#pwm-cells = <2>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_PWM0>,
-				 <&dummy_clk_s0asyncd8>;
+				 <&scmi_clk X5H_CLOCK_ID_CLK_S0AD8_PERW_BUS>;
 			clock-names = "bus_clk", "counter_clk";
 			status = "disabled";
 		};
@@ -2988,7 +2976,7 @@
 			reg = <0 0xc0783000 0 0x10>;
 			#pwm-cells = <2>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_PWM0>,
-				 <&dummy_clk_s0asyncd8>;
+				 <&scmi_clk X5H_CLOCK_ID_CLK_S0AD8_PERW_BUS>;
 			clock-names = "bus_clk", "counter_clk";
 			status = "disabled";
 		};
@@ -2998,7 +2986,7 @@
 			reg = <0 0xc0784000 0 0x10>;
 			#pwm-cells = <2>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_PWM0>,
-				 <&dummy_clk_s0asyncd8>;
+				 <&scmi_clk X5H_CLOCK_ID_CLK_S0AD8_PERW_BUS>;
 			clock-names = "bus_clk", "counter_clk";
 			status = "disabled";
 		};
@@ -3008,7 +2996,7 @@
 			reg = <0 0xc0785000 0 0x10>;
 			#pwm-cells = <2>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_PWM0>,
-				 <&dummy_clk_s0asyncd8>;
+				 <&scmi_clk X5H_CLOCK_ID_CLK_S0AD8_PERW_BUS>;
 			clock-names = "bus_clk", "counter_clk";
 			status = "disabled";
 		};
@@ -3018,7 +3006,7 @@
 			reg = <0 0xc0720000 0 0x148>;
 			interrupts = <GIC_SPI 4087 IRQ_TYPE_LEVEL_HIGH>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_TPU0>,
-				 <&dummy_clk_sgasyncd16>;
+				 <&scmi_clk X5H_CLOCK_ID_CLK_SGAD16_PERW_M>;
 			clock-names = "bus_clk", "counter_clk";
 			#pwm-cells = <3>;
 			status = "disabled";
