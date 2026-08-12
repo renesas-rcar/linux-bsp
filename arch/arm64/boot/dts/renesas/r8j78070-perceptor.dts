@@ -236,135 +236,135 @@
 };
 
 &crc0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &crc1 {
-	status = "disabled";
+	status = "okay";
 };
 
 &crc2 {
-	status = "disabled";
+	status = "okay";
 };
 
 &crc3 {
-	status = "disabled";
+	status = "okay";
 };
 
 &crc4 {
-	status = "disabled";
+	status = "okay";
 };
 
 &crc5 {
-	status = "disabled";
+	status = "okay";
 };
 
 &crc6 {
-	status = "disabled";
+	status = "okay";
 };
 
 &crc7 {
-	status = "disabled";
+	status = "okay";
 };
 
 &crc8 {
-	status = "disabled";
+	status = "okay";
 };
 
 &crc9 {
-	status = "disabled";
+	status = "okay";
 };
 
 &crc10 {
-	status = "disabled";
+	status = "okay";
 };
 
 &kcrc0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &kcrc1 {
-	status = "disabled";
+	status = "okay";
 };
 
 &kcrc2 {
-	status = "disabled";
+	status = "okay";
 };
 
 &kcrc3 {
-	status = "disabled";
+	status = "okay";
 };
 
 &kcrc4 {
-	status = "disabled";
+	status = "okay";
 };
 
 &kcrc5 {
-	status = "disabled";
+	status = "okay";
 };
 
 &kcrc6 {
-	status = "disabled";
+	status = "okay";
 };
 
 &kcrc7 {
-	status = "disabled";
+	status = "okay";
 };
 
 &kcrc8 {
-	status = "disabled";
+	status = "okay";
 };
 
 &kcrc9 {
-	status = "disabled";
+	status = "okay";
 };
 
 &kcrc10 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wcrc0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wcrc1 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wcrc2 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wcrc3 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wcrc4 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wcrc5 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wcrc6 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wcrc7 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wcrc8 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wcrc9 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wcrc10 {
-	status = "disabled";
+	status = "okay";
 };
 
 &ufs0 {
