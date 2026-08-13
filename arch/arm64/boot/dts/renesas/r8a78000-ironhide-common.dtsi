@@ -1345,6 +1345,7 @@
 			phy-handle = <&dp83869_phy>;
 			phy-mode = "sgmii";
 			phys = <&eth_pcs 5>;
+			max-speed = <1000>;
 
 			mdio {
 				#address-cells = <1>;
