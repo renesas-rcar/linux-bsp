@@ -108,19 +108,19 @@
 };
 
 &usb30 {
-	status = "disabled";
+	status = "okay";
 };
 
 &usb31 {
-	status = "disabled";
+	status = "okay";
 };
 
 &usb20 {
-	status = "disabled";
+	status = "okay";
 };
 
 &usb21 {
-	status = "disabled";
+	status = "okay";
 };
 
 &dp0 {
