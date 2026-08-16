@@ -5673,12 +5673,14 @@
 			compatible = "arm,smmu-v3";
 			reg = <0x0 0xf9000000 0x0 0x20000>;
 			#iommu-cells = <1>;
+			renesas,bypass-unmatched-streams;
 		};
 
 		smmu_vi1: iommu@f9800000 {
 			compatible = "arm,smmu-v3";
 			reg = <0x0 0xf9800000 0x0 0x20000>;
 			#iommu-cells = <1>;
+			renesas,bypass-unmatched-streams;
 		};
 
 		smmu_vipn: iommu@f8200000 {
