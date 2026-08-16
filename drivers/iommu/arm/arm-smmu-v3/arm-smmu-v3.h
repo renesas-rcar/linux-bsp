@@ -682,6 +682,7 @@ struct arm_smmu_strtab_cfg {
 			struct arm_smmu_strtab_l2 **l2ptrs;
 			dma_addr_t l1_dma;
 			unsigned int num_l1_ents;
+			struct arm_smmu_strtab_l2 *bypass;
 		} l2;
 	};
 };
@@ -733,6 +734,7 @@ struct arm_smmu_device {
 #define ARM_SMMU_OPT_MSIPOLL		(1 << 2)
 #define ARM_SMMU_OPT_CMDQ_FORCE_SYNC	(1 << 3)
 #define ARM_SMMU_OPT_TEGRA241_CMDQV	(1 << 4)
+#define ARM_SMMU_OPT_BYPASS_UNMATCHED	(1 << 5)
 	u32				options;
 
 	struct arm_smmu_cmdq		cmdq;

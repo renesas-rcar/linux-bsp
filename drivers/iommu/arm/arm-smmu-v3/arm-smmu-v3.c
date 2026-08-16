@@ -81,6 +81,7 @@ DEFINE_MUTEX(arm_smmu_asid_lock);
 static struct arm_smmu_option_prop arm_smmu_options[] = {
 	{ ARM_SMMU_OPT_SKIP_PREFETCH, "hisilicon,broken-prefetch-cmd" },
 	{ ARM_SMMU_OPT_PAGE0_REGS_ONLY, "cavium,cn9900-broken-page1-regspace"},
+	{ ARM_SMMU_OPT_BYPASS_UNMATCHED, "renesas,bypass-unmatched-streams"},
 	{ 0, NULL},
 };
 
@@ -1698,13 +1699,17 @@ EXPORT_SYMBOL_IF_KUNIT(arm_smmu_make_s2_domain_ste);
  * This can safely directly manipulate the STE memory without a sync sequence
  * because the STE table has not been installed in the SMMU yet.
  */
-static void arm_smmu_init_initial_stes(struct arm_smmu_ste *strtab,
+static void arm_smmu_init_initial_stes(struct arm_smmu_device *smmu,
+				       struct arm_smmu_ste *strtab,
 				       unsigned int nent)
 {
 	unsigned int i;
 
 	for (i = 0; i < nent; ++i) {
-		arm_smmu_make_abort_ste(strtab);
+		if (smmu->options & ARM_SMMU_OPT_BYPASS_UNMATCHED)
+			arm_smmu_make_bypass_ste(smmu, strtab);
+		else
+			arm_smmu_make_abort_ste(strtab);
 		strtab++;
 	}
 }
@@ -1728,10 +1733,17 @@ static int arm_smmu_init_l2_strtab(struct arm_smmu_device *smmu, u32 sid)
 		return -ENOMEM;
 	}
 
-	arm_smmu_init_initial_stes((*l2table)->stes,
+	arm_smmu_init_initial_stes(smmu, (*l2table)->stes,
 				   ARRAY_SIZE((*l2table)->stes));
 	arm_smmu_write_strtab_l1_desc(&cfg->l2.l1tab[arm_smmu_strtab_l1_idx(sid)],
 				      l2ptr_dma);
+
+	if (cfg->l2.bypass) {
+		struct arm_smmu_cmdq_ent cmd = { .opcode = CMDQ_OP_CFGI_ALL };
+
+		arm_smmu_cmdq_issue_cmd_with_sync(smmu, &cmd);
+	}
+
 	return 0;
 }
 
@@ -3680,6 +3692,24 @@ static int arm_smmu_init_strtab_2lvl(struct arm_smmu_device *smmu)
 	if (!cfg->l2.l2ptrs)
 		return -ENOMEM;
 
+	if (smmu->options & ARM_SMMU_OPT_BYPASS_UNMATCHED) {
+		dma_addr_t bypass_dma;
+		unsigned int i;
+
+		cfg->l2.bypass = dmam_alloc_coherent(smmu->dev,
+						     sizeof(*cfg->l2.bypass),
+						     &bypass_dma, GFP_KERNEL);
+		if (!cfg->l2.bypass)
+			return -ENOMEM;
+
+		arm_smmu_init_initial_stes(smmu, cfg->l2.bypass->stes,
+					   ARRAY_SIZE(cfg->l2.bypass->stes));
+
+		for (i = 0; i < cfg->l2.num_l1_ents; i++)
+			arm_smmu_write_strtab_l1_desc(&cfg->l2.l1tab[i],
+						      bypass_dma);
+	}
+
 	return 0;
 }
 
@@ -3700,7 +3730,7 @@ static int arm_smmu_init_strtab_linear(struct arm_smmu_device *smmu)
 	}
 	cfg->linear.num_ents = 1 << smmu->sid_bits;
 
-	arm_smmu_init_initial_stes(cfg->linear.table, cfg->linear.num_ents);
+	arm_smmu_init_initial_stes(smmu, cfg->linear.table, cfg->linear.num_ents);
 	return 0;
 }
 
