@@ -118,6 +118,14 @@
 	status = "disabled";
 };
 
+&smmu_vi0 {
+	status = "disabled";
+};
+
+&smmu_vi1 {
+	status = "disabled";
+};
+
 &vspi0 {
 	status = "disabled";
 };
