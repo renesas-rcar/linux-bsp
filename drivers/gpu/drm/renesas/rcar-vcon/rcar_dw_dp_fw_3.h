@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0+ */
 #ifndef __RCAR_DW_DP_FW_3_H__
-#define __RCAR_DW_DP_FW_3_H
+#define __RCAR_DW_DP_FW_3_H__
 
 u32 rcar_dw_dp_fw_data_3[4096] = {
 0x0301,
