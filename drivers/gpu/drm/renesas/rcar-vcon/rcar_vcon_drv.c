@@ -13,6 +13,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/of_reserved_mem.h>
 #include <linux/platform_device.h>
 #include <linux/pm.h>
 #include <linux/pm_runtime.h>
@@ -193,6 +194,8 @@ static int rcar_vcon_probe(struct platform_device *pdev)
 	ret = dma_coerce_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(40));
 	if (ret)
 		return ret;
+
+	of_reserved_mem_device_init(&pdev->dev);
 
 	pm_runtime_enable(&pdev->dev);
 
