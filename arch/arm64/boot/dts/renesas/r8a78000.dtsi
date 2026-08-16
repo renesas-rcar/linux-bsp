@@ -4439,6 +4439,7 @@
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_FCPVD0>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVD0>;
+			iommus = <&smmu_vi0 0x80000>;
 		};
 
 		fcpvd1: fcp@c5011000 {
@@ -4447,6 +4448,7 @@
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_FCPVD1>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVD1>;
+			iommus = <&smmu_vi0 0x90000>;
 		};
 
 		fcpvd2: fcp@c5012000 {
@@ -4455,6 +4457,7 @@
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_FCPVD2>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVD2>;
+			iommus = <&smmu_vi0 0xa0000>;
 		};
 
 		fcpvd3: fcp@c5013000 {
@@ -4463,6 +4466,7 @@
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_FCPVD3>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVD3>;
+			iommus = <&smmu_vi0 0xb0000>;
 		};
 
 		fcpvd4: fcp@c5014000 {
@@ -4471,6 +4475,7 @@
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_FCPVD4>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVD4>;
+			iommus = <&smmu_vi1 0x80000>;
 		};
 
 		fcpvd5: fcp@c5015000 {
@@ -4479,6 +4484,7 @@
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_FCPVD5>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVD5>;
+			iommus = <&smmu_vi1 0x90000>;
 		};
 
 		fcpvd6: fcp@c5016000 {
@@ -4487,6 +4493,7 @@
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_FCPVD6>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVD6>;
+			iommus = <&smmu_vi1 0xa0000>;
 		};
 
 		fcpvd7: fcp@c5017000 {
@@ -4495,6 +4502,7 @@
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_FCPVD7>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVD7>;
+			iommus = <&smmu_vi1 0xb0000>;
 		};
 
 		fcpvd8: fcp@c5018000 {
@@ -4503,6 +4511,7 @@
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_FCPVD8>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVD8>;
+			iommus = <&smmu_vi0 0xc0000>;
 		};
 
 		fcpvd9: fcp@c5019000 {
@@ -4511,6 +4520,7 @@
 			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_VIO4>;
 			clocks = <&scmi_clk X5H_CLOCK_ID_FCPVD9>;
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_FCPVD9>;
+			iommus = <&smmu_vi0 0xd0000>;
 		};
 
 		vspd0: vsp@c4800000 {
@@ -5663,14 +5673,12 @@
 			compatible = "arm,smmu-v3";
 			reg = <0x0 0xf9000000 0x0 0x20000>;
 			#iommu-cells = <1>;
-			status = "disabled";
 		};
 
 		smmu_vi1: iommu@f9800000 {
 			compatible = "arm,smmu-v3";
 			reg = <0x0 0xf9800000 0x0 0x20000>;
 			#iommu-cells = <1>;
-			status = "disabled";
 		};
 
 		smmu_vipn: iommu@f8200000 {
