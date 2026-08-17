@@ -5257,7 +5257,7 @@
 			dma-names = "tx", "rx", "tx", "rx",
 				    "tx", "rx";
 			clocks = <&scmi_clk X5H_CLOCK_ID_MSI4>,
-				<&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>,
+				<&scmi_clk X5H_CLOCK_ID_CLK_MSOCK_PERW_BUS>,
 				<&msiof_clk>;
 			clock-names = "fck", "mso", "msiof_clk";
 			assigned-clocks = <&msiof_clk>;
@@ -5278,7 +5278,7 @@
 			dma-names = "tx", "rx", "tx", "rx",
 				    "tx", "rx";
 			clocks = <&scmi_clk X5H_CLOCK_ID_MSI5>,
-				<&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>,
+				<&scmi_clk X5H_CLOCK_ID_CLK_MSOCK_PERW_BUS>,
 				<&msiof_clk>;
 			clock-names = "fck", "mso", "msiof_clk";
 			assigned-clocks = <&msiof_clk>;
@@ -5299,7 +5299,7 @@
 			dma-names = "tx", "rx", "tx", "rx",
 				    "tx", "rx";
 			clocks = <&scmi_clk X5H_CLOCK_ID_MSI6>,
-				<&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>,
+				<&scmi_clk X5H_CLOCK_ID_CLK_MSOCK_PERW_BUS>,
 				<&msiof_clk>;
 			clock-names = "fck", "mso", "msiof_clk";
 			assigned-clocks = <&msiof_clk>;
@@ -5320,7 +5320,7 @@
 			dma-names = "tx", "rx", "tx", "rx",
 				    "tx", "rx";
 			clocks = <&scmi_clk X5H_CLOCK_ID_MSI7>,
-				<&scmi_clk X5H_CLOCK_ID_CLK_MSO_SCP_MAIN>,
+				<&scmi_clk X5H_CLOCK_ID_CLK_MSOCK_PERW_BUS>,
 				<&msiof_clk>;
 			clock-names = "fck", "mso", "msiof_clk";
 			assigned-clocks = <&msiof_clk>;
