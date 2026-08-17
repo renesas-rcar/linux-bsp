@@ -1404,6 +1404,8 @@
 		interrupts = <GIC_SPI 795 IRQ_TYPE_LEVEL_HIGH>;
 		maximum-speed = "high-speed";
 		dr_mode = "host";
+		usb-role-switch;
+		role-switch-default-mode = "host";
 	};
 };
 
@@ -1436,6 +1438,8 @@
 		interrupts = <GIC_SPI 796 IRQ_TYPE_LEVEL_HIGH>;
 		maximum-speed = "high-speed";
 		dr_mode = "host";
+		usb-role-switch;
+		role-switch-default-mode = "host";
 	};
 };
 
