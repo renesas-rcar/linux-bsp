@@ -1093,6 +1093,7 @@ struct rsw3_etha {
 	void __iomem *coma_addr;
 	bool external_phy;
 	struct mii_bus *mii;
+	struct mutex mdio_lock;
 	phy_interface_t phy_interface;
 	u32 psmcs;
 	u8 mac_addr[MAX_ADDR_LEN];

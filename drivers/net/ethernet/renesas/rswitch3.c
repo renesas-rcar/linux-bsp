@@ -1588,13 +1588,16 @@ static int rsw3_etha_mii_read_c45(struct mii_bus *bus, int addr, int devad,
 	struct rsw3_etha *etha = bus->priv;
 	int ret;
 
+	mutex_lock(&etha->mdio_lock);
+
 	ret = rsw3_etha_mpsm_op(etha, false, MPSM_MMF_C45, addr, devad,
 				MPSM_POP_ADDRESS, regad);
-	if (ret)
-		return ret;
+	if (!ret)
+		ret = rsw3_etha_mpsm_op(etha, true, MPSM_MMF_C45, addr, devad,
+					MPSM_POP_READ_C45, 0);
+	mutex_unlock(&etha->mdio_lock);
 
-	return rsw3_etha_mpsm_op(etha, true, MPSM_MMF_C45, addr, devad,
-				 MPSM_POP_READ_C45, 0);
+	return ret;
 }
 
 static int rsw3_etha_mii_write_c45(struct mii_bus *bus, int addr, int devad,
@@ -1603,30 +1606,43 @@ static int rsw3_etha_mii_write_c45(struct mii_bus *bus, int addr, int devad,
 	struct rsw3_etha *etha = bus->priv;
 	int ret;
 
+	mutex_lock(&etha->mdio_lock);
+
 	ret = rsw3_etha_mpsm_op(etha, false, MPSM_MMF_C45, addr, devad,
 				MPSM_POP_ADDRESS, regad);
-	if (ret)
-		return ret;
+	if (!ret)
+		ret = rsw3_etha_mpsm_op(etha, false, MPSM_MMF_C45, addr, devad,
+					MPSM_POP_WRITE, val);
+	mutex_unlock(&etha->mdio_lock);
 
-	return rsw3_etha_mpsm_op(etha, false, MPSM_MMF_C45, addr, devad,
-				 MPSM_POP_WRITE, val);
+	return ret;
 }
 
 static int rsw3_etha_mii_read_c22(struct mii_bus *bus, int phyad, int regad)
 {
 	struct rsw3_etha *etha = bus->priv;
+	int ret;
 
-	return rsw3_etha_mpsm_op(etha, true, MPSM_MMF_C22, phyad, regad,
-				 MPSM_POP_READ_C22, 0);
+	mutex_lock(&etha->mdio_lock);
+	ret = rsw3_etha_mpsm_op(etha, true, MPSM_MMF_C22, phyad, regad,
+				MPSM_POP_READ_C22, 0);
+	mutex_unlock(&etha->mdio_lock);
+
+	return ret;
 }
 
 static int rsw3_etha_mii_write_c22(struct mii_bus *bus, int phyad,
 				   int regad, u16 val)
 {
 	struct rsw3_etha *etha = bus->priv;
+	int ret;
 
-	return rsw3_etha_mpsm_op(etha, false, MPSM_MMF_C22, phyad, regad,
-				 MPSM_POP_WRITE, val);
+	mutex_lock(&etha->mdio_lock);
+	ret = rsw3_etha_mpsm_op(etha, false, MPSM_MMF_C22, phyad, regad,
+				MPSM_POP_WRITE, val);
+	mutex_unlock(&etha->mdio_lock);
+
+	return ret;
 }
 
 /* Call of_node_put(port) after done */
@@ -2538,6 +2554,7 @@ static void rsw3_etha_init(struct rsw3_private *priv, unsigned int index)
 	etha->coma_addr = priv->addr;
 
 	memset(etha_mii, 0, sizeof(*etha));
+	mutex_init(&etha_mii->mdio_lock);
 	etha_mii->index = index;
 	etha_mii->addr = priv->addr + RSWITCH3_ETHA_OFFSET + index * RSWITCH3_ETHA_SIZE;
 	etha_mii->coma_addr = priv->addr;
