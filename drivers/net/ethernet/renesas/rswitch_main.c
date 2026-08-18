@@ -1835,7 +1835,8 @@ static int rswitch_etha_mii_write_c22(struct mii_bus *bus, int phyad,
 /* Call of_node_put(port) after done */
 static struct device_node *rswitch_get_port_node(struct rswitch_device *rdev)
 {
-	struct device_node *ports, *port;
+	struct device_node *port = NULL;
+	struct device_node *ports;
 	int err = 0;
 	u32 index, etha_mii_idx;
 
@@ -1843,14 +1844,14 @@ static struct device_node *rswitch_get_port_node(struct rswitch_device *rdev)
 				     "ethernet-ports");
 	if (!ports)
 		return NULL;
-	for_each_available_child_of_node_scoped(ports, port) {
-		err = of_property_read_u32(port, "reg", &index);
-		if (err < 0) {
-			of_node_put(port);
-			port = NULL;
-			goto out;
-		}
+
+	for_each_available_child_of_node_scoped(ports, child) {
+		if (of_property_read_u32(child, "reg", &index))
+			break;
+
 		if (index == rdev->etha->index) {
+			port = of_node_get(child);
+
 			if (rdev->priv->info->rswitch_version == RSW20)
 				break;
 
