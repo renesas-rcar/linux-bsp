@@ -28,6 +28,10 @@ obj-$(CONFIG_PCIE_UNIPHIER) += pcie-uniphier.o
 obj-$(CONFIG_PCIE_UNIPHIER_EP) += pcie-uniphier-ep.o
 obj-$(CONFIG_PCIE_VISCONTI_HOST) += pcie-visconti.o
 obj-$(CONFIG_PCIE_RCAR_GEN4) += pcie-rcar-gen4.o
+ucie-rcar-host-drv-objs := ucie-rcar.o ucie-rcar-host.o
+obj-$(CONFIG_UCIE_RCAR_HOST) += ucie-rcar-host-drv.o
+ucie-rcar-ep-drv-objs := ucie-rcar.o ucie-rcar-ep.o
+obj-$(CONFIG_UCIE_RCAR_EP) += ucie-rcar-ep-drv.o
 
 obj-$(CONFIG_PCIE6_DW) += pcie6-designware.o
 pcie6-rcar-gen5-host-drv-objs := pcie6-rcar-gen5.o pcie6-rcar-host.o

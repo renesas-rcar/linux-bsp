@@ -1,0 +1,343 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * UCIe host/endpoint controller driver for Renesas R-Car Gen5 Series SoCs
+ * Copyright (C) 2026 Renesas Electronics Corporation
+ */
+#ifndef _UCIE_RCAR_H_
+#define _UCIE_RCAR_H_
+
+#include <linux/bitfield.h>
+#include <linux/io.h>
+#include <linux/pci.h>
+#include <linux/reset.h>
+#include <linux/clk.h>
+#include <linux/iopoll.h>
+#include <linux/pm_domain.h>
+
+#include "pcie6-designware.h"
+
+/* APB */
+#define UCIEMSR0					0xe00000
+#define DEVICE_TYPE_RP					(0x4 << 2)
+#define DEVICE_TYPE_EP					(0x0 << 2)
+
+#define UCIEFMIS					0xe00308
+#define APP_SEGMENT_ID_RC				(0x19a << 16)
+#define APP_SEGMENT_ID_EP				(0x15c << 16)
+
+#define UCIE_DBI_ADDR_UPPER(n)				FIELD_GET(GENMASK(31, 24), n)
+#define UCIE_DBI_ADDR_LOWER(n)				FIELD_GET(GENMASK(23, 0), n)
+
+#define UCIEPWRMNGCTRL					0xe00070
+#define APP_READY_ENTR_L23				BIT(6)
+
+#define UCIEDBIADR					0xe005e8
+#define UCIEDBIADR_DBI_AWADDR(n)			FIELD_PREP(GENMASK(15, 8), n)
+#define UCIEDBIADR_DBI_ARADDR(n)			FIELD_PREP(GENMASK(7, 0), n)
+
+#define UCIEICR14					0xe10048
+#define UCIEICR15					0xe1004c
+#define UCIEICR27					0xe1007c
+#define INTREQ13_FREQ_CHANGE_REQ_EN			BIT(1)
+
+#define UCIECSR00					0xe20000
+#define CTL_CXLMODE_CXL					0x1
+#define CTL_CXLMODE_CML					0x0
+
+#define UCIEPCR00					0xe21000
+#define IEP_EN						BIT(1)
+#define IRP_EN						BIT(0)
+
+#define UCIEPCR01					0xe21004
+
+/* AXI */
+#define TYPE1_DEV_ID_VEND_ID_REG			0x0000
+#define DEVICE_ID(n)					FIELD_PREP(GENMASK(31, 16), n)
+#define VENDOR_ID(n)					FIELD_PREP(GENMASK(15, 0), n)
+
+#define	PCICONF3					0x000C
+#define	EP_MULTI_FUNC					BIT(23)
+
+#define	PF0_PCIE_CAP_BASE				0x70
+
+#define PCIE_CAP_ID_PCIE_NEXT_CAP_PTR_PCIE_CAP_REG	(PF0_PCIE_CAP_BASE + 0x0000)
+#define PCIE_DEV_PORT_TYPE				GENMASK(23, 20)
+#define PCIE_EP						FIELD_PREP(PCIE_DEV_PORT_TYPE, 0x0)
+#define ROOT_PORT_PCIE_RC				FIELD_PREP(PCIE_DEV_PORT_TYPE, 0x4)
+
+#define LINK_CONTROL2_LINK_STATUS2_REG			(PF0_PCIE_CAP_BASE + 0x0030)
+#define PCIE_CAP_TARGET_LINK_SPEED			GENMASK(3, 0)
+
+#define PF0_AER_CAP_BASE				0x100
+#define ADV_ERR_CAP_CTRL_OFF				(PF0_AER_CAP_BASE + 0x0018)
+#define ECRC_CHECK_EN					BIT(8)
+#define ECRC_GEN_EN					BIT(6)
+
+#define PF0_PL32G_CAP_BASE				0x1b8
+
+#define PL32G_CONTROL_REG				(PF0_PL32G_CAP_BASE + 0x0008)
+#define MOD_TS_USAGE_MODE_SELECT			GENMASK(10, 8)
+#define MOD_TS_USAGE_MODE_SELECT_ALT			FIELD_PREP(MOD_TS_USAGE_MODE_SELECT, 0x2)
+
+#define CXL_DVSEC_UNIT_DSP_BASE				0x3b0
+#define CXL_DVSEC_FLEX_CTL_STATUS			(CXL_DVSEC_UNIT_DSP_BASE + 0x000c)
+#define CXL_DVSEC_CXL_68B_FLIT_VH_EN			BIT(5)
+#define CXL_DVSEC_MEM_EN				BIT(2)
+#define CXL_DVSEC_IO_EN					BIT(1)
+#define CXL_DVSEC_CACHE_EN				BIT(0)
+
+#define CXL_RCIEP_FLEXBUS_CNTRL_STATUS_OFF		0x448
+
+#define DVSEC_UNIT_DSP_BASE				0x4b4
+#define DVSEC_UCIE_LINK_CONTROL				(DVSEC_UNIT_DSP_BASE + 0x0010)
+#define DVSEC_UCIE_LINK_SPEED				GENMASK(9, 6)
+#define DVSEC_UCIE_RC_MODE_EN				BIT(10)
+#define DVSEC_STD256_EH_FLIT_FORMAT_EN			BIT(14)
+#define DVSEC_68B_FLIT_FORMAT_EN			BIT(13)
+#define DVSEC_68B_FLIT_FORMAT_DISABLE			FIELD_PREP(DVSEC_68B_FLIT_FORMAT_EN, 0x1)
+
+#define DVSEC_UCIE_LINK_STATUS				(DVSEC_UNIT_DSP_BASE + 0x0014)
+#define DVSEC_LINK_STATUS				BIT(15)
+#define DVSEC_LINK_SPEED_ENABLED			GENMASK(14, 11)
+#define DVSEC_LINK_WIDTH_ENABLED			GENMASK(10, 7)
+
+#define UCIE_LINK_SPEED_4GT				0x0
+#define UCIE_LINK_SPEED_8GT				0x1
+#define UCIE_LINK_SPEED_12GT				0x2
+#define UCIE_LINK_SPEED_16GT				0x3
+
+#define PF0_PORT_LOGIC_BASE				0x700
+
+#define MISC_CONTROL_1_OFF				(PF0_PORT_LOGIC_BASE + 0x01bc)
+#define OPTIONAL_OHC_CTRL				GENMASK(28, 26)
+#define ADD_OHC_C					FIELD_PREP(OPTIONAL_OHC_CTRL, 0x2)
+
+#define CXL_VLSM_CSR_REG_OFF				(PF0_PORT_LOGIC_BASE + 0x0548)
+#define CXL_VLSM_PM_ENABLE				BIT(23)
+
+#define PF0_MEMBAR0_RAS_CAP_BASE			0xf01050
+
+#define MEMBAR0_RAS_UNCOR_ERROR_MASK_REG_OFF		(PF0_MEMBAR0_RAS_CAP_BASE + 0x0004)
+#define MEMBAR0_RAS_UNCOR_ERROR_MASK_DEFAULT		0x0
+
+#define MEMBAR0_RAS_CORR_ERROR_MASK_REG_OFF		(PF0_MEMBAR0_RAS_CAP_BASE + 0x0010)
+#define MEMBAR0_RAS_CORR_ERROR_MASK_DEFAULT		0x0
+
+#define MEMBAR0_RAS_CAP_D8_REG_OFF			(PF0_MEMBAR0_RAS_CAP_BASE + 0x00d8)
+
+#define DWORD_0_BASE					0x41f00000
+#define DWORD_0_DWMODECTRL0				(DWORD_0_BASE + 0x0004)
+#define DWORD_0_DWMODECTRL0_DEF				0x0600000c
+#define DWORD_0_DWMODECTRL0_MASK			0xffffffff
+#define DWORD_0_DWMODECTRL0_DWRXCTLCLKSEL_MASK		0x1
+#define DWORD_0_DWMODECTRL0_DWRXCTLCLKSEL_SHIFT		23
+#define DWORD_0_DWMODECTRL0_DWRXLATALIGN_MASK		0x3
+#define DWORD_0_DWMODECTRL0_DWRXLATALIGN_SHIFT		0
+#define DWORD_0_DWRXLATCTRL				(DWORD_0_BASE + 0x0050)
+#define DWORD_0_DWRXLATCTRL_MASK			0xffffffff
+#define DWORD_0_DWRXLATCTRL_DWRXVLDMARGIN_MASK		0x1
+#define DWORD_0_DWRXLATCTRL_DWRXVLDMARGIN_SHIFT		6
+#define DWORD_0_DWVREFVAR				(DWORD_0_BASE + 0x00dc)
+#define DWORD_0_DWVREFVAR_DEF				0x007f0001
+#define DWORD_0_DWTXZCALSB				(DWORD_0_BASE + 0x00f8)
+#define DWORD_0_DWTXZCALSB_DEF				0x00001b1d
+#define DWORD_0_DWMISCCTRL0				(DWORD_0_BASE + 0x0104)
+#define DWORD_0_DWMISCCTRL0_MASK			0xffffffff
+#define DWORD_0_DWMISCCTRL0_DWTXCKPARKLEVEL_MASK	0x1
+#define DWORD_0_DWMISCCTRL0_DWTXCKPARKLEVEL_SHIFT	15
+#define DWORD_0_DWMISCCTRL1				(DWORD_0_BASE + 0x0108)
+#define DWORD_0_DWMODULEDEGRADESTATUS			(DWORD_0_BASE + 0x011c)
+#define DWORD_0_DWMODULEDEGRADESTATUS_DEF		0x0000fffc
+#define DWORD_0_DWPERBITCTRL(n)				(DWORD_0_BASE + 0x0140 + 4 * (n))
+
+#define DWORD_1_BASE					0x41f10000
+#define DWORD_1_DWMODECTRL0				(DWORD_1_BASE + 0x0004)
+#define DWORD_1_DWMODECTRL0_MASK			0xffffffff
+#define DWORD_1_DWMODECTRL0_DWRXCTLCLKSEL_MASK		0x1
+#define DWORD_1_DWMODECTRL0_DWRXCTLCLKSEL_SHIFT		23
+#define DWORD_1_DWMODECTRL0_DWRXLATALIGN_MASK		0x3
+#define DWORD_1_DWMODECTRL0_DWRXLATALIGN_SHIFT		0
+#define DWORD_1_DWRXLATCTRL				(DWORD_1_BASE + 0x0050)
+#define DWORD_1_DWRXLATCTRL_MASK			0xffffffff
+#define DWORD_1_DWRXLATCTRL_DWRXVLDMARGIN_MASK		0x1
+#define DWORD_1_DWRXLATCTRL_DWRXVLDMARGIN_SHIFT		6
+#define DWORD_1_DWVREFVAR				(DWORD_1_BASE + 0x00dc)
+#define DWORD_1_DWTXZCALSB				(DWORD_1_BASE + 0x00f8)
+#define DWORD_1_DWMISCCTRL0				(DWORD_1_BASE + 0x0104)
+#define DWORD_1_DWMISCCTRL0_MASK			0xffffffff
+#define DWORD_1_DWMISCCTRL0_DWTXCKPARKLEVEL_MASK	0x1
+#define DWORD_1_DWMISCCTRL0_DWTXCKPARKLEVEL_SHIFT	15
+#define DWORD_1_DWMISCCTRL1				(DWORD_1_BASE + 0x0108)
+#define DWORD_1_DWMODULEDEGRADESTATUS			(DWORD_1_BASE + 0x011c)
+#define DWORD_1_DWPERBITCTRL(n)				(DWORD_1_BASE + 0x0140 + 4 * (n))
+
+#define UCIE_DWORDSECTION_BASE				0x40701000
+#define UCIE_TRAININGSETUP2_LWR				(UCIE_DWORDSECTION_BASE + 0x0010)
+#define UCIE_TRAININGSETUP2_UPR				(UCIE_DWORDSECTION_BASE + 0x0014)
+#define UCIE_TRAININGSETUP3_LWR				(UCIE_DWORDSECTION_BASE + 0x0020)
+#define UCIE_TRAININGSETUP3_UPR				(UCIE_DWORDSECTION_BASE + 0x0024)
+
+#define MMPL_BASE					0x41f01000
+#define MMPL_MMMODECTRL					(MMPL_BASE + 0x0004)
+#define MMMODECTRL_DEF					0x00000012
+
+#define MMPL_MODULEDEGRADESTATUS			(MMPL_BASE + 0x0008)
+#define MODULE_DISABLE_STATUS				GENMASK(15, 0)
+#define MODULE_DISABLE_STATUS_DEF			FIELD_PREP(MODULE_DISABLE_STATUS, 0xfffc)
+
+#define MMPL_ZCALCTRL0					(MMPL_BASE + 0x001c)
+#define ZCAL_OFFSET_SAMPLE_TIME				GENMASK(31, 22)
+#define ZCAL_OFFSET_SAMPLE_TIME_DEF			FIELD_PREP(ZCAL_OFFSET_SAMPLE_TIME, 200)
+#define ZCAL_SAMPLE_TIME				GENMASK(21, 12)
+#define ZCAL_SAMPLE_TIME_DEF				FIELD_PREP(ZCAL_SAMPLE_TIME, 250)
+#define ZCAL_COMP_STARTUP_TIME				GENMASK(11, 0)
+#define ZCAL_COMP_STARTUP_TIME_DEF			FIELD_PREP(ZCAL_COMP_STARTUP_TIME, 1000)
+#define MMPL_ZCALCTRL1					(MMPL_BASE + 0x0020)
+#define TX_ZCAL_N_OFFSET				GENMASK(15, 11)
+#define TX_ZCAL_N_OFFSET_DEF				FIELD_PREP(TX_ZCAL_N_OFFSET, 0x13)
+#define TX_ZCAL_P_OFFSET				GENMASK(10, 6)
+#define TX_ZCAL_P_OFFSET_DEF				FIELD_PREP(TX_ZCAL_P_OFFSET, 0x13)
+#define MMPL_ZCALCTRL4					(MMPL_BASE + 0x002c)
+
+#define MMPL_PLLCTRL0_P0				(MMPL_BASE + 0x0044)
+#define PLLCTRL0_P0_DEF					0x2c7c0604
+#define MMPL_PLLCTRL1_P0				(MMPL_BASE + 0x0048)
+#define PLLCTRL1_P0_DEF					0x00000e9a
+#define MMPL_PLLCTRL3					(MMPL_BASE + 0x0050)
+#define PLLCTRL3_DEF					0x00056439
+#define MMPL_PLLCTRL4					(MMPL_BASE + 0x0054)
+#define PLLCTRL4_DEF					0x04200330
+
+#define MMPL_CSRADDR2					(MMPL_BASE + 0x0078)
+#define MMPL_CSRADDR5					(MMPL_BASE + 0x0084)
+#define MMPL_CSRADDR10					(MMPL_BASE + 0x0098)
+#define MMPL_CSRADDR11					(MMPL_BASE + 0x009c)
+
+#define MMPL_MMTRKCTRL					(MMPL_BASE + 0x0100)
+#define MMRXTRK_EN					BIT(1)
+
+#define ACSM_BASE					0x41f02000
+#define ACSMCTRL					(ACSM_BASE + 0x0000)
+#define ACSMCTRL_MASK					0xffffffff
+#define ACSMCTRL_ACSMSTOPADDR_MASK			0x7f
+#define ACSMCTRL_ACSMSTOPADDR_SHIFT			24
+#define ACSMSEQ0CTRL					(ACSM_BASE + 0x0004)
+#define ACSMSEQ0CTRL_MASK				0xffffffff
+#define ACSMSEQ0CTRL_ACSMSEQ0STOPADDR_MASK		0x7f
+#define ACSMSEQ0CTRL_ACSMSEQ0STOPADDR_SHIFT		8
+#define ACSMSEQ1CTRL					(ACSM_BASE + 0x0008)
+#define ACSMSEQ1CTRL_MASK				0xffffffff
+#define ACSMSEQ1CTRL_ACSMSEQ1STOPADDR_MASK		0x7f
+#define ACSMSEQ1CTRL_ACSMSEQ1STOPADDR_SHIFT		8
+#define ACSMLTSMSTATUS					(ACSM_BASE + 0x0050)
+#define ACSMLTSMSTATUS_ACSMLTSMSTATE_MASK		0x1f
+#define ACSMLTSMSTATUS_ACSMLTSMSTATE_ACTIVE		0x16
+#define ACSMTIMEOUTCTRL1				(ACSM_BASE + 0x0060)
+#define ACSMLOOPVAR1					(ACSM_BASE + 0x007c)
+#define ACSMTRAINVAR0I0					(ACSM_BASE + 0x0098)
+#define ACSMTRAINVAR0I0_MASK				0xffffffff
+#define ACSMTRAINVAR0I1					(ACSM_BASE + 0x009c)
+#define ACSMTRAINVAR0I1_MASK				0xffffffff
+#define ACSMTRAINVAR0I2					(ACSM_BASE + 0x00a0)
+#define ACSMTRAINVAR0I2_MASK				0xffffffff
+#define ACSMTRAINVAR1I1					(ACSM_BASE + 0x00ac)
+#define ACSMTRAINVAR1I1_MASK				0xffffffff
+#define ACSMLTSMINDEX0VAR14				(ACSM_BASE + 0x0150)
+#define ACSMLTSMINDEX0VAR14_MASK			0xffffffff
+#define ACSMLTSMINDEX0VAR14_ACSMLTSMINDEX0VAR14_MASK	0x1fffff
+#define ACSMLTSMINDEX0VAR14_ACSMLTSMINDEX0VAR14_SHIFT	0
+#define ACSMLTSMINDEX0VAR16				(ACSM_BASE + 0x0158)
+#define	ACSMLTSMINDEX0VAR16_MASK			0xffffffff
+#define ACSMLTSMINDEX0VAR16_ACSMLTSMINDEX0VAR16_MASK	0x1fffff
+#define ACSMLTSMINDEX0VAR16_ACSMLTSMINDEX0VAR16_SHIFT	0
+#define ACSMLTSMMSK0VAR(n)				(ACSM_BASE + 0x0218 + (n) * 4)
+#define ACSMLTSMMSK1VAR(n)				(ACSM_BASE + 0x0298 + (n) * 4)
+#define ACSMLTSMMSK0VAR_ALT(n)				(ACSM_BASE + 0x0318 + ((n) - 21) * 4)
+#define ACSMLTSMMSK1VAR_ALT(n)				(ACSM_BASE + 0x0344 + ((n) - 21) * 4)
+
+#define ACSM1_BASE					0x41f12000
+#define ACSM1_ACSMLTSMINDEX0VAR14			(ACSM1_BASE + 0x0150)
+#define ACSM1_ACSMLTSMINDEX0VAR16			(ACSM1_BASE + 0x0158)
+
+#define ACSMIM_BASE					0x41f03000
+#define ACSMINSTRREG(n)					(ACSMIM_BASE + (n) * 4)
+
+#define ACSMIM_ACSMINSTRREG95				(ACSMIM_BASE + 0x017c)
+#define ACSMIM_ACSMINSTRREG96				(ACSMIM_BASE + 0x0180)
+#define ACSMIM_ACSMINSTRREG97				(ACSMIM_BASE + 0x0184)
+#define ACSMIM_ACSMINSTRREG98				(ACSMIM_BASE + 0x0188)
+#define ACSMIM_ACSMINSTRREG99				(ACSMIM_BASE + 0x018c)
+
+#define IMP_SPECIFIC_SB_UNIT_BASE			0x41782000
+#define IMP_SB_CONFIG0					(IMP_SPECIFIC_SB_UNIT_BASE + 0x0000)
+#define IMP_SB_CONFIG2					(IMP_SPECIFIC_SB_UNIT_BASE + 0x0008)
+
+#define IMP_SB_CONFIG3					(IMP_SPECIFIC_SB_UNIT_BASE + 0x000c)
+#define FDI_CPL_CR_EN					BIT(17)
+#define FDI_CPL_CR_DISABLE				FIELD_PREP(FDI_CPL_CR_EN, 0)
+
+#define IMP_SB_CONFIG4					(IMP_SPECIFIC_SB_UNIT_BASE + 0x0010)
+#define UP						BIT(22)
+#define UP_ENABLE					FIELD_PREP(UP, 0x1)
+#define DP						BIT(21)
+#define DP_ENABLE					FIELD_PREP(DP, 0x1)
+#define RETRY						BIT(5)
+#define RETRY_DISABLE					FIELD_PREP(DP, 0)
+#define STREAMING					BIT(4)
+#define STREAMING_DISABLE				FIELD_PREP(STREAMING, 0)
+
+#define IMP_SB_CONFIG5					(IMP_SPECIFIC_SB_UNIT_BASE + 0x0014)
+
+#define IMP_SPECIFIC_MB_UNIT_BASE			0x41783000
+#define IMP_MB_CONFIG4					(IMP_SPECIFIC_MB_UNIT_BASE + 0x0010)
+
+#define IMP_MB_CONFIG11					(IMP_SPECIFIC_MB_UNIT_BASE + 0x002c)
+#define MAX_UNACK_FLITS_256B				GENMASK(23, 16)
+#define MAX_UNACK_FLITS_256B_DEF			FIELD_PREP(MAX_UNACK_FLITS_256B, 0x90)
+#define MAX_UNACK_FLITS_68B				GENMASK(15, 8)
+#define MAX_UNACK_FLITS_68B_DEF				FIELD_PREP(MAX_UNACK_FLITS_68B, 0xb0)
+
+#define RCAR_UCIE_VENDOR_ID				0x1912
+#define RCAR_UCIE_DEVICE_ID				0x0036
+
+struct rcar_ucie_pcie {
+	struct dw_pcie6			*pci;
+	enum dw_pcie6_device_mode	mode;
+};
+
+struct rcar_ucie {
+	struct device *dev;
+	void __iomem *axi_base;
+	void __iomem *apb_base;
+
+	struct clk_bulk_data *clks;
+	int num_clks;
+	struct reset_control *rsts;
+	struct dev_pm_domain_list *pd_list;
+	u32 ch;
+	u32 link_speed;
+
+	struct rcar_ucie_pcie *dw_plat;
+};
+
+u32 rcar_ucie_apb_read(struct rcar_ucie *ucie, u32 reg);
+u32 rcar_ucie_axi_read(struct rcar_ucie *ucie, u32 reg);
+void rcar_ucie_axi_write(struct rcar_ucie *ucie, u32 reg, u32 val);
+
+int rcar_ucie_clk_get(struct rcar_ucie *ucie);
+int rcar_ucie_reset_get(struct rcar_ucie *ucie);
+int rcar_ucie_clk_init(struct rcar_ucie *ucie);
+int rcar_ucie_power_up(struct rcar_ucie *ucie);
+void rcar_ucie_power_down(struct rcar_ucie *ucie);
+void rcar_ucie_clk_deinit(struct rcar_ucie *ucie);
+int rcar_ucie_get_resources(struct rcar_ucie *ucie, struct platform_device *pdev);
+int rcar_ucie_hw_init(struct rcar_ucie *ucie, bool rc_mode);
+void rcar_ucie_start_link_up(struct rcar_ucie *ucie, bool rc_mode);
+int rcar_ucie_link_up(struct dw_pcie6 *pcie);
+void rcar_ucie_link_down(struct dw_pcie6 *pcie);
+int rcar_ucie_is_link_up(struct dw_pcie6 *pcie);
+void rcar_ucie_report_link(struct dw_pcie6 *pcie);
+
+extern const struct dw_pcie6_ops rcar_ucie_ops;
+
+#endif /* _UCIE_RCAR_H_ */
