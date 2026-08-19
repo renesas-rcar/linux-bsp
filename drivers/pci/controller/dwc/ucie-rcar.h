@@ -326,6 +326,7 @@ void rcar_ucie_axi_write(struct rcar_ucie *ucie, u32 reg, u32 val);
 
 int rcar_ucie_clk_get(struct rcar_ucie *ucie);
 int rcar_ucie_reset_get(struct rcar_ucie *ucie);
+int rcar_ucie_parse_channel_id(struct rcar_ucie *ucie, struct device_node *np);
 int rcar_ucie_clk_init(struct rcar_ucie *ucie);
 int rcar_ucie_power_up(struct rcar_ucie *ucie);
 void rcar_ucie_power_down(struct rcar_ucie *ucie);

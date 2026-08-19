@@ -16,6 +16,104 @@
 
 #include "ucie-rcar.h"
 
+/* Base addresses */
+#define HSCS_APB_BASE		0xDE200000
+#define HSCS_APB_SIZE		0x2000
+
+/* Register offsets from HSCS_APB_BASE */
+
+#define CLKHSCSD1WCR0		0x1370
+#define CLKHSCSPKCPROT0		0x1380
+
+#define PLL9_CR0(ch)		(0x11EC + (ch) * 0xC)
+#define PLL9_CR1(ch)		(0x11F0 + (ch) * 0xC)
+#define PLL9_CR2(ch)		(0x11F4 + (ch) * 0xC)
+#define PLL9_SCR(ch)		(0x1308 + (ch) * 0x8)
+#define PLL9_DCR(ch)		(0x130C + (ch) * 0x8)
+#define UCICORECKCR(ch)		(0x1080 + (ch) * 0x4)
+
+#define PLL9_CR2_BUSY		BIT(31)
+#define PLL9_SCR_ACK		BIT(16)
+
+#define PLL9_POLL_US		10
+#define PLL9_TIMEOUT_US		100000
+
+struct ucie_pll9_param {
+	u32 cr0;
+	u32 cr1;
+	u32 dcr;
+};
+
+static const struct ucie_pll9_param ucie_pll9_params[] = {
+	{ 0x07700000, 0x041895f9, 0x00000018 },	/* 4GT/s */
+	{ 0x07700000, 0x041895f9, 0x00000010 },	/* 8GT/s */
+	{ 0x05900000, 0x0012707a, 0x00000000 },	/* 12GT/s */
+	{ 0x07700000, 0x041895f9, 0x00000000 },	/* 16GT/s */
+};
+
+static int rcar_ucie_set_pll9(struct rcar_ucie *ucie, u32 f_speed)
+{
+	const struct ucie_pll9_param *prm = &ucie_pll9_params[f_speed];
+	u32 ch = ucie->ch;
+	void __iomem *base;
+	int ret;
+	u32 val;
+
+	base = ioremap(HSCS_APB_BASE, HSCS_APB_SIZE);
+	if (!base)
+		return -ENOMEM;
+
+	writel(0xA5A5A501, base + CLKHSCSD1WCR0);
+	writel(0xFFFFFFFF, base + CLKHSCSPKCPROT0);
+
+	writel(prm->cr0, base + PLL9_CR0(ch));
+	writel(prm->cr1, base + PLL9_CR1(ch));
+	writel(prm->dcr, base + PLL9_DCR(ch));
+	writel(0x10000000, base + PLL9_CR2(ch));
+
+	ret = readl_poll_timeout(base + PLL9_CR2(ch), val, val & PLL9_CR2_BUSY,
+				 PLL9_POLL_US, PLL9_TIMEOUT_US);
+	if (ret)
+		goto out;
+
+	writel(0x00000001, base + PLL9_SCR(ch));
+	ret = readl_poll_timeout(base + PLL9_SCR(ch), val, val & PLL9_SCR_ACK,
+				 PLL9_POLL_US, PLL9_TIMEOUT_US);
+	if (ret)
+		goto out;
+
+	writel(0x20000000, base + PLL9_CR2(ch));
+	ret = readl_poll_timeout(base + PLL9_CR2(ch), val, val & PLL9_CR2_BUSY,
+				 PLL9_POLL_US, PLL9_TIMEOUT_US);
+	if (ret)
+		goto out;
+
+	ret = readl_poll_timeout(base + PLL9_CR2(ch), val, !(val & PLL9_CR2_BUSY),
+				 PLL9_POLL_US, PLL9_TIMEOUT_US);
+	if (ret)
+		goto out;
+
+	writel(0x00000000, base + PLL9_SCR(ch));
+	ret = readl_poll_timeout(base + PLL9_SCR(ch), val, !(val & PLL9_SCR_ACK),
+				 PLL9_POLL_US, PLL9_TIMEOUT_US);
+	if (ret)
+		goto out;
+
+	writel(0x10000000, base + PLL9_CR2(ch));
+	ret = readl_poll_timeout(base + PLL9_CR2(ch), val, val & PLL9_CR2_BUSY,
+				 PLL9_POLL_US, PLL9_TIMEOUT_US);
+	if (ret)
+		goto out;
+
+	writel(0x00000100, base + UCICORECKCR(ch));
+	writel(0x00000000, base + UCICORECKCR(ch));
+
+out:
+	iounmap(base);
+
+	return ret;
+}
+
 void rcar_ucie_apb_write(struct rcar_ucie *ucie, u32 reg, u32 val);
 
 #define UCIE_CORE_CLK_ID	"ucie1"
@@ -54,6 +152,17 @@ int rcar_ucie_reset_get(struct rcar_ucie *ucie)
 	return PTR_ERR_OR_ZERO(ucie->rsts);
 }
 
+int rcar_ucie_parse_channel_id(struct rcar_ucie *ucie, struct device_node *np)
+{
+	int ret;
+
+	ret = of_property_read_u32(np, "channel-id", &ucie->ch);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
 int rcar_ucie_clk_init(struct rcar_ucie *ucie)
 {
 	int num_peri_clks = ucie->num_clks - 1;
@@ -64,6 +173,13 @@ int rcar_ucie_clk_init(struct rcar_ucie *ucie)
 		return ret;
 
 	rcar_ucie_apb_write(ucie, UCIEPWRMNGCTRL, APP_READY_ENTR_L23);
+
+	ret = rcar_ucie_set_pll9(ucie, 0);
+	if (ret) {
+		dev_err(ucie->dev, "Failed to configure PLL9_%u: %d\n",
+			ucie->ch, ret);
+		goto err_disable_peri;
+	}
 
 	ret = clk_bulk_prepare_enable(1, &ucie->clks[num_peri_clks]);
 	if (ret)
@@ -162,7 +278,7 @@ int rcar_ucie_get_resources(struct rcar_ucie *ucie, struct platform_device *pdev
 
 	of_property_read_u32(np, "num-lanes", &pci->num_lanes);
 
-	ret = of_property_read_u32(np, "channel-id", &ucie->ch);
+	ret = rcar_ucie_parse_channel_id(ucie, np);
 	if (ret)
 		return ret;
 
