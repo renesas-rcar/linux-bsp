@@ -683,12 +683,16 @@ int dw_pcie6_wait_for_link(struct dw_pcie6 *pci)
 	if (pci->max_link_speed > 2)
 		msleep(PCIE_RESET_CONFIG_WAIT_MS);
 
-	offset = dw_pcie6_find_capability(pci, PCI_CAP_ID_EXP);
-	val = dw_pcie6_readw_dbi(pci, offset + PCI_EXP_LNKSTA);
+	if (pci->ops && pci->ops->link_report) {
+		pci->ops->link_report(pci);
+	} else {
+		offset = dw_pcie6_find_capability(pci, PCI_CAP_ID_EXP);
+		val = dw_pcie6_readw_dbi(pci, offset + PCI_EXP_LNKSTA);
 
-	dev_info(pci->dev, "PCIe Gen.%u x%u link up\n",
-		 FIELD_GET(PCI_EXP_LNKSTA_CLS, val),
-		 FIELD_GET(PCI_EXP_LNKSTA_NLW, val));
+		dev_info(pci->dev, "PCIe Gen.%u x%u link up\n",
+			 FIELD_GET(PCI_EXP_LNKSTA_CLS, val),
+			 FIELD_GET(PCI_EXP_LNKSTA_NLW, val));
+	}
 
 	return 0;
 }

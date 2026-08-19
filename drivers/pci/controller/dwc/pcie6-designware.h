@@ -430,6 +430,7 @@ struct dw_pcie6_ops {
 	void    (*write_dbi2)(struct dw_pcie6 *pcie, void __iomem *base, u32 reg,
 			      size_t size, u32 val);
 	int	(*link_up)(struct dw_pcie6 *pcie);
+	void	(*link_report)(struct dw_pcie6 *pcie);
 	enum dw_pcie6_ltssm (*get_ltssm)(struct dw_pcie6 *pcie);
 	int	(*start_link)(struct dw_pcie6 *pcie);
 	void	(*stop_link)(struct dw_pcie6 *pcie);
