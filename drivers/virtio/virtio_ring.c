@@ -10,6 +10,7 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/hrtimer.h>
+#include <linux/dma-direct.h>
 #include <linux/dma-mapping.h>
 #include <linux/kmsan.h>
 #include <linux/spinlock.h>
@@ -378,7 +379,7 @@ static int vring_map_one_sg(const struct vring_virtqueue *vq, struct scatterlist
 		 * depending on the direction.
 		 */
 		kmsan_handle_dma(sg_page(sg), sg->offset, sg->length, direction);
-		*addr = (dma_addr_t)sg_phys(sg);
+		*addr = phys_to_dma(vring_dma_dev(vq), sg_phys(sg));
 		return 0;
 	}
 
