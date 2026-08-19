@@ -5767,6 +5767,36 @@
 			status = "disabled";
 		};
 
+		cr52_rproc3: cr52_3 {
+			compatible = "renesas,rcar-gen5-rproc";
+			status = "disabled";
+		};
+
+		cr52_rproc4: cr52_4 {
+			compatible = "renesas,rcar-gen5-rproc";
+			status = "disabled";
+		};
+
+		cr52_rproc5: cr52_5 {
+			compatible = "renesas,rcar-gen5-rproc";
+			status = "disabled";
+		};
+
+		cr52_rproc6: cr52_6 {
+			compatible = "renesas,rcar-gen5-rproc";
+			status = "disabled";
+		};
+
+		cr52_rproc7: cr52_7 {
+			compatible = "renesas,rcar-gen5-rproc";
+			status = "disabled";
+		};
+
+		cr52_rproc8: cr52_8 {
+			compatible = "renesas,rcar-gen5-rproc";
+			status = "disabled";
+		};
+
 		rpmsg_shm0: rpmsg_shm@0 {
 			compatible = "generic-uio";
 			reg = <0x0 0x96600000 0x0 0x50000>;
@@ -5809,6 +5839,48 @@
 			reg = <0x0 0x18802000 0x0 0x1000>;
 			interrupts = <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>;
 			linux,uio-name = "rpmsg_ipi2";
+			status = "disabled";
+		};
+
+		rpmsg_shm3: rpmsg_shm@3 {
+			compatible = "generic-uio";
+			reg = <0x200 0x8e600000 0x0 0x50000>;
+			linux,uio-name = "rpmsg_shm3";
+			status = "disabled";
+		};
+
+		rpmsg_shm4: rpmsg_shm@4 {
+			compatible = "generic-uio";
+			reg = <0x200 0x8e650000 0x0 0x50000>;
+			linux,uio-name = "rpmsg_shm4";
+			status = "disabled";
+		};
+
+		rpmsg_shm5: rpmsg_shm@5 {
+			compatible = "generic-uio";
+			reg = <0x200 0x8e6a0000 0x0 0x50000>;
+			linux,uio-name = "rpmsg_shm5";
+			status = "disabled";
+		};
+
+		rpmsg_shm6: rpmsg_shm@6 {
+			compatible = "generic-uio";
+			reg = <0x240 0x8e600000 0x0 0x50000>;
+			linux,uio-name = "rpmsg_shm6";
+			status = "disabled";
+		};
+
+		rpmsg_shm7: rpmsg_shm@7 {
+			compatible = "generic-uio";
+			reg = <0x240 0x8e650000 0x0 0x50000>;
+			linux,uio-name = "rpmsg_shm7";
+			status = "disabled";
+		};
+
+		rpmsg_shm8: rpmsg_shm@8 {
+			compatible = "generic-uio";
+			reg = <0x240 0x8e6a0000 0x0 0x50000>;
+			linux,uio-name = "rpmsg_shm8";
 			status = "disabled";
 		};
 
