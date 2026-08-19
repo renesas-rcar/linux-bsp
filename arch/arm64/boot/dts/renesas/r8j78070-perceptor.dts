@@ -13,26 +13,74 @@
 	model = "Renesas Perceptor board based on r8j78070";
 	compatible = "renesas,perceptor", "renesas,r8j78070",
 		     "renesas,r8a78000";
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		cr52_ram4: cr52_ram4@2008e650000 {
+			no-map;
+			reg = <0x200 0x8e650000 0x0 0x1000>;
+		};
+
+		vdev4vring0: vdev0vring0@2008e651000 {
+			no-map;
+			reg = <0x200 0x8e651000 0x0 0x4000>;
+		};
+
+		vdev4vring1: vdev0vring1@2008e655000 {
+			no-map;
+			reg = <0x200 0x8e655000 0x0 0x4000>;
+		};
+
+		vdev4buffer: vdev0buffer@2008e610000 {
+			no-map;
+			reg = <0x200 0x8e610000 0x0 0x40000>;
+		};
+
+		cr52_ram7: cr52_ram7@2408e650000 {
+			no-map;
+			reg = <0x240 0x8e650000 0x0 0x1000>;
+		};
+
+		vdev7vring0: vdev0vring0@2408e651000 {
+			no-map;
+			reg = <0x240 0x8e651000 0x0 0x4000>;
+		};
+
+		vdev7vring1: vdev0vring1@2408e655000 {
+			no-map;
+			reg = <0x240 0x8e655000 0x0 0x4000>;
+		};
+
+		vdev7buffer: vdev0buffer@2408e610000 {
+			no-map;
+			reg = <0x240 0x8e610000 0x0 0x40000>;
+		};
+	};
 };
 
 &mmc0 {
 	status = "okay";
 };
 
-&mfis {
-	status = "disabled";
+&cr52_rproc4 {
+	memory-region = <&cr52_ram4 &vdev4vring0 &vdev4vring1 &vdev4buffer>;
+	status = "okay";
 };
 
-&cr52_rproc1 {
-	status = "disabled";
+&cr52_rproc7 {
+	memory-region = <&cr52_ram7 &vdev7vring0 &vdev7vring1 &vdev7buffer>;
+	status = "okay";
 };
 
-&rpmsg_shm0 {
-	status = "disabled";
+&rpmsg_shm3 {
+	status = "okay";
 };
 
-&rpmsg_ipi0 {
-	status = "disabled";
+&rpmsg_shm6 {
+	status = "okay";
 };
 
 &cmt0 {
