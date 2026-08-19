@@ -85,6 +85,7 @@
 #define PCI_DEVICE_ID_RENESAS_R8A774E1		0x0025
 #define PCI_DEVICE_ID_RENESAS_R8A779F0		0x0031
 #define PCI_DEVICE_ID_RENESAS_R8A78000		0x0035
+#define PCI_DEVICE_ID_RENESAS_R8A78060		0x003c
 
 #define PCI_DEVICE_ID_ROCKCHIP_RK3588		0x3588
 
@@ -1056,6 +1057,13 @@ static const struct pci_endpoint_test_data rk3588_data = {
 	.irq_type = IRQ_TYPE_MSI,
 };
 
+static const struct pci_endpoint_test_data r8a78060_data = {
+	.test_reg_bar = BAR_4,
+	.alignment = SZ_4K,
+	.irq_type = IRQ_TYPE_MSI,
+	.use_polling = true,
+};
+
 /*
  * If the controller's Vendor/Device ID are programmable, you may be able to
  * use one of the existing entries for testing instead of adding a new one.
@@ -1085,6 +1093,9 @@ static const struct pci_device_id pci_endpoint_test_tbl[] = {
 	{ PCI_DEVICE(PCI_VENDOR_ID_RENESAS, PCI_DEVICE_ID_RENESAS_R8A779F0),},
 	{ PCI_DEVICE(PCI_VENDOR_ID_RENESAS, PCI_DEVICE_ID_RENESAS_R8A78000),
 	  .driver_data = (kernel_ulong_t)&default_data,
+	},
+	{ PCI_DEVICE(PCI_VENDOR_ID_RENESAS, PCI_DEVICE_ID_RENESAS_R8A78060),
+	  .driver_data = (kernel_ulong_t)&r8a78060_data,
 	},
 	{ PCI_DEVICE(PCI_VENDOR_ID_TI, PCI_DEVICE_ID_TI_J721E),
 	  .driver_data = (kernel_ulong_t)&j721e_data,
