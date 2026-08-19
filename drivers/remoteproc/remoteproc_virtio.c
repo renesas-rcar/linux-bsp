@@ -414,6 +414,13 @@ static int rproc_add_virtio_dev(struct rproc_vdev *rvdev, int id)
 				dev_err(dev, "Failed to associate buffer\n");
 				goto out;
 			}
+
+			ret = dma_direct_set_offset(dev, pa, mem->da,
+						    mem->len);
+			if (ret < 0) {
+				dev_err(dev, "Failed to set dma offset\n");
+				goto out;
+			}
 		}
 	} else {
 		struct device_node *np = rproc->dev.parent->of_node;
