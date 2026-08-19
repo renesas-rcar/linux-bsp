@@ -10,14 +10,23 @@
 #include <linux/platform_device.h>
 #include <linux/remoteproc.h>
 #include <linux/delay.h>
+#include <linux/io.h>
+#include <linux/device.h>
 
 #include "remoteproc_internal.h"
 #include <misc/rcar-mfis/rcar_mfis_public.h>
 
+#define OFFSET_MEM_KICK_PA		0x500
+#define OFFSET_MEM_CHECK_NOTIFY		0x04
+#define MEM_NOTIFY_BIT			BIT(0)
+
 struct rcar_rproc {
 	struct rproc *rproc;
 	struct work_struct workqueue;
+	struct delayed_work poll_work;
 	u32 mfis_chan;
+	phys_addr_t kick_pa;
+	void __iomem *kick_va;
 };
 
 static int rcar_gen5_rproc_mem_alloc(struct rproc *rproc, struct rproc_mem_entry *mem)
@@ -55,6 +64,34 @@ static void handle_event(struct work_struct *work)
 	rproc_vq_interrupt(priv->rproc, 1);
 }
 
+static bool rcar_gen5_rproc_check(struct rcar_rproc *priv)
+{
+	u32 val;
+	void __iomem *ack_reg = priv->kick_va + OFFSET_MEM_CHECK_NOTIFY;
+
+	if (!priv->kick_va)
+		return false;
+
+	val = readl(ack_reg);
+
+	if (val & MEM_NOTIFY_BIT) {
+		val &= ~MEM_NOTIFY_BIT;
+		writel(val, ack_reg);
+		return true;
+	}
+
+	return false;
+}
+
+static void rcar_gen5_poll_handler(struct work_struct *work)
+{
+	struct rcar_rproc *priv = container_of(work, struct rcar_rproc, poll_work.work);
+
+	if (rcar_gen5_rproc_check(priv))
+		schedule_work(&priv->workqueue);
+	schedule_delayed_work(&priv->poll_work, msecs_to_jiffies(1));
+}
+
 static int rcar_gen5_rproc_interrupt_cb(struct notifier_block *self, unsigned long action,
 					void *data)
 {
@@ -77,6 +114,7 @@ static int rcar_gen5_rproc_prepare(struct rproc *rproc)
 	struct rproc_mem_entry *mem;
 	struct reserved_mem *rmem;
 	u32 da;
+	struct rcar_rproc *priv = rproc->priv;
 
 	/* Register associated reserved memory regions */
 	of_phandle_iterator_init(&it, np, "memory-region", NULL, 0);
@@ -89,13 +127,7 @@ static int rcar_gen5_rproc_prepare(struct rproc *rproc)
 			return -EINVAL;
 		}
 
-		if (rmem->base > U32_MAX) {
-			of_node_put(it.node);
-			return -EINVAL;
-		}
-
-		/* No need to translate pa to da, R-Car use same map */
-		da = rmem->base;
+		da = rmem->base & 0xFFFFFFFF;
 		mem = rproc_mem_entry_init(dev, NULL,
 					   rmem->base,
 					   rmem->size, da,
@@ -106,6 +138,11 @@ static int rcar_gen5_rproc_prepare(struct rproc *rproc)
 		if (!mem) {
 			of_node_put(it.node);
 			return -ENOMEM;
+		}
+
+		if (strstr(it.node->name, "cr52_ram")) {
+			priv->kick_pa = rmem->base + OFFSET_MEM_KICK_PA;
+			priv->kick_va = devm_ioremap(dev, priv->kick_pa, rmem->size);
 		}
 
 		rproc_add_carveout(rproc, mem);
@@ -127,8 +164,16 @@ static int rcar_gen5_rproc_parse_fw(struct rproc *rproc, const struct firmware *
 
 static int rcar_gen5_rproc_start(struct rproc *rproc)
 {
+	struct rcar_rproc *priv;
+
 	if (!rproc->bootaddr)
 		return -EINVAL;
+
+	priv = rproc->priv;
+	if (priv->mfis_chan == -1) {
+		INIT_DELAYED_WORK(&priv->poll_work, rcar_gen5_poll_handler);
+		schedule_delayed_work(&priv->poll_work, msecs_to_jiffies(1000));
+	}
 
 	return 0;
 }
@@ -149,6 +194,26 @@ static void rcar_gen5_rproc_kick(struct rproc *rproc, int vqid)
 	msg.icr = vqid;
 	msg.mbr = 0;
 
+	if (priv->mfis_chan == -1) {
+		u32 val;
+
+		if (!priv->kick_va) {
+			dev_err(dev, "Kick address not mapped!\n");
+			return;
+		}
+
+		val = MEM_NOTIFY_BIT;
+		/*
+		 * Ensure all vring updates in shared memory are visible to the
+		 * remote processor, especially over UCIe, before the notification
+		 * write below signals it to process them.
+		 */
+		mb();
+		(void)readl(priv->kick_va);
+		writel(val, priv->kick_va);
+		return;
+	}
+
 	do {
 		ret = rcar_mfis_trigger_interrupt(priv->mfis_chan, msg);
 		if (ret)
@@ -156,8 +221,6 @@ static void rcar_gen5_rproc_kick(struct rproc *rproc, int vqid)
 
 	} while (ret && n_tries--);
 
-	if (ret)
-		dev_info(dev, "%s failed\n", __func__);
 }
 
 static int rcar_gen5_rproc_elf_load_segments(struct rproc *rproc, const struct firmware *fw)
@@ -200,14 +263,14 @@ static int rcar_gen5_rproc_probe(struct platform_device *pdev)
 
 	ret = of_property_read_u32(np, "renesas,mfis-channel", &priv->mfis_chan);
 	if (ret) {
-		/* Default is channel 0 */
-		priv->mfis_chan = 0;
-	}
-
-	ret = rcar_mfis_register_notifier(priv->mfis_chan, &rcar_gen5_rproc_notifier_block, priv);
-	if (ret) {
-		dev_err(dev, "cannot register notifier on mfis channel %d\n", 0);
-		return ret;
+		priv->mfis_chan = -1;
+	} else {
+		ret = rcar_mfis_register_notifier(priv->mfis_chan,
+						  &rcar_gen5_rproc_notifier_block, priv);
+		if (ret) {
+			dev_err(dev, "cannot register notifier on mfis channel %d\n", 0);
+			return ret;
+		}
 	}
 
 	/* Manually start the rproc */
