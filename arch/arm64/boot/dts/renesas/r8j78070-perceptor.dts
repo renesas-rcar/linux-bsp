@@ -530,3 +530,11 @@
 &isp3 {
 	status = "disabled";
 };
+
+&ucie0_rc {
+	status = "okay";
+};
+
+&ucie1_rc {
+	status = "okay";
+};
