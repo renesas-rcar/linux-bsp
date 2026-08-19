@@ -6480,6 +6480,154 @@
 				};
 			};
 		};
+
+		ucie0_rc: pcie@0xd8000000 {
+			compatible = "renesas,r8a78000-ucie";
+			bus-range = <0 0xff>;
+			reg = <0x0 0xd8000000 0 0x1000000>,
+			      <0x0 0xdc000000 0 0x1000000>,
+			      <0x220 0x0000000 0 0x400000>;
+			reg-names = "axi", "apb", "config";
+			#address-cells = <3>;
+			#size-cells = <2>;
+			device_type = "pci";
+			ranges = <0x03000000 0 0x40000000 0x220 0x10000000 0 0x08000000>,
+				 <0x43000000 0 0x48000000 0x220 0x18000000 0 0x08000000>,
+				 <0x03000000 0 0x8e200000 0x200 0x8e200000 0 0x00100000>,
+				 <0x03000000 0 0x8e600000 0x200 0x8e600000 0 0x31a00000>;
+			interrupts = <GIC_SPI 765 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 766 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "others", "dma";
+			interrupt-map-mask = <0 0 0 7>;
+			interrupt-map = <0 0 0 1 &gic 0 765 4
+					 0 0 0 2 &gic 0 766 4>;
+			#interrupt-cells = <1>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_UCIE01>,
+				 <&scmi_clk X5H_CLOCK_ID_UCIE02>,
+				 <&scmi_clk X5H_CLOCK_ID_UCIEBG0DEV0>,
+				 <&scmi_clk X5H_CLOCK_ID_UCIEBG0DEV1>,
+				 <&scmi_clk X5H_CLOCK_ID_UCIEBG0ICN0>,
+				 <&scmi_clk X5H_CLOCK_ID_UCIEBG0ICN1>;
+			clock-names = "ucie1", "ucie2", "bgdev0", "bgdev1",
+				      "bgicn0", "bgicn1";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_UCI>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_UCIE02>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_UCIE01>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_UCIEBG0DEV0>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_UCIEBG0DEV1>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_UCIEBG0ICN0>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_UCIEBG0ICN1>;
+			channel-id = <0>;
+			max-link-speed = <5>;
+			num-lanes = <2>;
+			#stream-id-cells = <1>;
+			status = "disabled";
+		};
+
+		ucie0_ep: pcie-ep@0xd8000000 {
+			compatible = "renesas,r8a78000-ucie-ep";
+			reg = <0x0 0xd8000000 0 0x1000000>,
+			      <0x0 0xdc000000 0 0x1000000>,
+			      <0x200 0x0000000 0x0 0x40000000>;
+			reg-names = "axi", "apb", "addr_space";
+			interrupts = <GIC_SPI 765 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 766 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "others", "dma";
+			clocks = <&scmi_clk X5H_CLOCK_ID_UCIE01>,
+				 <&scmi_clk X5H_CLOCK_ID_UCIE02>,
+				 <&scmi_clk X5H_CLOCK_ID_UCIEBG0DEV0>,
+				 <&scmi_clk X5H_CLOCK_ID_UCIEBG0DEV1>,
+				 <&scmi_clk X5H_CLOCK_ID_UCIEBG0ICN0>,
+				 <&scmi_clk X5H_CLOCK_ID_UCIEBG0ICN1>;
+			clock-names = "ucie1", "ucie2", "bgdev0", "bgdev1",
+				      "bgicn0", "bgicn1";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_UCI>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_UCIE02>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_UCIE01>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_UCIEBG0DEV0>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_UCIEBG0DEV1>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_UCIEBG0ICN0>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_UCIEBG0ICN1>;
+			channel-id = <0>;
+			num-lanes = <2>;
+			num-ib-windows = <16>;
+			num-ob-windows = <16>;
+			status = "disabled";
+		};
+
+		ucie1_rc: pcie@0xd9000000 {
+			compatible = "renesas,r8a78000-ucie";
+			bus-range = <0 0xff>;
+			reg = <0x0 0xd9000000 0 0x1000000>,
+			      <0x0 0xdd000000 0 0x1000000>,
+			      <0x260 0x0000000 0 0x400000>;
+			reg-names = "axi", "apb", "config";
+			#address-cells = <3>;
+			#size-cells = <2>;
+			device_type = "pci";
+			ranges = <0x03000000 0 0x40000000 0x260 0x10000000 0 0x08000000>,
+				 <0x43000000 0 0x48000000 0x260 0x18000000 0 0x08000000>,
+				 <0x03000000 0 0x8e200000 0x240 0x8e200000 0 0x00100000>,
+				 <0x03000000 0 0x8e600000 0x240 0x8e600000 0 0x31a00000>;
+			interrupts = <GIC_SPI 770 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 771 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "others", "dma";
+			interrupt-map-mask = <0 0 0 7>;
+			interrupt-map = <0 0 0 1 &gic 0 770 4
+					 0 0 0 2 &gic 0 771 4>;
+			#interrupt-cells = <1>;
+			clocks = <&scmi_clk X5H_CLOCK_ID_UCIE11>,
+				 <&scmi_clk X5H_CLOCK_ID_UCIE12>,
+				 <&scmi_clk X5H_CLOCK_ID_UCIEBG1DEV0>,
+				 <&scmi_clk X5H_CLOCK_ID_UCIEBG1DEV1>,
+				 <&scmi_clk X5H_CLOCK_ID_UCIEBG1ICN0>,
+				 <&scmi_clk X5H_CLOCK_ID_UCIEBG1ICN1>;
+			clock-names = "ucie1", "ucie2", "bgdev0", "bgdev1",
+				      "bgicn0", "bgicn1";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_UCI>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_UCIE12>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_UCIE11>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_UCIEBG1DEV0>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_UCIEBG1DEV1>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_UCIEBG1ICN0>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_UCIEBG1ICN1>;
+			channel-id = <1>;
+			max-link-speed = <5>;
+			num-lanes = <2>;
+			#stream-id-cells = <1>;
+			status = "disabled";
+		};
+
+		ucie1_ep: pcie-ep@0xd9000000 {
+			compatible = "renesas,r8a78000-ucie-ep";
+			reg = <0x0 0xd9000000 0 0x1000000>,
+			      <0x0 0xdd000000 0 0x1000000>,
+			      <0x240 0x0000000 0x0 0x40000000>;
+			reg-names = "axi", "apb", "addr_space";
+			interrupts = <GIC_SPI 770 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 771 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "others", "dma";
+			clocks = <&scmi_clk X5H_CLOCK_ID_UCIE11>,
+				 <&scmi_clk X5H_CLOCK_ID_UCIE12>,
+				 <&scmi_clk X5H_CLOCK_ID_UCIEBG1DEV0>,
+				 <&scmi_clk X5H_CLOCK_ID_UCIEBG1DEV1>,
+				 <&scmi_clk X5H_CLOCK_ID_UCIEBG1ICN0>,
+				 <&scmi_clk X5H_CLOCK_ID_UCIEBG1ICN1>;
+			clock-names = "ucie1", "ucie2", "bgdev0", "bgdev1",
+				      "bgicn0", "bgicn1";
+			power-domains = <&scmi_devpd X5H_POWER_DOMAIN_ID_UCI>;
+			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_UCIE12>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_UCIE11>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_UCIEBG1DEV0>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_UCIEBG1DEV1>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_UCIEBG1ICN0>,
+				 <&scmi_reset X5H_RESET_DOMAIN_ID_UCIEBG1ICN1>;
+			channel-id = <1>;
+			num-lanes = <2>;
+			num-ib-windows = <16>;
+			num-ob-windows = <16>;
+			status = "disabled";
+		};
 	};
 
 	timer {
