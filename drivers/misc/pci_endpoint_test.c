@@ -124,12 +124,14 @@ struct pci_endpoint_test {
 	enum pci_barno test_reg_bar;
 	size_t alignment;
 	const char *name;
+	bool use_polling;
 };
 
 struct pci_endpoint_test_data {
 	enum pci_barno test_reg_bar;
 	size_t alignment;
 	int irq_type;
+	bool use_polling;
 };
 
 static inline u32 pci_endpoint_test_readl(struct pci_endpoint_test *test,
@@ -142,6 +144,50 @@ static inline void pci_endpoint_test_writel(struct pci_endpoint_test *test,
 					    u32 offset, u32 value)
 {
 	writel(value, test->base + offset);
+}
+
+static inline u32 pci_endpoint_test_bar_readl(struct pci_endpoint_test *test,
+					      int bar, int offset)
+{
+	return readl(test->bar[bar] + offset);
+}
+
+static inline void pci_endpoint_test_bar_writel(struct pci_endpoint_test *test,
+						int bar, u32 offset, u32 value)
+{
+	writel(value, test->bar[bar] + offset);
+}
+
+static unsigned long pci_endpoint_test_poll_status(struct pci_endpoint_test *test, unsigned long
+						   timeout_ms)
+{
+	unsigned long timeout = jiffies + msecs_to_jiffies(timeout_ms);
+	u32 reg;
+
+	do {
+		reg = pci_endpoint_test_readl(test, PCI_ENDPOINT_TEST_STATUS);
+		if (reg & STATUS_IRQ_RAISED) {
+			pci_endpoint_test_writel(test, PCI_ENDPOINT_TEST_STATUS,
+						 reg & ~STATUS_IRQ_RAISED);
+			return 1;
+		}
+		cpu_relax();
+	} while (time_before(jiffies, timeout));
+
+	return 0;
+}
+
+static unsigned long pci_endpoint_test_wait_for_status(struct pci_endpoint_test *test,
+						       unsigned long timeout_ms)
+{
+	if (test->use_polling)
+		return pci_endpoint_test_poll_status(test, timeout_ms);
+
+	if (timeout_ms)
+		return wait_for_completion_timeout(&test->irq_raised,
+						   msecs_to_jiffies(timeout_ms));
+	wait_for_completion(&test->irq_raised);
+	return 1;
 }
 
 static irqreturn_t pci_endpoint_test_irqhandler(int irq, void *dev_id)
@@ -497,7 +543,7 @@ static bool pci_endpoint_test_copy(struct pci_endpoint_test *test,
 	pci_endpoint_test_writel(test, PCI_ENDPOINT_TEST_COMMAND,
 				 COMMAND_COPY);
 
-	wait_for_completion(&test->irq_raised);
+	pci_endpoint_test_wait_for_status(test, 10000);
 
 	dma_unmap_single(dev, orig_dst_phys_addr, size + alignment,
 			 DMA_FROM_DEVICE);
@@ -605,7 +651,7 @@ static bool pci_endpoint_test_write(struct pci_endpoint_test *test,
 	pci_endpoint_test_writel(test, PCI_ENDPOINT_TEST_COMMAND,
 				 COMMAND_READ);
 
-	wait_for_completion(&test->irq_raised);
+	pci_endpoint_test_wait_for_status(test, 10000);
 
 	reg = pci_endpoint_test_readl(test, PCI_ENDPOINT_TEST_STATUS);
 	if (reg & STATUS_READ_SUCCESS)
@@ -699,7 +745,7 @@ static bool pci_endpoint_test_read(struct pci_endpoint_test *test,
 	pci_endpoint_test_writel(test, PCI_ENDPOINT_TEST_COMMAND,
 				 COMMAND_WRITE);
 
-	wait_for_completion(&test->irq_raised);
+	pci_endpoint_test_wait_for_status(test, 10000);
 
 	dma_unmap_single(dev, orig_phys_addr, size + alignment,
 			 DMA_FROM_DEVICE);
@@ -846,6 +892,7 @@ static int pci_endpoint_test_probe(struct pci_dev *pdev,
 		test->test_reg_bar = test_reg_bar;
 		test->alignment = data->alignment;
 		irq_type = data->irq_type;
+		test->use_polling = data->use_polling;
 	}
 
 	init_completion(&test->irq_raised);
@@ -990,6 +1037,7 @@ static const struct pci_endpoint_test_data default_data = {
 	.test_reg_bar = BAR_0,
 	.alignment = SZ_4K,
 	.irq_type = IRQ_TYPE_MSI,
+	.use_polling = true,
 };
 
 static const struct pci_endpoint_test_data am654_data = {
