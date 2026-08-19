@@ -1774,6 +1774,179 @@ static void rsw3_mii_unregister(struct rsw3_device *rdev)
 	}
 }
 
+static int rsw3_axi_emergency_stop(struct rsw3_private *priv)
+{
+	u32 val;
+
+	rsw3_modify(priv->addr, GWAC, GWAC_AMPR, GWAC_AMPR);
+
+	return readl_poll_timeout_atomic(priv->addr + GWAC, val,
+				(val & GWAC_AMP) == GWAC_AMP, 1, 50000);
+}
+
+static void rsw3_datapath_port_stop(struct rsw3_device *rdev)
+{
+	struct rsw3_private *priv = rdev->priv;
+	unsigned long flags;
+	int i;
+
+	netif_tx_stop_all_queues(rdev->ndev);
+
+	spin_lock_irqsave(&priv->lock, flags);
+	for (i = 0; i < NUM_QUEUES_TX_PER_NDEV; i++)
+		rsw3_enadis_data_irq(priv, rdev->tx_queue[i]->index, false);
+	for (i = 0; i < NUM_QUEUES_RX_PER_NDEV; i++)
+		rsw3_enadis_data_irq(priv, rdev->rx_queue[i]->index, false);
+	spin_unlock_irqrestore(&priv->lock, flags);
+
+	for (i = 0; i < NUM_QUEUES_TX_PER_NDEV; i++)
+		napi_disable(&rdev->tx_queue[i]->napi);
+	for (i = 0; i < NUM_QUEUES_RX_PER_NDEV; i++)
+		napi_disable(&rdev->rx_queue[i]->napi);
+}
+
+static void rsw3_datapath_port_start(struct rsw3_device *rdev)
+{
+	struct rsw3_private *priv = rdev->priv;
+	unsigned long flags;
+	int i;
+
+	for (i = 0; i < NUM_QUEUES_TX_PER_NDEV; i++)
+		napi_enable(&rdev->tx_queue[i]->napi);
+	for (i = 0; i < NUM_QUEUES_RX_PER_NDEV; i++)
+		napi_enable(&rdev->rx_queue[i]->napi);
+
+	spin_lock_irqsave(&priv->lock, flags);
+	for (i = 0; i < NUM_QUEUES_TX_PER_NDEV; i++)
+		rsw3_enadis_data_irq(priv, rdev->tx_queue[i]->index, true);
+	for (i = 0; i < NUM_QUEUES_RX_PER_NDEV; i++)
+		rsw3_enadis_data_irq(priv, rdev->rx_queue[i]->index, true);
+	spin_unlock_irqrestore(&priv->lock, flags);
+
+	netif_tx_start_all_queues(rdev->ndev);
+}
+
+static int rsw3_speed_reconfigure(struct rsw3_device *target, int new_speed)
+{
+	struct rsw3_private *priv = target->priv;
+	struct rsw3_device *rdev;
+	int old_speed = target->etha->speed;
+	unsigned int i;
+	int err;
+
+	rsw3_for_each_enabled_port(priv, i) {
+		rdev = priv->rdev[i];
+		if (netif_running(rdev->ndev))
+			rsw3_datapath_port_stop(rdev);
+	}
+
+	err = rsw3_axi_emergency_stop(priv);
+	if (err < 0)
+		goto reconfigure_failed;
+
+	rsw3_reset(priv);
+	rsw3_modify(priv->addr, GWAC, GWAC_AMPR, 0);
+	rsw3_clock_enable(priv);
+	err = rsw3_bpool_config(priv);
+	if (err < 0)
+		goto reconfigure_failed;
+
+	rsw3_coma_init(priv);
+
+	err = rsw3_fwd_init(priv);
+	if (err < 0)
+		goto reconfigure_failed;
+
+	rsw3_for_each_enabled_port(priv, i) {
+		rsw3_txdmac_free(priv->rdev[i]->ndev);
+		rsw3_rxdmac_free(priv->rdev[i]->ndev);
+	}
+
+	rsw3_for_each_enabled_port(priv, i) {
+		err = rsw3_rxdmac_alloc(priv->rdev[i]->ndev);
+		if (err < 0)
+			goto out_dmac;
+
+		err = rsw3_txdmac_alloc(priv->rdev[i]->ndev);
+		if (err < 0)
+			goto out_dmac;
+	}
+
+	rsw3_top_init(priv);
+
+	for (i = 0; i < rswitch3_num_ports; i++)
+		priv->etha_mii[i].operated = false;
+
+	err = rsw3_gwca_hw_init(priv);
+	if (err < 0)
+		goto reconfigure_failed;
+
+	target->etha->speed = new_speed;
+
+	rsw3_for_each_enabled_port(priv, i) {
+		rdev = priv->rdev[i];
+
+		err = rsw3_etha_mii_hw_init(rdev->etha_mii);
+		if (err < 0)
+			goto reconfigure_failed;
+
+		err = rsw3_etha_hw_init(rdev->etha, rdev->ndev->dev_addr);
+		if (err < 0)
+			goto reconfigure_failed;
+
+		err = rsw3_etha_mii_hw_start(rdev->etha_mii);
+		if (err < 0)
+			goto reconfigure_failed;
+	}
+
+	mutex_lock(&priv->tsnes_lock);
+	for (i = 0; i < RSWITCH3_NUM_TSNES; i++) {
+		u32 rsw_port;
+
+		if (!(priv->tsnes_attached & BIT(i)))
+			continue;
+
+		rsw_port = RSWITCH3_TSNES_PORT_BASE + i;
+		rsw3_etha_hw_init_tsn_internal(priv, rsw_port, NULL);
+	}
+	mutex_unlock(&priv->tsnes_lock);
+
+	rcar_gen4_ptp_reinit_hw(priv->ptp_priv);
+
+	err = phy_set_speed(target->pcs, new_speed);
+	if (err < 0)
+		goto reconfigure_failed;
+
+	goto restart_datapath;
+
+reconfigure_failed:
+	netdev_err(target->ndev,
+		"speed reset failed (%d), reverting to %d Mbps\n",
+		err, old_speed);
+	target->etha->speed = old_speed;
+
+restart_datapath:
+	rsw3_for_each_enabled_port(priv, i) {
+		rdev = priv->rdev[i];
+		if (netif_running(rdev->ndev))
+			rsw3_datapath_port_start(rdev);
+	}
+
+	return err;
+
+out_dmac:
+	netdev_err(target->ndev,
+	"Failed to allocate DMAC rings (%d)\n", err);
+	target->etha->speed = old_speed;
+
+	rsw3_for_each_enabled_port(priv, i) {
+		rsw3_txdmac_free(priv->rdev[i]->ndev);
+		rsw3_rxdmac_free(priv->rdev[i]->ndev);
+	}
+
+	return err;
+}
+
 static void rsw3_adjust_link(struct net_device *ndev)
 {
 	struct rsw3_device *rdev = netdev_priv(ndev);
@@ -1784,6 +1957,10 @@ static void rsw3_adjust_link(struct net_device *ndev)
 		phy_print_status(phydev);
 
 		if (phydev->link) {
+			if (!parallel_mode && phydev->speed != rdev->etha->speed
+					&& !rdev->etha->connect_to_xpcs)
+				phy_set_speed(rdev->pcs, phydev->speed);
+
 			if (!rdev->pcs->power_count) {
 				phy_power_on(rdev->pcs);
 			} else {
@@ -1791,16 +1968,24 @@ static void rsw3_adjust_link(struct net_device *ndev)
 				phy_power_on(rdev->pcs);
 			}
 			if (!parallel_mode && phydev->speed != rdev->etha->speed) {
-				rdev->etha->speed = phydev->speed;
-				err = rsw3_etha_hw_init(rdev->etha, rdev->ndev->dev_addr);
-				if (err < 0) {
-					netdev_err(ndev, "ETHA hw_init failed: %d\n", err);
-					rdev->etha->link = phydev->link;
-					return;
+				if (rdev->etha->connect_to_xpcs) {
+					err = rsw3_speed_reconfigure(rdev, phydev->speed);
+					if (err < 0) {
+						netdev_err(ndev, "speed reconfigure failed: %d\n", err);
+						rdev->etha->link = phydev->link;
+						return;
+					}
+				} else {
+					rdev->etha->speed = phydev->speed;
+					err = rsw3_etha_hw_init(rdev->etha, rdev->ndev->dev_addr);
+					if (err < 0) {
+						netdev_err(ndev, "ETHA hw_init failed: %d\n", err);
+						rdev->etha->link = phydev->link;
+						return;
+					}
 				}
-				phy_set_speed(rdev->pcs, rdev->etha->speed);
 			}
-		} 
+		}
 		rdev->etha->link = phydev->link;
 	}
 }
@@ -1810,13 +1995,11 @@ static void rsw3_phy_remove_link_mode(struct rsw3_device *rdev,
 {
 	switch (rdev->etha->speed) {
 	case SPEED_100:
-		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_1000baseT_Full_BIT);
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_2500baseX_Full_BIT);
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_5000baseT_Full_BIT);
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_10000baseT_Full_BIT);
 		break;
 	case SPEED_1000:
-		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_100baseT_Full_BIT);
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_2500baseX_Full_BIT);
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_5000baseT_Full_BIT);
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_10000baseT_Full_BIT);
@@ -1824,20 +2007,14 @@ static void rsw3_phy_remove_link_mode(struct rsw3_device *rdev,
 	case SPEED_2500:
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_100baseT_Full_BIT);
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_1000baseT_Full_BIT);
-		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_5000baseT_Full_BIT);
-		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_10000baseT_Full_BIT);
 		break;
 	case SPEED_5000:
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_100baseT_Full_BIT);
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_1000baseT_Full_BIT);
-		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_2500baseX_Full_BIT);
-		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_10000baseT_Full_BIT);
 		break;
 	case SPEED_10000:
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_100baseT_Full_BIT);
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_1000baseT_Full_BIT);
-		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_2500baseX_Full_BIT);
-		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_5000baseT_Full_BIT);
 		break;
 	default:
 		break;

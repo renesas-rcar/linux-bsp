@@ -915,6 +915,9 @@ enum rsw3_gwca_mode {
 #define GWARIRM_ARIOG		BIT(0)
 #define GWARIRM_ARR		BIT(1)
 
+#define GWAC_AMPR		BIT(0)
+#define GWAC_AMP		BIT(1)
+
 #define GWMDNC_TSDMN(num)	(((num) << 16) & GENMASK(17, 16))
 #define GWMDNC_TXDMN(num)	(((num) << 8) & GENMASK(12, 8))
 #define GWMDNC_RXDMN(num)	((num) & GENMASK(4, 0))
