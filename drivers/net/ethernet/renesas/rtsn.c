@@ -1989,7 +1989,7 @@ static int rtsn_suspend(struct device *dev)
 		netif_device_detach(ndev);
 
 		rtnl_lock();
-		ret = rtsn_stop_common(ndev, false);
+		ret = rtsn_stop_common(ndev, true);
 		rtnl_unlock();
 		if (ret)
 			return ret;
@@ -2020,7 +2020,7 @@ static int rtsn_resume(struct device *dev)
 		return 0;
 
 	rtnl_lock();
-	ret = rtsn_open_common(ndev, false);
+	ret = rtsn_open_common(ndev, true);
 	rtnl_unlock();
 	if (ret)
 		goto error_clk;
