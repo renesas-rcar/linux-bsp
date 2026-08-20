@@ -2930,6 +2930,16 @@ static int renesas_eth_sw_resume(struct device *dev)
 
 	rsw3_clock_enable(priv);
 
+	/* Deepstop leaves the switch fabric in a partial state the per-block
+	 * re-inits below cannot repair (post-S2R fabric->port8 egress caps at
+	 * ~2.1G and deadlocks under flood even though the buffer pool was
+	 * re-initialized).  Mirror probe exactly: clock enable, full RRC
+	 * reset, clock enable again (RRC clears RCEC).
+	 */
+	rsw3_reset(priv);
+
+	rsw3_clock_enable(priv);
+
 	rsw3_bpool_config(priv);
 
 	rsw3_coma_init(priv);
