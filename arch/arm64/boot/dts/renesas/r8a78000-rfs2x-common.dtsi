@@ -95,12 +95,12 @@
 			reg = <0x0 0x8e200000 0x0 0x100000>;
 		};
 
-		ucie_ldr0: ucie_ldr0@82000000 {
+		ucie_ldr0: ucie_ldr0@8c200000 {
 			no-map;
 			reg = <0x0 0x8c200000 0x0 0x100000>;
 		};
 
-		ucie_ldr1: ucie_ldr1@83000000 {
+		ucie_ldr1: ucie_ldr1@8c300000 {
 			no-map;
 			reg = <0x0 0x8c300000 0x0 0x100000>;
 		};
@@ -188,19 +188,6 @@
 			reg = <0x1c 0x0 0x0 0x40000000>;
 		};
 		
-	};
-
-	ucie_shared0: ucie_shared0@90000000 {
-		reg = <0x0 0x90000000 0x0 0x200000>;
-	};
-
-	ucie_shared1: ucie_shared1@90200000 {
-		reg = <0x0 0x90200000 0x0 0x200000>;
-	};
-
-	ucie_ldr_map_dev: ucie_ldr_map {
-		compatible = "renesas,ucie-ldr-map";
-		ldr-regions = <&ucie_ldr0>, <&ucie_ldr1>;
 	};
 
 	sound_card: sound {
@@ -1284,12 +1271,14 @@
 
 &ucie_dummy0 {
 	status = "okay";
-	shared-region = <&ucie_shared0>;
+	mem_map = <0x0 0x90000000 0x200000 0x0 0x90000000>,
+		  <0x0 0x8c200000 0x100000 0x0 0x8e200000>;
 };
 
 &ucie_dummy1 {
 	status = "okay";
-	shared-region = <&ucie_shared1>;
+	mem_map = <0x0 0x90200000 0x200000 0x0 0x90200000>,
+		  <0x0 0x8c300000 0x100000 0x0 0x8e200000>;
 };
 
 &canxl0 {
