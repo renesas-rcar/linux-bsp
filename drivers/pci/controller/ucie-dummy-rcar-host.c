@@ -53,6 +53,8 @@ static int ucie_host_enable_mapping(struct ucie_dummy_host *host);
 static void ucie_host_disable_mapping(struct ucie_dummy_host *host);
 static int ucie_host_sync_to_dest(struct ucie_dummy_host *host);
 static int ucie_host_sync_from_dest(struct ucie_dummy_host *host);
+static void ucie_host_write_reg(struct ucie_dummy_host *host,
+				u32 val, unsigned int reg);
 
 /*
  * UCIe hardware initialization
@@ -198,6 +200,31 @@ static int ucie_host_sync_from_dest(struct ucie_dummy_host *host)
 	ucie_rmw32(&host->ucie, UCIE_RQ_SYNC_FROM, SYNC_STS, SYNC_STS);
 
 	return 0;
+}
+
+/* Programme one iATU channel with the given SRC/DST/size and enable it. */
+static void ucie_program_iatu_channel(struct ucie_dummy_host *host, int index,
+				      phys_addr_t src_phys, phys_addr_t dst_phys,
+				      u32 size)
+{
+	struct ucie_dummy_host ch_host = *host;
+	struct ucie_dummy ch_ucie = host->ucie;
+
+	ch_ucie.base = host->ucie.base + (index * IATU_RGN_OFFSET);
+	ch_host.ucie = ch_ucie;
+
+	ucie_write_reg(&ch_ucie, lower_32_bits(src_phys), UCIE_LOWER_SRC_ADDR);
+	ucie_write_reg(&ch_ucie, upper_32_bits(src_phys), UCIE_UPPER_SRC_ADDR);
+	ucie_write_reg(&ch_ucie, lower_32_bits(dst_phys), UCIE_LOWER_DST_ADDR);
+	ucie_write_reg(&ch_ucie, upper_32_bits(dst_phys), UCIE_UPPER_DST_ADDR);
+	ucie_write_reg(&ch_ucie, size, UCIE_MAPPING_SIZE);
+	/* Use host wrapper so mapping_active state is updated */
+	ucie_host_write_reg(&ch_host, MAPPING_FILE_EN | MAPPING_EN, UCIE_MAPPING_EN);
+
+	dev_info(host->ucie.dev,
+		 "UCIe iATU ch%d: src=0x%llx dst=0x%llx size=0x%x\n",
+		 index, (unsigned long long)src_phys,
+		 (unsigned long long)dst_phys, size);
 }
 
 /*
@@ -702,62 +729,35 @@ static int ucie_dummy_probe(struct platform_device *pdev)
 		}
 	}
 
-	/*
-	 * Auto-configure UCIe shared memory mapping.
-	 *
-	 * When a "shared-region" phandle is present in the DT node, programme
-	 * the UCIe controller's src/dst address and size registers and enable
-	 * MAPPING_EN so that accesses from both sides reach the same physical
-	 * memory.  This replicates the manual:
-	 *   echo 'PHYS PHYS SIZE' > mapping_control
-	 * that would otherwise be required before the first transfer.
-	 */
-	for (int index = 0; index < IATU_RGN_CH_MAX ; index++)
+	/* mem_map = <src_hi src_lo size dst_hi dst_lo> [, ...]: region mappings */
 	{
-		dev_info(dev,"UCIe shared-mem mapping iatu channel: %d\n", index);
-		struct device_node *shm_np;
-		u32 reg[4];
-		struct ucie_dummy_host iatu_ch_host;
-		struct ucie_dummy iatu_ch_ucie;
+		int index;
+		u32 cells[5];
+		int num_cells;
 
-		iatu_ch_host = *host; 
-		iatu_ch_ucie = host->ucie;
-		iatu_ch_ucie.base = host->ucie.base + (index * IATU_RGN_OFFSET);
-		iatu_ch_host.ucie = iatu_ch_ucie;
+		num_cells = of_property_count_u32_elems(dev->of_node, "mem_map");
+		if (num_cells > 0 && (num_cells % ARRAY_SIZE(cells)) == 0) {
+			int num_regs = num_cells / ARRAY_SIZE(cells);
+			for (index = 0; index < num_regs && index < IATU_RGN_CH_MAX; index++) {
+				int cell_idx = index * ARRAY_SIZE(cells);
+				phys_addr_t src_phys, dst_phys;
 
-		shm_np = of_parse_phandle(dev->of_node, "shared-region", index);
-		if (shm_np) {
-			if (of_property_read_u32_array(shm_np, "reg", reg,
-						       ARRAY_SIZE(reg)) == 0) {
-				phys_addr_t shm_phys =
-					((phys_addr_t)reg[0] << 32) | reg[1];
-				u32 shm_size = reg[3]; /* raw bytes, same unit user passes */
-
-				ucie_write_reg(&iatu_ch_ucie, lower_32_bits(shm_phys),
-					       UCIE_LOWER_SRC_ADDR);
-				ucie_write_reg(&iatu_ch_ucie, upper_32_bits(shm_phys),
-					       UCIE_UPPER_SRC_ADDR);
-				ucie_write_reg(&iatu_ch_ucie, lower_32_bits(shm_phys),
-					       UCIE_LOWER_DST_ADDR);
-				ucie_write_reg(&iatu_ch_ucie, upper_32_bits(shm_phys),
-					       UCIE_UPPER_DST_ADDR);
-				ucie_write_reg(&iatu_ch_ucie, shm_size, UCIE_MAPPING_SIZE);
-				/* Use host wrapper so mapping_active state is updated */
-				ucie_host_write_reg(&iatu_ch_host,
-						    MAPPING_FILE_EN | MAPPING_EN,
-						    UCIE_MAPPING_EN);
-				dev_info(dev,
-					 "UCIe shared-mem mapping: phys=0x%llx size=0x%x\n",
-					 (unsigned long long)shm_phys, shm_size);
-			} else {
-				dev_warn(dev,
-					 "shared-region: failed to read reg property\n");
+				if (of_property_read_u32_index(dev->of_node, "mem_map", cell_idx,
+							      &cells[0]) == 0 &&
+				    of_property_read_u32_index(dev->of_node, "mem_map", cell_idx + 1,
+							      &cells[1]) == 0 &&
+				    of_property_read_u32_index(dev->of_node, "mem_map", cell_idx + 2,
+							      &cells[2]) == 0 &&
+				    of_property_read_u32_index(dev->of_node, "mem_map", cell_idx + 3,
+							      &cells[3]) == 0 &&
+				    of_property_read_u32_index(dev->of_node, "mem_map", cell_idx + 4,
+							      &cells[4]) == 0) {
+					src_phys = ((phys_addr_t)cells[0] << 32) | cells[1];
+					dst_phys = ((phys_addr_t)cells[3] << 32) | cells[4];
+					ucie_program_iatu_channel(host, index, src_phys,
+								  dst_phys, cells[2]);
+				}
 			}
-			of_node_put(shm_np);
-		}
-		else
-		{
-			break;
 		}
 	}
 
