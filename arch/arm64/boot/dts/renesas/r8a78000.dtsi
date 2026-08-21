@@ -65,6 +65,13 @@
 		clock-frequency = <2700000000>;
 	};
 
+	rpc_ref_clk: rpc_ref_clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <80000000>;
+		clock-output-names = "rpc";
+	};
+
 	cluster_opp: opp_table10 {
 		compatible = "operating-points-v2";
 		opp-shared;
@@ -4761,6 +4768,46 @@
 			compatible = "generic-uio";
 			reg = <0x0 0xfff75000 0x0 0x10000>;
 			linux,uio-name = "stub_pad_reset_10";
+		};
+
+		rpc: spi@c08c0000 {
+			compatible = "renesas,rcar-gen5-rpc-if";
+			reg = <0 0xc08c0000 0 0x200>,
+				<0 0x34000000 0 0x04000000>,
+				<0 0xc08c8000 0 0x100>;
+			reg-names = "regs", "dirmap", "wbuf";
+			//interrupts = <GIC_SPI 225 IRQ_TYPE_LEVEL_HIGH>;
+			interrupts = <0 895 4>;
+			//clocks = <&cpg CPG_MOD 629>;
+			clocks = <&rpc_ref_clk>;
+			clock-names = "rpc";
+			//power-domains = <&sysc R8A779H0_PD_ALWAYS_ON>;
+			//resets = <&cpg 629>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			//status = "disabled";
+
+			flash@0 {
+				compatible = "cypress,hyperflash", "cfi-flash";
+				reg = <0>;
+				spi-max-frequency = <40000000>;
+				spi-rx-bus-width = <1>;
+				spi-tx-bus-width = <1>;
+
+				partitions {
+					compatible = "fixed-partitions";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					boot@0 {
+						reg = <0x0 0x1200000>;
+						read-only;
+					};
+					user@1200000 {
+						reg = <0x1200000 0x200000>;
+					};
+				};
+			};
 		};
 
 		cr52_rproc0: cr52_0 {
