@@ -364,9 +364,9 @@ int rpcif_hw_init(struct device *dev, bool hyperflash)
 	regmap_update_bits(rpc->regmap, RPCIF_PHYOFFSET2, RPCIF_PHYOFFSET2_OCTTMG(7),
 			   RPCIF_PHYOFFSET2_OCTTMG(4));
 
-	if (hyperflash)
-		regmap_update_bits(rpc->regmap, RPCIF_PHYINT,
-				   RPCIF_PHYINT_WPVAL, 0);
+	//if (hyperflash)
+	//	regmap_update_bits(rpc->regmap, RPCIF_PHYINT,
+	//			   RPCIF_PHYINT_WPVAL, 0);
 
 	if (rpc->info->type == RPCIF_RZ_G2L)
 		regmap_update_bits(rpc->regmap, RPCIF_CMNCR,
@@ -439,8 +439,7 @@ void rpcif_prepare(struct device *dev, const struct rpcif_op *op, u64 *offs,
 			rpc->ddr = RPCIF_SMDRENR_HYPE(0x5);
 	}
 	if (op->ocmd.buswidth) {
-		rpc->enable  |= RPCIF_SMENR_OCDE |
-			RPCIF_SMENR_OCDB(rpcif_bit_size(op->ocmd.buswidth));
+		rpc->enable  |= RPCIF_SMENR_OCDB(rpcif_bit_size(op->ocmd.buswidth));
 		rpc->command |= RPCIF_SMCMR_OCMD(op->ocmd.opcode);
 	}
 
