@@ -341,9 +341,9 @@ int rpcif_hw_init(struct device *dev, bool hyperflash)
 		return ret;
 
 	if (rpc->info->type == RPCIF_RZ_G2L) {
-		ret = reset_control_reset(rpc->rstc);
-		if (ret)
-			return ret;
+		//ret = reset_control_reset(rpc->rstc);
+		//if (ret)
+		//	return ret;
 		usleep_range(200, 300);
 		rpcif_rzg2l_timing_adjust_sdr(rpc);
 	}
@@ -625,8 +625,8 @@ exit:
 	return ret;
 
 err_out:
-	if (reset_control_reset(rpc->rstc))
-		dev_err(dev, "Failed to reset HW\n");
+	//if (reset_control_reset(rpc->rstc))
+	//	dev_err(dev, "Failed to reset HW\n");
 	rpcif_hw_init(dev, rpc->bus_size == 2);
 	goto exit;
 }
@@ -759,9 +759,9 @@ static int rpcif_probe(struct platform_device *pdev)
 
 	rpc->size = resource_size(res);
 	rpc->info = of_device_get_match_data(dev);
-	rpc->rstc = devm_reset_control_get_exclusive(dev, NULL);
-	if (IS_ERR(rpc->rstc))
-		return PTR_ERR(rpc->rstc);
+	//rpc->rstc = devm_reset_control_get_exclusive(dev, NULL);
+	//if (IS_ERR(rpc->rstc))
+	//	return PTR_ERR(rpc->rstc);
 
 	vdev = platform_device_alloc(name, pdev->id);
 	if (!vdev)
