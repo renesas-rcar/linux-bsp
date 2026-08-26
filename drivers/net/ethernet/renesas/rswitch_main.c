@@ -1868,7 +1868,6 @@ static struct device_node *rswitch_get_port_node(struct rswitch_device *rdev)
 		}
 	}
 
-out:
 	of_node_put(ports);
 
 	return port;
