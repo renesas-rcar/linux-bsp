@@ -132,9 +132,15 @@ static int rtsn_parse_rswitch_forward_ports(struct rtsn_private *priv)
 		u32 port;
 		int ret;
 
+		/* no renesas,rswitch-forward-ports parameter means TSN-ES port is L2 switched */
 		ret = of_property_read_u32_index(np, "renesas,rswitch-forward-ports", i, &port);
-		if (ret)
+		if (ret == -ENODATA) {
+			priv->rswitch_fwd_mask = fwd_mask;
+
+			return 0;
+		} else if (ret) {
 			return ret;
+		}
 
 		if (port > RTSN_RSWITCH_EXTERNAL_MAX)
 			return dev_err_probe(dev, -EINVAL,

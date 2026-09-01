@@ -158,6 +158,7 @@ enum DIE_DT {
 
 /* For reception */
 #define SPN			GENMASK_U64(38, 36)
+#define SPN_X5H			GENMASK_U64(39, 36)
 
 /* For timestamp descriptor in dptrl (Byte 4 to 7) */
 #define TS_DESC_TSUN(dptrl)	((dptrl) & GENMASK(7, 0))
@@ -368,6 +369,7 @@ struct rswitch_device {
 	struct sk_buff *ts_skb[TS_TAGS_PER_PORT];
 	DECLARE_BITMAP(ts_skb_used, TS_TAGS_PER_PORT);
 	bool disabled;
+	bool phy_less;
 
 	struct list_head list;
 
@@ -442,7 +444,7 @@ struct rswitch_private {
 	struct rswitch_switchdev_event_work *switchdev_work;
 
 	struct mutex tsnes_lock; /* Protects TSN-ES */
-	unsigned long tsnes_attached;
+	DECLARE_BITMAP(tsnes_attached, RSWITCH3_NUM_TSNES);
 	u32 tsnes_fwd_mask[RSWITCH3_NUM_TSNES];
 };
 
@@ -494,5 +496,8 @@ void rswitch_update_stats(struct rswitch_device *rdev);
 int rswitch_attach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port,
 			 u32 fwd_mask, const u8 *mac);
 void rswitch_detach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port);
+void rswitch_enable_tsn_forwarding(struct rswitch_private *priv,
+				   u32 tsnes_id, u32 rsw_port,
+				   u32 requested_mask);
 
 #endif	/* #ifndef __RSWITCH_H__ */

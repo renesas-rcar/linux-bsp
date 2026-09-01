@@ -169,9 +169,9 @@ static void rswitch_fwd_allow_ports(struct rswitch_private *priv,
 	rswitch_modify(priv->addr_mfwd, RSW3_FWPC0(src_port), MACDSA, MACDSA);
 }
 
-static void rswitch_enable_tsn_forwarding(struct rswitch_private *priv,
-					  u32 tsnes_id, u32 rsw_port,
-					  u32 requested_mask)
+void rswitch_enable_tsn_forwarding(struct rswitch_private *priv,
+				   u32 tsnes_id, u32 rsw_port,
+				   u32 requested_mask)
 {
 	struct device *dev = &priv->pdev->dev;
 	u32 enabled_ports;
@@ -210,13 +210,15 @@ static void rswitch_enable_tsn_forwarding(struct rswitch_private *priv,
 		return;
 	}
 
-	rswitch_fwd_allow_ports(priv, rsw_port, external_ports);
+	if (!priv->rdev[rsw_port]->brdev) {
+		rswitch_fwd_allow_ports(priv, rsw_port, external_ports);
 
-	for (i = 0; i < RSWITCH_NUM_PORTS_RSW3; i++) {
-		if (!(external_ports & BIT(i)))
-			continue;
+		for (i = 0; i < RSWITCH_NUM_PORTS_RSW3; i++) {
+			if (!(external_ports & BIT(i)))
+				continue;
 
-		rswitch_fwd_allow_ports(priv, i, BIT(rsw_port));
+			rswitch_fwd_allow_ports(priv, i, BIT(rsw_port));
+		}
 	}
 }
 
@@ -227,7 +229,7 @@ static void rswitch_attached_forwarding(struct rswitch_private *priv)
 	for (tsnes_id = 0; tsnes_id < RSWITCH3_NUM_TSNES; tsnes_id++) {
 		u32 rsw_port = RSWITCH3_TSNES_PORT_BASE + tsnes_id;
 
-		if (!(priv->tsnes_attached & BIT(tsnes_id)))
+		if (!test_bit(tsnes_id, priv->tsnes_attached))
 			continue;
 
 		rswitch_enable_tsn_forwarding(priv, tsnes_id, rsw_port,
@@ -1289,7 +1291,10 @@ static void rswitch_queue_interrupt(struct rswitch_private *priv, struct rswitch
 
 	if (gq->index == priv->gwca.l2_shared_rx_queue->index) {
 		desc = &gq->rx_ring[gq->cur];
-		spn = FIELD_GET(SPN, le64_to_cpu(desc->info1));
+		if (priv->info->rswitch_version == RSW30)
+			spn = FIELD_GET(SPN_X5H, le64_to_cpu(desc->info1));
+		else
+			spn = FIELD_GET(SPN, le64_to_cpu(desc->info1));
 		ndev = priv->rdev[spn]->ndev;
 		rdev = netdev_priv(ndev);
 		gq->ndev = ndev;
@@ -1678,7 +1683,10 @@ static int rswitch_etha_hw_init_tsn_internal(struct rswitch_private *priv,
 		return err;
 
 	rswitch_etha_init_tsn_egress_path(etha);
-	iowrite32(NO_VLAN, etha->addr + EAVCC);
+	iowrite32(FIELD_PREP(DQD, DES_RAM_DP), etha->addr + EATDQDC0);
+	iowrite32(FIELD_PREP(VEM, SC_TAG_VLAN), etha->addr + EAVCC);
+	/* Drop frames with unknown tags */
+	iowrite32(UT, etha->addr + EARTFC);
 	rswitch_etha_write_mac_address(etha, mac);
 	iowrite32(RX_PROMISC, etha->addr + MRAFC);
 	rswitch_modify(etha->addr, MIOC, FORCE_PHY_LINK, FORCE_PHY_LINK);
@@ -1881,9 +1889,12 @@ static int rswitch_etha_get_params(struct rswitch_device *rdev)
 	if (!rdev->np_port)
 		return 0;	/* ignored */
 
-	err = of_get_phy_mode(rdev->np_port, &rdev->etha->phy_interface);
-	if (err)
-		return err;
+	rdev->phy_less = of_property_read_bool(rdev->np_port, "renesas,phy_less");
+	if (!rdev->phy_less) {
+		err = of_get_phy_mode(rdev->np_port, &rdev->etha->phy_interface);
+		if (err)
+			return err;
+	}
 
 	if (rdev->priv->info->rswitch_version != RSW20)
 		rdev->etha->connect_to_xpcs = of_property_read_bool(rdev->np_port,
@@ -2187,6 +2198,7 @@ static void rswitch_ether_port_deinit_one(struct rswitch_device *rdev)
 
 static int rswitch_ether_port_init_all(struct rswitch_private *priv)
 {
+	struct rswitch_etha *etha;
 	unsigned int i;
 	int err;
 
@@ -2202,6 +2214,32 @@ static int rswitch_ether_port_init_all(struct rswitch_private *priv)
 		if (priv->rdev[i]->disabled)
 			continue;
 
+		if (priv->rdev[i]->phy_less) {
+			if (!rswitch_agent_clock_is_enabled(priv->addr_gwca, i))
+				rswitch_agent_clock_ctrl(priv->addr_gwca, i, 1);
+
+			err = rswitch_etha_hw_init_tsn_internal(priv, i, priv->etha[i].mac_addr);
+			if (err)
+				return err;
+
+			/*
+			 * Only TSN-ES0..2 need selector.
+			 * MIOC[3] = 0: connect RSwitch3 port 5..7 to TSN-ES0..2.
+			 * MIOC[3] = 1: connect RSwitch3 port 5..7 to external PHY/XPCS.
+			 */
+			if (i >= 5 && i <= 7) {
+				etha = &priv->etha[i];
+
+				if (!etha->addr) {
+					err = -ENODEV;
+					return err;
+				}
+
+				rswitch_modify(etha->addr, MIOC, BIT(3), 0);
+			}
+			continue;
+		}
+
 		err = rswitch_ether_port_init_one(priv->rdev[i]);
 		if (err)
 			return err;
@@ -2209,6 +2247,9 @@ static int rswitch_ether_port_init_all(struct rswitch_private *priv)
 
 	rswitch_for_each_enabled_port(priv, i) {
 		if (priv->rdev[i]->disabled)
+			continue;
+
+		if (priv->rdev[i]->phy_less)
 			continue;
 
 		if (priv->info->rswitch_version == RSW30) {
@@ -2249,7 +2290,7 @@ static int rswitch_open(struct net_device *ndev)
 	int err;
 
 	/* Init PHY if not already connected */
-	if (!ndev->phydev) {
+	if (!ndev->phydev && !rdev->phy_less) {
 		err = rswitch_phy_device_init(rdev);
 		if (err)
 			return err;
@@ -2274,13 +2315,14 @@ static int rswitch_open(struct net_device *ndev)
 	napi_enable(&rdev->napi);
 
 	spin_lock_irqsave(&rdev->priv->lock, flags);
-	bitmap_set(rdev->priv->opened_ports, rdev->port, 1);
+	set_bit(rdev->port, rdev->priv->opened_ports);
 	rswitch_enadis_data_irq(rdev->priv, rdev->tx_queue->index, true);
 	rswitch_enadis_data_irq(rdev->priv, rdev->rx_queue->index, true);
 	rswitch_enadis_data_irq(rdev->priv, rdev->priv->gwca.l2_shared_rx_queue->index, true);
 	spin_unlock_irqrestore(&rdev->priv->lock, flags);
 
-	phy_start(ndev->phydev);
+	if (!rdev->phy_less)
+		phy_start(ndev->phydev);
 
 	netif_start_queue(ndev);
 
@@ -2299,12 +2341,13 @@ static int rswitch_stop(struct net_device *ndev)
 
 	netif_tx_stop_all_queues(ndev);
 
-	phy_stop(ndev->phydev);
+	if (!rdev->phy_less)
+		phy_stop(ndev->phydev);
 
 	spin_lock_irqsave(&rdev->priv->lock, flags);
 	rswitch_enadis_data_irq(rdev->priv, rdev->tx_queue->index, false);
 	rswitch_enadis_data_irq(rdev->priv, rdev->rx_queue->index, false);
-	bitmap_clear(rdev->priv->opened_ports, rdev->port, 1);
+	clear_bit(rdev->port, rdev->priv->opened_ports);
 	if (bitmap_empty(rdev->priv->opened_ports, 1))
 		rswitch_enadis_data_irq(rdev->priv,
 					rdev->priv->gwca.l2_shared_rx_queue->index,
@@ -2597,10 +2640,8 @@ static void rswitch_get_stats64(struct net_device *ndev,
 	storage->tx_dropped = ndev->stats.tx_dropped;
 
 	storage->multicast = rdev->r_stats.mrmfc + rdev->r_stats.mtmfc;
-	//storage->collisions = ndev->stats.__collisions;
 
 	/* detailed rx_errors: */
-
 	storage->rx_length_errors = rdev->r_stats.mrguefc + rdev->r_stats.mrbuefc +
 				    rdev->r_stats.mrgoefc + rdev->r_stats.mrboefc;
 	storage->rx_over_errors = rdev->r_stats.mrovfc; //receive buffer overflow
@@ -2610,10 +2651,6 @@ static void rswitch_get_stats64(struct net_device *ndev,
 				   rdev->r_stats.mrguefc + rdev->r_stats.mrbuefc +
 				   rdev->r_stats.mrgoefc + rdev->r_stats.mrboefc;
 
-/*
- *	storage->rx_fifo_errors = rdev->stats.;
- *	storage->rx_missed_errors = rdev->stats.;
- */
 	/* detailed tx_errors */
 	storage->tx_aborted_errors = ndev->stats.tx_aborted_errors;
 	storage->tx_carrier_errors = ndev->stats.tx_carrier_errors;
@@ -2894,35 +2931,38 @@ int rswitch_attach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port,
 
 	mutex_lock(&priv->tsnes_lock);
 
-	if (priv->tsnes_attached & BIT(tsnes_id)) {
+	if (test_bit(tsnes_id, priv->tsnes_attached)) {
 		ret = -EBUSY;
 		goto out_unlock;
 	}
 
-	if (!rswitch_agent_clock_is_enabled(priv->addr_gwca, rsw_port))
-		rswitch_agent_clock_ctrl(priv->addr_gwca, rsw_port, 1);
+	/* This is skipped if the TSN[rsw_port] is configured in the DTB. */
+	if (!priv->rdev[rsw_port]->phy_less) {
+		if (!rswitch_agent_clock_is_enabled(priv->addr_gwca, rsw_port))
+			rswitch_agent_clock_ctrl(priv->addr_gwca, rsw_port, 1);
 
-	ret = rswitch_etha_hw_init_tsn_internal(priv, rsw_port, mac);
-	if (ret)
-		goto out_unlock;
-
-	/*
-	 * Only TSN-ES0..2 need selector.
-	 * MIOC[3] = 0: connect RSwitch3 port 5..7 to TSN-ES0..2.
-	 * MIOC[3] = 1: connect RSwitch3 port 5..7 to external PHY/XPCS.
-	 */
-	if (tsnes_id <= 2) {
-		etha = &priv->etha[rsw_port];
-
-		if (!etha->addr) {
-			ret = -ENODEV;
+		ret = rswitch_etha_hw_init_tsn_internal(priv, rsw_port, mac);
+		if (ret)
 			goto out_unlock;
-		}
 
-		rswitch_modify(etha->addr, MIOC, BIT(3), 0);
+		/*
+		 * Only TSN-ES0..2 need selector.
+		 * MIOC[3] = 0: connect RSwitch3 port 5..7 to TSN-ES0..2.
+		 * MIOC[3] = 1: connect RSwitch3 port 5..7 to external PHY/XPCS.
+		 */
+		if (tsnes_id <= 2) {
+			etha = &priv->etha[rsw_port];
+
+			if (!etha->addr) {
+				ret = -ENODEV;
+				goto out_unlock;
+			}
+
+			rswitch_modify(etha->addr, MIOC, BIT(3), 0);
+		}
 	}
 
-	priv->tsnes_attached |= BIT(tsnes_id);
+	set_bit(tsnes_id, priv->tsnes_attached);
 	priv->tsnes_fwd_mask[tsnes_id] = fwd_mask;
 	rswitch_enable_tsn_forwarding(priv, tsnes_id, rsw_port, fwd_mask);
 
@@ -2945,7 +2985,7 @@ void rswitch_detach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port)
 
 	mutex_lock(&priv->tsnes_lock);
 
-	priv->tsnes_attached &= ~BIT(tsnes_id);
+	clear_bit(tsnes_id, priv->tsnes_attached);
 	priv->tsnes_fwd_mask[tsnes_id] = 0;
 	rswitch3_fwd_init(priv);
 
@@ -2962,6 +3002,7 @@ static int rswitch_device_alloc(struct rswitch_private *priv, unsigned int index
 
 	if (index >= priv->num_ports)
 		return -EINVAL;
+
 	ndev = devm_alloc_etherdev_mqs(&pdev->dev, sizeof(struct rswitch_device),
 				       RSWITCH_PRIOS, 1);
 	if (!ndev)

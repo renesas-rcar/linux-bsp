@@ -173,12 +173,21 @@ static void rswitch_update_offload_brdev(struct rswitch_private *priv)
 static void rswitch_port_update_brdev(struct net_device *ndev,
 				      struct net_device *brdev)
 {
+	struct rswitch_private *priv;
 	struct rswitch_device *rdev;
+	unsigned int tsnes_id;
 
 	if (!is_rdev(ndev))
 		return;
 
 	rdev = netdev_priv(ndev);
+	priv = rdev->priv;
+
+	if (rdev->brdev && rdev->phy_less) {
+		for_each_set_bit(tsnes_id, priv->tsnes_attached, RSWITCH3_NUM_TSNES)
+			rswitch_enable_tsn_forwarding(priv, tsnes_id, rdev->etha->index,
+						      priv->tsnes_fwd_mask[tsnes_id]);
+	}
 	rdev->brdev = brdev;
 	rswitch_update_offload_brdev(rdev->priv);
 }
