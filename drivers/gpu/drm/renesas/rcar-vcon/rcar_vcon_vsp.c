@@ -571,6 +571,15 @@ static const struct drm_plane_funcs rcar_vcon_vsp_plane_funcs = {
 static void rcar_vcon_vsp_cleanup(struct drm_device *dev, void *res)
 {
 	struct rcar_vcon_vsp *vsp = res;
+	unsigned int i;
+
+	for (i = 0; i < vsp->num_planes; ++i) {
+		struct rcar_vcon_vsp_plane *plane = &vsp->planes[i];
+
+		drm_plane_cleanup(&plane->plane);
+	}
+
+	kfree(vsp->planes);
 
 	put_device(vsp->vsp);
 }
@@ -580,6 +589,7 @@ int rcar_vcon_vsp_init(struct rcar_vcon_vsp *vsp, struct device_node *np, unsign
 	struct rcar_vcon_device *rvcon = vsp->dev;
 	struct platform_device *pdev;
 	unsigned int num_crtcs = hweight32(crtcs);
+	unsigned int num_planes = 5;
 	unsigned int i;
 	int ret;
 
@@ -590,7 +600,7 @@ int rcar_vcon_vsp_init(struct rcar_vcon_vsp *vsp, struct device_node *np, unsign
 
 	vsp->vsp = &pdev->dev;
 
-	ret = drmm_add_action(&rvcon->ddev, rcar_vcon_vsp_cleanup, vsp);
+	ret = drmm_add_action_or_reset(&rvcon->ddev, rcar_vcon_vsp_cleanup, vsp);
 	if (ret)
 		return ret;
 
@@ -598,13 +608,11 @@ int rcar_vcon_vsp_init(struct rcar_vcon_vsp *vsp, struct device_node *np, unsign
 	if (ret)
 		return ret;
 
-	vsp->num_planes = 5;
-
-	vsp->planes = devm_kcalloc(rvcon->dev, vsp->num_planes, sizeof(*vsp->planes), GFP_KERNEL);
+	vsp->planes = kcalloc(num_planes, sizeof(*vsp->planes), GFP_KERNEL);
 	if (!vsp->planes)
 		return -ENOMEM;
 
-	for (i = 0; i < vsp->num_planes; ++i) {
+	for (i = 0; i < num_planes; ++i) {
 		enum drm_plane_type type = i < num_crtcs
 					 ? DRM_PLANE_TYPE_PRIMARY
 					 : DRM_PLANE_TYPE_OVERLAY;
@@ -636,8 +644,10 @@ int rcar_vcon_vsp_init(struct rcar_vcon_vsp *vsp, struct device_node *np, unsign
 							   rvcon->props.colorkey_alpha,
 							   0);
 			drm_plane_create_zpos_property(&plane->plane, 1, 1,
-						       vsp->num_planes - 1);
+						       num_planes - 1);
 		}
+
+		vsp->num_planes++;
 	}
 
 	return 0;
