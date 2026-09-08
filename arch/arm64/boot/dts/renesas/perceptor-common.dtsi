@@ -458,19 +458,19 @@
 };
 
 &canfd_0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &canfd_1 {
-	status = "disabled";
+	status = "okay";
 };
 
 &canxl0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &canxl1 {
-	status = "disabled";
+	status = "okay";
 };
 
 &rtca {
