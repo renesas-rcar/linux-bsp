@@ -20,6 +20,7 @@
 #include <linux/clk.h>
 
 #include <media/mipi-csi2.h>
+#include <media/v4l2-mc.h>
 #include <media/v4l2-subdev.h>
 
 #define ISPFIFOCTL						0x0004
@@ -534,6 +535,43 @@ static void risp_start_gen3(struct rcar_isp *isp, const struct rcar_isp_format *
 		      risp_read_cs(isp, ISPINPUTSEL0_REG) | sel_csi);
 }
 
+/*
+ * Each ISP CS instance reserves an isp->info->num_vin_conn_bridge-wide
+ * block of the global VIN "renesas,id" space (e.g. on gen5, up to 3 VINs
+ * x 8 channels each: CS0 -> id 0-23, CS1 -> id 24-47, CS2 -> id 48-71,
+ * CS3 -> id 72-95). Within that block, Table 42.4 (ISP CS Output <->
+ * Target IP) fixes ISPCS_Output[(id % num_vin_conn_bridge) + 4] to
+ * whichever VIN channel that DT endpoint's "renesas,id" names -- it is
+ * *not* guaranteed to line up with the pad's sequential VC index unless
+ * that CS instance's connected VIN ids happen to start at 0. E.g. on this
+ * board CS0's PORT0/1 (vc0/1) are wired to VIN0ch0/ch1 (id 0/1, local
+ * output 4/5) but PORT2/3 (vc2/3) are wired to VIN1ch0/VIN2ch0 (id 8/16,
+ * local output 12/20), NOT output 6/7. A fixed "channel = vc + 4"
+ * assumption only happens to match CS0 when its ids start at 0; it breaks
+ * both for vc2/3 on CS0 and for every VC on CS1-3, whose ids never start
+ * at 0. Look up the pad's actual remote VIN and derive the channel from
+ * its own renesas,id modulo the per-CS block size instead of assuming a
+ * flat vc+4 sequence.
+ */
+static int risp_channel_for_source_pad(struct rcar_isp *isp,
+				       unsigned int pad_idx)
+{
+	struct media_pad *pad = &isp->subdev.entity.pads[pad_idx];
+	struct media_pad *remote;
+	struct video_device *vdev;
+	u32 id;
+
+	remote = media_pad_remote_pad_first(pad);
+	if (!remote || !is_media_entity_v4l2_video_device(remote->entity))
+		return -ENODEV;
+
+	vdev = media_entity_to_video_device(remote->entity);
+	if (of_property_read_u32(vdev->dev_parent->of_node, "renesas,id", &id))
+		return -ENODEV;
+
+	return (id % isp->info->num_vin_conn_bridge) + 4;
+}
+
 static void risp_start_gen5(struct rcar_isp *isp, const struct rcar_isp_format *format)
 {
 	unsigned int vc;
@@ -549,8 +587,11 @@ static void risp_start_gen5(struct rcar_isp *isp, const struct rcar_isp_format *
 
 	/* Configure Channel Selector. */
 	for (vc = 0; vc < 4; vc++) {
-		u8 ch = vc + 4;
+		int ch = risp_channel_for_source_pad(isp, RCAR_ISP_PORT0 + vc);
 		u8 dt = format->datatype;
+
+		if (ch < 0)
+			continue; /* pad not connected to a VIN */
 
 		/* Stage 2: VC Filter */
 		risp_write_cs(isp, ISPCS_FILTER_VC_EN_CH(ch), BIT(vc));
