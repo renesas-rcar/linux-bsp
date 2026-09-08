@@ -118,7 +118,7 @@
 };
 
 &i3c0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &rpc {
