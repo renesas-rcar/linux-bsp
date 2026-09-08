@@ -198,87 +198,87 @@
 };
 
 &wwdt0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wwdt1 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wwdt2 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wwdt3 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wwdt4 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wwdt5 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wwdt6 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wwdt7 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wwdt8 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wwdt9 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wwdt10 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wwdt11 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wwdt12 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wwdt13 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wwdt14 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wwdt15 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wwdt16 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wwdt17 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wwdt18 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wwdt19 {
-	status = "disabled";
+	status = "okay";
 };
 
 &wwdt20 {
-	status = "disabled";
+	status = "okay";
 };
 
 &crc0 {
