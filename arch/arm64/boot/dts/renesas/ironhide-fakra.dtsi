@@ -13,22 +13,22 @@
 
 #include <dt-bindings/gpio/gpio.h>
 
-#define IRONHIDE_CAMERA0  "dummy,camera"
-#define IRONHIDE_CAMERA1  "dummy,camera"
-#define IRONHIDE_CAMERA2  "dummy,camera"
-#define IRONHIDE_CAMERA3  "dummy,camera"
-#define IRONHIDE_CAMERA4  "dummy,camera"
-#define IRONHIDE_CAMERA5  "dummy,camera"
-#define IRONHIDE_CAMERA6  "dummy,camera"
-#define IRONHIDE_CAMERA7  "dummy,camera"
-#define IRONHIDE_CAMERA8  "dummy,camera"
-#define IRONHIDE_CAMERA9  "dummy,camera"
-#define IRONHIDE_CAMERA10  "dummy,camera"
-#define IRONHIDE_CAMERA11  "dummy,camera"
-#define IRONHIDE_CAMERA12  "dummy,camera"
-#define IRONHIDE_CAMERA13  "dummy,camera"
-#define IRONHIDE_CAMERA14  "dummy,camera"
-#define IRONHIDE_CAMERA15  "dummy,camera"
+#define IRONHIDE_CAMERA0  "sony,imx728"
+#define IRONHIDE_CAMERA1  "sony,imx728"
+#define IRONHIDE_CAMERA2  "sony,imx728"
+#define IRONHIDE_CAMERA3  "sony,imx728"
+#define IRONHIDE_CAMERA4  "sony,imx728"
+#define IRONHIDE_CAMERA5  "sony,imx728"
+#define IRONHIDE_CAMERA6  "sony,imx728"
+#define IRONHIDE_CAMERA7  "sony,imx728"
+#define IRONHIDE_CAMERA8  "sony,imx728"
+#define IRONHIDE_CAMERA9  "sony,imx728"
+#define IRONHIDE_CAMERA10  "sony,imx728"
+#define IRONHIDE_CAMERA11  "sony,imx728"
+#define IRONHIDE_CAMERA12  "sony,imx728"
+#define IRONHIDE_CAMERA13  "sony,imx728"
+#define IRONHIDE_CAMERA14  "sony,imx728"
+#define IRONHIDE_CAMERA15  "sony,imx728"
 
 /* Define the endpoint links */
 #ifdef IRONHIDE_CAMERA0
