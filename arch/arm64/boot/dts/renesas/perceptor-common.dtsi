@@ -7,6 +7,13 @@
 
 #include "r8a78000-ironhide-common.dtsi"
 
+/*
+ * On Perceptor, gmsl0/gmsl1 (max96726 @0x31/@0x33 behind io_expander_u297)
+ * are wired to I2C7 instead of I2C3 used on Ironhide.
+ */
+/delete-node/ &gmsl0;
+/delete-node/ &gmsl1;
+
 / {
 	model = "Renesas Perceptor board based on r8j78070";
 	compatible = "renesas,perceptor", "renesas,r8j78070",
@@ -418,99 +425,284 @@
 };
 
 &vin000 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin001 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin010 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin020 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin030 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin031 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin040 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin050 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin060 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin061 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin070 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin080 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin090 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin091 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin100 {
-	status = "disabled";
+	status = "okay";
 };
 
 &vin110 {
-	status = "disabled";
+	status = "okay";
 };
 
 &csi40 {
-	status = "disabled";
+	status = "okay";
 };
 
 &csi41 {
-	status = "disabled";
+	status = "okay";
 };
 
 &csi42 {
-	status = "disabled";
+	status = "okay";
 };
 
 &csi43 {
-	status = "disabled";
+	status = "okay";
 };
 
 &isp0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &isp1 {
-	status = "disabled";
+	status = "okay";
 };
 
 &isp2 {
-	status = "disabled";
+	status = "okay";
 };
 
 &isp3 {
-	status = "disabled";
+	status = "okay";
+};
+
+&pfc {
+	i2c7_pins: i2c7 {
+		groups = "i2c7";
+		function = "i2c7";
+	};
+};
+
+&i2c7 {
+	pinctrl-0 = <&i2c7_pins>;
+	pinctrl-names = "default";
+	clock-frequency = <400000>;
+
+	status = "okay";
+
+	gmsl0: gmsl-deserializer@31 {
+		compatible = "maxim,max96726";
+		reg = <0x31>, <0x01>, <0x02>, <0x03>, <0x04>;
+		pwdnb-gpios = <&io_expander_u297 3 GPIO_ACTIVE_HIGH>; /* P03 */
+		gpio-controller;
+		#gpio-cells = <2>;
+		power-supply = <&max20087_0>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				max96726_in0: endpoint {
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				max96726_in1: endpoint {
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				max96726_in2: endpoint {
+				};
+			};
+
+			port@3 {
+				reg = <3>;
+				max96726_in3: endpoint {
+				};
+			};
+
+			port@4 {
+				reg = <4>;
+				max96726_out0: endpoint {
+					bus-type = <MEDIA_BUS_TYPE_CSI2_CPHY>;
+					clock-lanes = <0>;
+					data-lanes = <1 2 3 4>;
+					remote-endpoint = <&csi40_in>;
+				};
+			};
+		};
+
+		i2c-mux {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			i2c@0 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>;
+
+				status = "disabled";
+			};
+
+			i2c@1 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <1>;
+
+				status = "disabled";
+			};
+
+			i2c@2 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <2>;
+
+				status = "disabled";
+			};
+
+			i2c@3 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <3>;
+
+				status = "disabled";
+			};
+		};
+	};
+
+	gmsl1: gmsl-deserializer@33 {
+		compatible = "maxim,max96726";
+		reg = <0x33>, <0x05>, <0x06>, <0x07>, <0x08>;
+		pwdnb-gpios = <&io_expander_u297 13 GPIO_ACTIVE_HIGH>; /* P13 */
+		gpio-controller;
+		#gpio-cells = <2>;
+		power-supply = <&max20087_1>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				max96726_in4: endpoint {
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				max96726_in5: endpoint {
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				max96726_in6: endpoint {
+				};
+			};
+
+			port@3 {
+				reg = <3>;
+				max96726_in7: endpoint {
+				};
+			};
+
+			port@4 {
+				reg = <4>;
+				max96726_out1: endpoint {
+					bus-type = <MEDIA_BUS_TYPE_CSI2_CPHY>;
+					clock-lanes = <0>;
+					data-lanes = <1 2 3 4>;
+					remote-endpoint = <&csi41_in>;
+				};
+			};
+		};
+
+		i2c-mux {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			i2c@0 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>;
+
+				status = "disabled";
+			};
+
+			i2c@1 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <1>;
+
+				status = "disabled";
+			};
+
+			i2c@2 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <2>;
+
+				status = "disabled";
+			};
+
+			i2c@3 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <3>;
+
+				status = "disabled";
+			};
+		};
+	};
 };
 
 &ucie0_rc {
@@ -521,3 +713,12 @@
 	status = "okay";
 };
 
+/*
+ * ironhide-fakra.dtsi's &gmsl0/&gmsl1/&max96726_inX overlays are applied
+ * while gmsl0/gmsl1 are still the I2C3-based nodes from the common dtsi
+ * (fakra.dtsi is included inside r8a78000-ironhide-common.dtsi, before
+ * the /delete-node/ + &i2c7 redefinition above), so that content is lost
+ * once those nodes are deleted here. perceptor-fakra.dtsi re-applies the
+ * same camera wiring against the relocated I2C7 nodes.
+ */
+#include "perceptor-fakra.dtsi"
