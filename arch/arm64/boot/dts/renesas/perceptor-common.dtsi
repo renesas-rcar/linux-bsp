@@ -397,42 +397,6 @@
 	status = "okay";
 };
 
-&vspi0 {
-	status = "disabled";
-};
-
-&vspi1 {
-	status = "disabled";
-};
-
-&vspi2 {
-	status = "disabled";
-};
-
-&vspi3 {
-	status = "disabled";
-};
-
-&vspb0 {
-	status = "disabled";
-};
-
-&vspb1 {
-	status = "disabled";
-};
-
-&vspb2 {
-	status = "disabled";
-};
-
-&vspb3 {
-	status = "disabled";
-};
-
-&vspb4 {
-	status = "disabled";
-};
-
 &canfd_0 {
 	status = "okay";
 };
@@ -450,10 +414,6 @@
 };
 
 &rtca {
-	status = "disabled";
-};
-
-&gsx {
 	status = "disabled";
 };
 
