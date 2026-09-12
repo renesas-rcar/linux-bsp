@@ -169,30 +169,6 @@
 	status = "okay";
 };
 
-&dp0 {
-	status = "disabled";
-};
-
-&dp1 {
-	status = "disabled";
-};
-
-&dp2 {
-	status = "disabled";
-};
-
-&vcon_group0 {
-	status = "disabled";
-};
-
-&vcon_group1 {
-	status = "disabled";
-};
-
-&vcon_group2 {
-	status = "disabled";
-};
-
 &rwdt {
 	status = "disabled";
 };
