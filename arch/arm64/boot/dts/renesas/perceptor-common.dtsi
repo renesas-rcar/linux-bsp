@@ -1,0 +1,587 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+/*
+ * Device Tree Source for the Perceptor board
+ *
+ * Copyright (C) 2026 Renesas Electronics Corp.
+ */
+
+#include "r8a78000-ironhide-common.dtsi"
+
+/ {
+	model = "Renesas Perceptor board based on r8j78070";
+	compatible = "renesas,perceptor", "renesas,r8j78070",
+		     "renesas,r8a78000";
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		cr52_ram4: cr52_ram4@2008e650000 {
+			no-map;
+			reg = <0x200 0x8e650000 0x0 0x1000>;
+		};
+
+		vdev4vring0: vdev0vring0@2008e651000 {
+			no-map;
+			reg = <0x200 0x8e651000 0x0 0x4000>;
+		};
+
+		vdev4vring1: vdev0vring1@2008e655000 {
+			no-map;
+			reg = <0x200 0x8e655000 0x0 0x4000>;
+		};
+
+		vdev4buffer: vdev0buffer@2008e610000 {
+			no-map;
+			reg = <0x200 0x8e610000 0x0 0x40000>;
+		};
+
+		cr52_ram7: cr52_ram7@2408e650000 {
+			no-map;
+			reg = <0x240 0x8e650000 0x0 0x1000>;
+		};
+
+		vdev7vring0: vdev0vring0@2408e651000 {
+			no-map;
+			reg = <0x240 0x8e651000 0x0 0x4000>;
+		};
+
+		vdev7vring1: vdev0vring1@2408e655000 {
+			no-map;
+			reg = <0x240 0x8e655000 0x0 0x4000>;
+		};
+
+		vdev7buffer: vdev0buffer@2408e610000 {
+			no-map;
+			reg = <0x240 0x8e610000 0x0 0x40000>;
+		};
+	};
+};
+
+&mmc0 {
+	status = "okay";
+};
+
+&cr52_rproc4 {
+	memory-region = <&cr52_ram4 &vdev4vring0 &vdev4vring1 &vdev4buffer>;
+	status = "okay";
+};
+
+&cr52_rproc7 {
+	memory-region = <&cr52_ram7 &vdev7vring0 &vdev7vring1 &vdev7buffer>;
+	status = "okay";
+};
+
+&rpmsg_shm3 {
+	status = "okay";
+};
+
+&rpmsg_shm6 {
+	status = "okay";
+};
+
+&cmt0 {
+	status = "disabled";
+};
+
+&cmt1 {
+	status = "disabled";
+};
+
+&cmt2 {
+	status = "disabled";
+};
+
+&cmt3 {
+	status = "disabled";
+};
+
+&tmu0 {
+	status = "disabled";
+};
+
+&tmu1 {
+	status = "disabled";
+};
+
+&tmu2 {
+	status = "disabled";
+};
+
+&tmu3 {
+	status = "disabled";
+};
+
+&tmu4 {
+	status = "disabled";
+};
+
+&i3c0 {
+	status = "disabled";
+};
+
+&rpc {
+	status = "okay";
+};
+
+&pciec40 {
+	status = "okay";
+};
+
+&pciec60 {
+	status = "okay";
+};
+
+&pciec60_ep {
+	status = "disabled";
+};
+
+&pciec61 {
+	status = "disabled";
+};
+
+&pciec61_ep {
+	status = "disabled";
+};
+
+&rcar_sound {
+	status = "disabled";
+};
+
+&tsnes3 {
+	status = "disabled";
+};
+
+&usb30 {
+	status = "okay";
+};
+
+&usb31 {
+	status = "okay";
+};
+
+&usb20 {
+	status = "okay";
+};
+
+&usb21 {
+	status = "okay";
+};
+
+&dp0 {
+	status = "disabled";
+};
+
+&dp1 {
+	status = "disabled";
+};
+
+&dp2 {
+	status = "disabled";
+};
+
+&vcon_group0 {
+	status = "disabled";
+};
+
+&vcon_group1 {
+	status = "disabled";
+};
+
+&vcon_group2 {
+	status = "disabled";
+};
+
+&rwdt {
+	status = "disabled";
+};
+
+&wwdt0 {
+	status = "disabled";
+};
+
+&wwdt1 {
+	status = "disabled";
+};
+
+&wwdt2 {
+	status = "disabled";
+};
+
+&wwdt3 {
+	status = "disabled";
+};
+
+&wwdt4 {
+	status = "disabled";
+};
+
+&wwdt5 {
+	status = "disabled";
+};
+
+&wwdt6 {
+	status = "disabled";
+};
+
+&wwdt7 {
+	status = "disabled";
+};
+
+&wwdt8 {
+	status = "disabled";
+};
+
+&wwdt9 {
+	status = "disabled";
+};
+
+&wwdt10 {
+	status = "disabled";
+};
+
+&wwdt11 {
+	status = "disabled";
+};
+
+&wwdt12 {
+	status = "disabled";
+};
+
+&wwdt13 {
+	status = "disabled";
+};
+
+&wwdt14 {
+	status = "disabled";
+};
+
+&wwdt15 {
+	status = "disabled";
+};
+
+&wwdt16 {
+	status = "disabled";
+};
+
+&wwdt17 {
+	status = "disabled";
+};
+
+&wwdt18 {
+	status = "disabled";
+};
+
+&wwdt19 {
+	status = "disabled";
+};
+
+&wwdt20 {
+	status = "disabled";
+};
+
+&crc0 {
+	status = "okay";
+};
+
+&crc1 {
+	status = "okay";
+};
+
+&crc2 {
+	status = "okay";
+};
+
+&crc3 {
+	status = "okay";
+};
+
+&crc4 {
+	status = "okay";
+};
+
+&crc5 {
+	status = "okay";
+};
+
+&crc6 {
+	status = "okay";
+};
+
+&crc7 {
+	status = "okay";
+};
+
+&crc8 {
+	status = "okay";
+};
+
+&crc9 {
+	status = "okay";
+};
+
+&crc10 {
+	status = "okay";
+};
+
+&kcrc0 {
+	status = "okay";
+};
+
+&kcrc1 {
+	status = "okay";
+};
+
+&kcrc2 {
+	status = "okay";
+};
+
+&kcrc3 {
+	status = "okay";
+};
+
+&kcrc4 {
+	status = "okay";
+};
+
+&kcrc5 {
+	status = "okay";
+};
+
+&kcrc6 {
+	status = "okay";
+};
+
+&kcrc7 {
+	status = "okay";
+};
+
+&kcrc8 {
+	status = "okay";
+};
+
+&kcrc9 {
+	status = "okay";
+};
+
+&kcrc10 {
+	status = "okay";
+};
+
+&wcrc0 {
+	status = "okay";
+};
+
+&wcrc1 {
+	status = "okay";
+};
+
+&wcrc2 {
+	status = "okay";
+};
+
+&wcrc3 {
+	status = "okay";
+};
+
+&wcrc4 {
+	status = "okay";
+};
+
+&wcrc5 {
+	status = "okay";
+};
+
+&wcrc6 {
+	status = "okay";
+};
+
+&wcrc7 {
+	status = "okay";
+};
+
+&wcrc8 {
+	status = "okay";
+};
+
+&wcrc9 {
+	status = "okay";
+};
+
+&wcrc10 {
+	status = "okay";
+};
+
+&ufs0 {
+	status = "okay";
+};
+
+&ufs1 {
+	status = "okay";
+};
+
+&vspi0 {
+	status = "disabled";
+};
+
+&vspi1 {
+	status = "disabled";
+};
+
+&vspi2 {
+	status = "disabled";
+};
+
+&vspi3 {
+	status = "disabled";
+};
+
+&vspb0 {
+	status = "disabled";
+};
+
+&vspb1 {
+	status = "disabled";
+};
+
+&vspb2 {
+	status = "disabled";
+};
+
+&vspb3 {
+	status = "disabled";
+};
+
+&vspb4 {
+	status = "disabled";
+};
+
+&canfd_0 {
+	status = "disabled";
+};
+
+&canfd_1 {
+	status = "disabled";
+};
+
+&canxl0 {
+	status = "disabled";
+};
+
+&canxl1 {
+	status = "disabled";
+};
+
+&rtca {
+	status = "disabled";
+};
+
+&gsx {
+	status = "disabled";
+};
+
+&vin000 {
+	status = "disabled";
+};
+
+&vin001 {
+	status = "disabled";
+};
+
+&vin010 {
+	status = "disabled";
+};
+
+&vin020 {
+	status = "disabled";
+};
+
+&vin030 {
+	status = "disabled";
+};
+
+&vin031 {
+	status = "disabled";
+};
+
+&vin040 {
+	status = "disabled";
+};
+
+&vin050 {
+	status = "disabled";
+};
+
+&vin060 {
+	status = "disabled";
+};
+
+&vin061 {
+	status = "disabled";
+};
+
+&vin070 {
+	status = "disabled";
+};
+
+&vin080 {
+	status = "disabled";
+};
+
+&vin090 {
+	status = "disabled";
+};
+
+&vin091 {
+	status = "disabled";
+};
+
+&vin100 {
+	status = "disabled";
+};
+
+&vin110 {
+	status = "disabled";
+};
+
+&csi40 {
+	status = "disabled";
+};
+
+&csi41 {
+	status = "disabled";
+};
+
+&csi42 {
+	status = "disabled";
+};
+
+&csi43 {
+	status = "disabled";
+};
+
+&isp0 {
+	status = "disabled";
+};
+
+&isp1 {
+	status = "disabled";
+};
+
+&isp2 {
+	status = "disabled";
+};
+
+&isp3 {
+	status = "disabled";
+};
+
+&ucie0_rc {
+	status = "okay";
+};
+
+&ucie1_rc {
+	status = "okay";
+};
+

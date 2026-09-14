@@ -8,7 +8,7 @@
 
 /dts-v1/;
 #include "r8j78070-uio.dtsi"
-#include "r8a78000-ironhide-common.dtsi"
+#include "perceptor-common.dtsi"
 
 / {
 	model = "Renesas Perceptor board based on r8j78070";
