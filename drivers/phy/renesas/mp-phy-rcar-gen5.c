@@ -445,6 +445,33 @@ static int mp_phy_late_init(struct phy *phy)
 	if (chan->protocol_id == PHY_MODE_PCIE) {
 		link_width = chan->num_lanes ? chan->num_lanes : 4; /* Default to 4 lanes */
 
+		if (channel_id == 0) {
+			switch (link_width) {
+			case 1:
+			case 2:
+				mp_phy_update_firmware(priv, 0);
+				break;
+			case 4:
+				mp_phy_update_firmware(priv, 1);
+				break;
+			case 8:
+				mp_phy_update_firmware(priv, 2);
+				mp_phy_update_firmware(priv, 3);
+				break;
+			}
+
+		} else if (channel_id == 1) {
+			switch (link_width) {
+			case 1:
+			case 2:
+				mp_phy_update_firmware(priv, 2);
+				break;
+			case 4:
+				mp_phy_update_firmware(priv, 3);
+				break;
+			}
+		}
+
 		switch (link_width) {
 		case 1:
 		case 2:
