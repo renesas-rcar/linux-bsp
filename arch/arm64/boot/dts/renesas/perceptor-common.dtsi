@@ -541,6 +541,7 @@
 		gpio-controller;
 		#gpio-cells = <2>;
 		power-supply = <&max20087_0>;
+		maxim,mipi-controller = <2>; /* CSI-2 wired to Port B on Perceptor */
 
 		ports {
 			#address-cells = <1>;
@@ -626,6 +627,7 @@
 		gpio-controller;
 		#gpio-cells = <2>;
 		power-supply = <&max20087_1>;
+		maxim,mipi-controller = <2>; /* CSI-2 wired to Port B on Perceptor */
 
 		ports {
 			#address-cells = <1>;
@@ -711,6 +713,14 @@
 
 &ucie1_rc {
 	status = "okay";
+};
+
+&gmsl2 {
+	maxim,mipi-controller = <2>;
+};
+
+&gmsl3 {
+	maxim,mipi-controller = <2>;
 };
 
 /*
