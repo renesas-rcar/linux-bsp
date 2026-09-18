@@ -461,6 +461,7 @@ struct rcar_csi2;
 #define X5H_OFFSETCAL_WAIT_THRESH							GENMASK(4, 0)
 
 #define X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(l, n)	(0x42080 + ((l) * 0x400) + ((n) * 2)) /* l = 0 - 2; n = 0 - 26 */
+#define X5H_PHY1_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(l, n)	(0x62080 + ((l) * 0x400) + ((n) * 2)) /* l = 0 - 2; n = 0 - 26 */
 #define X5H_OA_LANEl_HSTX_LOWCAP_EN_OVR_EN					BIT(12)
 #define X5H_OA_LANEl_SHORT_LB_EN							BIT(11)
 #define X5H_OA_LANEl_SPARE_IN								GENMASK(10, 0)
@@ -1460,12 +1461,37 @@ static const struct rcsi2_cphy_line_order rcsi2_cphy_line_orders[] = {
 };
 
 static const struct rcsi2_cphy_line_order rcsi2_cphy_line_orders_x5h_cphy[] = {
-	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_ABC, .cfg = 0x0, .ctrl = 0x0, .tx = 0x0, },
-	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_ACB, .cfg = 0x2, .ctrl = 0x1, .tx = 0x2, },
-	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_BAC, .cfg = 0xc, .ctrl = 0x1, .tx = 0x4, },
-	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_BCA, .cfg = 0x5, .ctrl = 0x0, .tx = 0x3, },
-	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_CAB, .cfg = 0x3, .ctrl = 0x0, .tx = 0x5, },
-	{ .order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_CBA, .cfg = 0x9, .ctrl = 0x1, .tx = 0x1, }
+	{
+		.order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_ABC,
+		.cfg = 0x0000,
+		.ctrl = 0x0000,
+		.tx = 0x0000,
+	}, {
+		.order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_ACB,
+		.cfg = 0x000A,
+		.ctrl = 0x0040,
+		.tx = 0x2000,
+	}, {
+		.order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_BAC,
+		.cfg = 0x000C,
+		.ctrl = 0x0040,
+		.tx = 0x4000,
+	}, {
+		.order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_BCA,
+		.cfg = 0x0003,
+		.ctrl = 0x0000,
+		.tx = 0x3000,
+	}, {
+		.order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_CAB,
+		.cfg = 0x0005,
+		.ctrl = 0x0000,
+		.tx = 0x5000,
+	}, {
+		.order = V4L2_MBUS_CSI2_CPHY_LINE_ORDER_CBA,
+		.cfg = 0x0009,
+		.ctrl = 0x0040,
+		.tx = 0x1000,
+	}
 };
 
 enum rcar_csi2_pads {
@@ -1520,7 +1546,7 @@ struct rcar_csi2 {
 	bool cphy;
 	unsigned short lanes;
 	unsigned char lane_swap[4];
-	enum v4l2_mbus_csi2_cphy_line_orders_type line_orders[3];
+	enum v4l2_mbus_csi2_cphy_line_orders_type line_orders[4];
 #ifdef CONFIG_VIDEO_SNPS_CSI2_CAMERA
 	struct csi2cam *cam;
 #endif
@@ -2710,12 +2736,17 @@ static int rcsi2_startup_sequence_x5h(struct rcar_csi2 *priv, int msps)
 				 X5H_PHY0_CORE_DIG_CLANE_0_RW_HS_TX_REG(6));
 	rsci2_set_line_order_x5h(priv, priv->line_orders[1],
 			     X5H_PHY0_CORE_DIG_CLANE_1_RW_CFG_REG(0),
-			     X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(1, 10),
-				 X5H_PHY0_CORE_DIG_CLANE_1_RW_HS_TX_REG(6));
-	rsci2_set_line_order_x5h(priv, priv->line_orders[2],
-			     X5H_PHY0_CORE_DIG_CLANE_2_RW_CFG_REG(0),
 			     X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(2, 10),
-				 X5H_PHY0_CORE_DIG_CLANE_2_RW_HS_TX_REG(6));
+				 X5H_PHY0_CORE_DIG_CLANE_1_RW_HS_TX_REG(6));
+
+	rsci2_set_line_order_x5h(priv, priv->line_orders[2],
+			     X5H_PHY1_CORE_DIG_CLANE_0_RW_CFG_REG(0),
+			     X5H_PHY1_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(0, 10),
+				 X5H_PHY1_CORE_DIG_CLANE_0_RW_HS_TX_REG(6));
+	rsci2_set_line_order_x5h(priv, priv->line_orders[3],
+			     X5H_PHY1_CORE_DIG_CLANE_1_RW_CFG_REG(0),
+			     X5H_PHY1_CORE_DIG_IOCTRL_RW_AFE_LANEl_CTRL_REG(2, 10),
+				 X5H_PHY1_CORE_DIG_CLANE_1_RW_HS_TX_REG(6));
 
 	// Aggregation specific
 	rcsi2_modify16(priv, X5H_PHY0_CORE_DIG_IOCTRL_RW_AFE_CB_CTRL_REG(0), (1 << 13), X5H_OA_CB_VPCLK_REG_PON_OVR_VAL);
