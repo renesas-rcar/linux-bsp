@@ -146,7 +146,7 @@
 };
 
 &rcar_sound {
-	status = "disabled";
+	status = "okay";
 };
 
 &tsnes3 {
