@@ -426,6 +426,8 @@ int rcar_vcon_vsp_write_back(struct drm_device *dev, void *data, struct drm_file
 	u32 pixelformat, bpp;
 	unsigned int pitch;
 	dma_addr_t mem[3];
+	struct vsp1_du_wb_buf *wb;
+	size_t frame_size;
 	int ret;
 
 	obj = drm_mode_object_find(dev, file_priv, sh->crtc_id, DRM_MODE_OBJECT_CRTC);
@@ -455,41 +457,55 @@ int rcar_vcon_vsp_write_back(struct drm_device *dev, void *data, struct drm_file
 
 	pitch = mode->hdisplay * bpp / 8;
 
-	mem[0] = sh->buff;
-	mem[1] = 0;
-	mem[2] = 0;
-
 	if (sh->width != mode->hdisplay || sh->height != mode->vdisplay)
 		return -EINVAL;
 
-	if ((pitch * mode->vdisplay) > sh->buff_len)
+	frame_size = (size_t)pitch * mode->vdisplay;
+	if (frame_size > sh->buff_len)
 		return -EINVAL;
+
+	wb = vsp1_du_map_wb(rcrtc->vsp->vsp, sh->dmabuf_fd, sh->buff, frame_size,
+			    &mem[0]);
+	if (IS_ERR(wb))
+		return PTR_ERR(wb);
+
+	mem[1] = 0;
+	mem[2] = 0;
 
 	ret = vsp1_du_setup_wb(rcrtc->vsp->vsp, pixelformat, pitch, mem, rcrtc->vsp_pipe);
 	if (ret)
-		return ret;
+		goto out_unmap;
 
 	ret = vsp1_du_wait_wb(rcrtc->vsp->vsp, WB_STAT_CATP_SET, rcrtc->vsp_pipe);
 	if (ret)
-		return ret;
+		goto out_cancel;
 
 	ret = rcar_vcon_async_commit(dev, crtc);
 	if (ret)
-		return ret;
+		goto out_cancel;
 
 	ret = vsp1_du_wait_wb(rcrtc->vsp->vsp, WB_STAT_CATP_START, rcrtc->vsp_pipe);
 	if (ret)
-		return ret;
+		goto out_cancel;
 
 	ret = rcar_vcon_async_commit(dev, crtc);
 	if (ret)
-		return ret;
+		goto out_cancel;
 
 	ret = vsp1_du_wait_wb(rcrtc->vsp->vsp, WB_STAT_CATP_DONE, rcrtc->vsp_pipe);
 	if (ret)
-		return ret;
+		goto out_cancel;
 
+	vsp1_du_unmap_wb(rcrtc->vsp->vsp, wb);
 	return 0;
+
+out_cancel:
+	/* Force write-back off and wait for the current frame to finish. */
+	vsp1_du_cancel_wb(rcrtc->vsp->vsp, rcrtc->vsp_pipe);
+	vsp1_du_wait_wb_idle(rcrtc->vsp->vsp, rcrtc->vsp_pipe);
+out_unmap:
+	vsp1_du_unmap_wb(rcrtc->vsp->vsp, wb);
+	return ret;
 }
 
 int rcar_vcon_set_vmute(struct drm_device *dev, void *data, struct drm_file *file_priv)

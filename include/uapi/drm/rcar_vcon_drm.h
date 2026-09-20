@@ -26,6 +26,7 @@ struct rcar_vcon_screen_shot {
 	unsigned int	fmt;
 	unsigned int	width;
 	unsigned int	height;
+	int		dmabuf_fd;
 };
 
 /* rcar-vcon + vspd specific ioctls */
