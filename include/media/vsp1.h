@@ -143,6 +143,13 @@ int vsp1_du_if_set_mute(struct device *dev, bool on, unsigned int pipe_index);
 int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
 		     dma_addr_t mem[2], unsigned int pipe_index);
 int vsp1_du_wait_wb(struct device *dev, u32 count, unsigned int pipe_index);
+void vsp1_du_cancel_wb(struct device *dev, unsigned int pipe_index);
+int vsp1_du_wait_wb_idle(struct device *dev, unsigned int pipe_index);
+struct vsp1_du_wb_buf;
+struct vsp1_du_wb_buf *vsp1_du_map_wb(struct device *dev, int dmabuf_fd,
+				      unsigned long offset, size_t size,
+				      dma_addr_t *addr);
+void vsp1_du_unmap_wb(struct device *dev, struct vsp1_du_wb_buf *buf);
 
 /* -----------------------------------------------------------------------------
  * VSP1 ISP interface

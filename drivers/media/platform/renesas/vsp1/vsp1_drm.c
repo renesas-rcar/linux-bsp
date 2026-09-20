@@ -8,8 +8,11 @@
  */
 
 #include <linux/device.h>
+#include <linux/dma-buf.h>
 #include <linux/dma-mapping.h>
 #include <linux/export.h>
+#include <linux/iopoll.h>
+#include <linux/overflow.h>
 #include <linux/slab.h>
 
 #include <media/media-entity.h>
@@ -1015,6 +1018,81 @@ void vsp1_du_unmap_sg(struct device *dev, struct sg_table *sgt)
 }
 EXPORT_SYMBOL_GPL(vsp1_du_unmap_sg);
 
+struct vsp1_du_wb_buf {
+	struct dma_buf *dmabuf;
+	struct dma_buf_attachment *attach;
+	struct sg_table *sgt;
+};
+
+struct vsp1_du_wb_buf *vsp1_du_map_wb(struct device *dev, int dmabuf_fd,
+				      unsigned long offset, size_t size,
+				      dma_addr_t *addr)
+{
+	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
+	struct vsp1_du_wb_buf *buf;
+	unsigned long end;
+	int ret;
+
+	buf = kzalloc(sizeof(*buf), GFP_KERNEL);
+	if (!buf)
+		return ERR_PTR(-ENOMEM);
+
+	buf->dmabuf = dma_buf_get(dmabuf_fd);
+	if (IS_ERR(buf->dmabuf)) {
+		ret = PTR_ERR(buf->dmabuf);
+		goto err_free;
+	}
+
+	buf->attach = dma_buf_attach(buf->dmabuf, vsp1->bus_master);
+	if (IS_ERR(buf->attach)) {
+		ret = PTR_ERR(buf->attach);
+		goto err_put;
+	}
+
+	buf->sgt = dma_buf_map_attachment_unlocked(buf->attach, DMA_FROM_DEVICE);
+	if (IS_ERR(buf->sgt)) {
+		ret = PTR_ERR(buf->sgt);
+		goto err_detach;
+	}
+
+	/* The hardware writes one block, so the frame needs a single segment. */
+	if (buf->sgt->nents != 1 ||
+	    check_add_overflow(offset, size, &end) ||
+	    end > buf->dmabuf->size ||
+	    end > sg_dma_len(buf->sgt->sgl)) {
+		ret = -EINVAL;
+		goto err_unmap;
+	}
+
+	*addr = sg_dma_address(buf->sgt->sgl) + offset;
+
+	return buf;
+
+err_unmap:
+	dma_buf_unmap_attachment_unlocked(buf->attach, buf->sgt, DMA_FROM_DEVICE);
+err_detach:
+	dma_buf_detach(buf->dmabuf, buf->attach);
+err_put:
+	dma_buf_put(buf->dmabuf);
+err_free:
+	kfree(buf);
+	return ERR_PTR(ret);
+}
+EXPORT_SYMBOL_GPL(vsp1_du_map_wb);
+
+void vsp1_du_unmap_wb(struct device *dev, struct vsp1_du_wb_buf *buf)
+{
+	if (!buf)
+		return;
+
+	dma_buf_unmap_attachment_unlocked(buf->attach, buf->sgt,
+					  DMA_FROM_DEVICE);
+	dma_buf_detach(buf->dmabuf, buf->attach);
+	dma_buf_put(buf->dmabuf);
+	kfree(buf);
+}
+EXPORT_SYMBOL_GPL(vsp1_du_unmap_wb);
+
 int vsp1_du_setup_wb(struct device *dev, u32 pixelformat, unsigned int pitch,
 		     dma_addr_t mem[2], unsigned int pipe_index)
 {
@@ -1070,6 +1148,37 @@ int vsp1_du_wait_wb(struct device *dev, u32 count, unsigned int pipe_index)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(vsp1_du_wait_wb);
+
+void vsp1_du_cancel_wb(struct device *dev, unsigned int pipe_index)
+{
+	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
+	struct vsp1_drm_pipeline *drm_pipe = &vsp1->drm->pipe[pipe_index];
+	struct vsp1_pipeline *pipe = &drm_pipe->pipe;
+
+	/* Turn write-back off now, without relying on the next commit. */
+	pipe->output->write_back = WB_STAT_CATP_DONE;
+	vsp1_write(vsp1, VI6_WPF_WRBCK_CTRL(pipe_index), 0);
+}
+EXPORT_SYMBOL_GPL(vsp1_du_cancel_wb);
+
+int vsp1_du_wait_wb_idle(struct device *dev, unsigned int pipe_index)
+{
+	struct vsp1_device *vsp1 = dev_get_drvdata(dev);
+	u32 val;
+	int ret;
+
+	/* Wait until the hardware stops writing. */
+	ret = read_poll_timeout(vsp1_read, val,
+				!(val & VI6_WPF_WRBCK_CTRL_WBMD),
+				1000, 100000, false,
+				vsp1, VI6_WPF_WRBCK_CTRL(pipe_index));
+	if (ret)
+		dev_err(vsp1->dev,
+			"write-back did not stop on pipe %u\n", pipe_index);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(vsp1_du_wait_wb_idle);
 
 /* -----------------------------------------------------------------------------
  * Initialization
