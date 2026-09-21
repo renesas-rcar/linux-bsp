@@ -14,6 +14,11 @@
  * gmsl2/gmsl3 (I2C4) cameras are still configured by
  * ironhide-fakra.dtsi, unaffected by the gmsl0/gmsl1 I2C7 relocation
  * done in r8j78070-perceptor.dts.
+ *
+ * "sony,imx728"/"sony,imx623" have a devicetree binding under
+ * Documentation/devicetree/bindings/media/i2c/ for schema validation, but
+ * their v4l2 subdev driver is maintained out-of-tree (the "gmsl_serdes"
+ * project) and is not part of this kernel tree.
  */
 
 #include <dt-bindings/gpio/gpio.h>

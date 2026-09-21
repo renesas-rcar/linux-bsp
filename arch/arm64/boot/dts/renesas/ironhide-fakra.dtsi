@@ -9,6 +9,11 @@
  *
  * Enable the cameras by specifying the camera compatible on the appropriate
  * line. Comment out the defines to disconnect the camera from the DTB.
+ *
+ * "sony,imx728"/"sony,imx623" have a devicetree binding under
+ * Documentation/devicetree/bindings/media/i2c/ for schema validation, but
+ * their v4l2 subdev driver is maintained out-of-tree (the "gmsl_serdes"
+ * project) and is not part of this kernel tree.
  */
 
 #include <dt-bindings/gpio/gpio.h>
