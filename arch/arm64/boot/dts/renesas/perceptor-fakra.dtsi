@@ -5,15 +5,11 @@
  * Copyright (C) 2026 Renesas Electronics Corp.
  *
  * This overlay allows you to define cameras connected to the FAKRA
- * connectors on gmsl0/gmsl1 (I2C7) of the PERCEPTOR board.
+ * connectors on the PERCEPTOR (or compatible) board.
  *
  * Enable the cameras by specifying the camera compatible on the
  * appropriate line. Comment out the defines to disconnect the camera
  * from the DTB.
- *
- * gmsl2/gmsl3 (I2C4) cameras are still configured by
- * ironhide-fakra.dtsi, unaffected by the gmsl0/gmsl1 I2C7 relocation
- * done in r8j78070-perceptor.dts.
  *
  * "sony,imx728"/"sony,imx623" have a devicetree binding under
  * Documentation/devicetree/bindings/media/i2c/ for schema validation, but
@@ -31,6 +27,14 @@
 #define PERCEPTOR_CAMERA5  "sony,imx728"
 #define PERCEPTOR_CAMERA6  "sony,imx728"
 #define PERCEPTOR_CAMERA7  "sony,imx728"
+#define PERCEPTOR_CAMERA8  "sony,imx728"
+#define PERCEPTOR_CAMERA9  "sony,imx728"
+#define PERCEPTOR_CAMERA10  "sony,imx728"
+#define PERCEPTOR_CAMERA11  "sony,imx728"
+#define PERCEPTOR_CAMERA12  "sony,imx728"
+#define PERCEPTOR_CAMERA13  "sony,imx728"
+#define PERCEPTOR_CAMERA14  "sony,imx728"
+#define PERCEPTOR_CAMERA15  "sony,imx728"
 
 /* Define the endpoint links */
 #ifdef PERCEPTOR_CAMERA0
@@ -78,6 +82,54 @@
 #ifdef PERCEPTOR_CAMERA7
 &max96726_in7 {
 	remote-endpoint = <&fakra_con7>;
+};
+#endif
+
+#ifdef PERCEPTOR_CAMERA8
+&max96726_in8 {
+	remote-endpoint = <&fakra_con8>;
+};
+#endif
+
+#ifdef PERCEPTOR_CAMERA9
+&max96726_in9 {
+	remote-endpoint = <&fakra_con9>;
+};
+#endif
+
+#ifdef PERCEPTOR_CAMERA10
+&max96726_in10 {
+	remote-endpoint = <&fakra_con10>;
+};
+#endif
+
+#ifdef PERCEPTOR_CAMERA11
+&max96726_in11 {
+	remote-endpoint = <&fakra_con11>;
+};
+#endif
+
+#ifdef PERCEPTOR_CAMERA12
+&max96726_in12 {
+	remote-endpoint = <&fakra_con12>;
+};
+#endif
+
+#ifdef PERCEPTOR_CAMERA13
+&max96726_in13 {
+	remote-endpoint = <&fakra_con13>;
+};
+#endif
+
+#ifdef PERCEPTOR_CAMERA14
+&max96726_in14 {
+	remote-endpoint = <&fakra_con14>;
+};
+#endif
+
+#ifdef PERCEPTOR_CAMERA15
+&max96726_in15 {
+	remote-endpoint = <&fakra_con15>;
 };
 #endif
 
@@ -232,6 +284,164 @@
 				port {
 					fakra_con7: endpoint {
 						remote-endpoint = <&max96726_in7>;
+					};
+				};
+			};
+		};
+#endif
+	};
+};
+
+&gmsl2 {
+
+#if defined(PERCEPTOR_CAMERA8) || defined(PERCEPTOR_CAMERA9) || \
+	defined(PERCEPTOR_CAMERA10) || defined(PERCEPTOR_CAMERA11)
+	status = "okay";
+
+#endif
+
+	i2c-mux {
+#ifdef PERCEPTOR_CAMERA8
+		i2c@0 {
+			status = "okay";
+
+			camera@49 {
+				compatible = PERCEPTOR_CAMERA8;
+				reg = <0x49>;
+
+				port {
+					fakra_con8: endpoint {
+						remote-endpoint = <&max96726_in8>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef PERCEPTOR_CAMERA9
+		i2c@1 {
+			status = "okay";
+
+			camera@51 {
+				compatible = PERCEPTOR_CAMERA9;
+				reg = <0x51>;
+
+				port {
+					fakra_con9: endpoint {
+						remote-endpoint = <&max96726_in9>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef PERCEPTOR_CAMERA10
+		i2c@2 {
+			status = "okay";
+
+			camera@59 {
+				compatible = PERCEPTOR_CAMERA10;
+				reg = <0x59>;
+
+				port {
+					fakra_con10: endpoint {
+						remote-endpoint = <&max96726_in10>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef PERCEPTOR_CAMERA11
+		i2c@3 {
+			status = "okay";
+
+			camera@61 {
+				compatible = PERCEPTOR_CAMERA11;
+				reg = <0x61>;
+
+				port {
+					fakra_con11: endpoint {
+						remote-endpoint = <&max96726_in11>;
+					};
+				};
+			};
+		};
+#endif
+	};
+};
+
+&gmsl3 {
+
+#if defined(PERCEPTOR_CAMERA12) || defined(PERCEPTOR_CAMERA13) || \
+	defined(PERCEPTOR_CAMERA14) || defined(PERCEPTOR_CAMERA15)
+	status = "okay";
+
+#endif
+
+	i2c-mux {
+#ifdef PERCEPTOR_CAMERA12
+		i2c@0 {
+			status = "okay";
+
+			camera@49 {
+				compatible = PERCEPTOR_CAMERA12;
+				reg = <0x49>;
+
+				port {
+					fakra_con12: endpoint {
+						remote-endpoint = <&max96726_in12>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef PERCEPTOR_CAMERA13
+		i2c@1 {
+			status = "okay";
+
+			camera@51 {
+				compatible = PERCEPTOR_CAMERA13;
+				reg = <0x51>;
+
+				port {
+					fakra_con13: endpoint {
+						remote-endpoint = <&max96726_in13>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef PERCEPTOR_CAMERA14
+		i2c@2 {
+			status = "okay";
+
+			camera@59 {
+				compatible = PERCEPTOR_CAMERA14;
+				reg = <0x59>;
+
+				port {
+					fakra_con14: endpoint {
+						remote-endpoint = <&max96726_in14>;
+					};
+				};
+			};
+		};
+#endif
+
+#ifdef PERCEPTOR_CAMERA15
+		i2c@3 {
+			status = "okay";
+
+			camera@61 {
+				compatible = PERCEPTOR_CAMERA15;
+				reg = <0x61>;
+
+				port {
+					fakra_con15: endpoint {
+						remote-endpoint = <&max96726_in15>;
 					};
 				};
 			};
