@@ -89,45 +89,47 @@ static void rcar_gen5_pcie_ltssm_enable(struct rcar_pcie4 *rcar_pcie4,
 
 	val = readl(rcar_pcie4->base + PCIERSTCTRL1);
 	if (enable) {
-		val |= BIT(0);
-		val &= ~BIT(16);
+		val |= BIT(0);   /* Enable LTSSM */
+		val &= ~BIT(16); /* Clear reset bit! */
 	} else {
 		val &= ~BIT(0);
 		val |= BIT(16);
 	}
 	writel(val, rcar_pcie4->base + PCIERSTCTRL1);
 
-	phy_power_on(rcar_pcie4->phy);
 }
 
-static void rcar_gen5_pcie_retrain_link(struct dw_pcie *pci)
+static void rcar_gen5_pcie_retrain_link(struct dw_pcie_rp *pp)
 {
-	u32 val, lnksta, retries;
+	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
+	u32 val;
+	u16 lnksta;
+	int retries;
 
-	val = dw_pcie_readl_dbi(pci, EXPCAP(PCI_EXP_LNKCTL));
-	val |= PCI_EXP_LNKCTL_RL;
-	dw_pcie_writel_dbi(pci, EXPCAP(PCI_EXP_LNKCTL), val);
+	dw_pcie_dbi_ro_wr_en(pci);
 
-	/* Wait for link retrain */
-	for (retries = 0; retries <= 10; retries++) {
+	/* Trigger PORT_LOGIC_SPEED_CHANGE */
+	val = dw_pcie_readl_dbi(pci, PCIE_LINK_WIDTH_SPEED_CONTROL);
+	val &= ~PORT_LOGIC_SPEED_CHANGE;
+	dw_pcie_writel_dbi(pci, PCIE_LINK_WIDTH_SPEED_CONTROL, val);
+	val |= PORT_LOGIC_SPEED_CHANGE;
+	dw_pcie_writel_dbi(pci, PCIE_LINK_WIDTH_SPEED_CONTROL, val);
+
+	dw_pcie_dbi_ro_wr_dis(pci);
+
+	/* Wait for link training done */
+	for (retries = 0; retries < 1000; retries++) {
 		lnksta = dw_pcie_readw_dbi(pci, EXPCAP(PCI_EXP_LNKSTA));
-
-		/* Check retrain flag */
 		if (!(lnksta & PCI_EXP_LNKSTA_LT))
 			break;
-		mdelay(1);
+		usleep_range(1000, 2000);
 	}
-}
 
-static void rcar_gen5_pcie_check_speed(struct dw_pcie *pci)
-{
-	u32 lnkcap, lnksta;
+	if (retries >= 1000)
+		dev_err(pci->dev, "Link retrain timeout\n");
 
-	lnkcap = dw_pcie_readl_dbi(pci, EXPCAP(PCI_EXP_LNKCAP));
-	lnksta = dw_pcie_readw_dbi(pci, EXPCAP(PCI_EXP_LNKSTA));
-
-	if ((lnksta & PCI_EXP_LNKSTA_CLS) != (lnkcap & PCI_EXP_LNKCAP_SLS))
-		rcar_gen5_pcie_retrain_link(pci);
+	/* Wait for link width to fully negotiate */
+	msleep(100);
 }
 
 static int rcar_gen5_pcie_link_up(struct dw_pcie *pci)
@@ -138,16 +140,31 @@ static int rcar_gen5_pcie_link_up(struct dw_pcie *pci)
 	val = readl(rcar_pcie4->base + PCIEINTSTS0);
 	mask = GENMASK(7, 6);
 
-	rcar_gen5_pcie_check_speed(pci);
-
 	return (val & mask) == mask;
 }
 
 static int rcar_gen5_pcie_start_link(struct dw_pcie *pci)
 {
 	struct rcar_pcie4 *rcar_pcie4 = to_rcar_gen5_pcie(pci);
+	u32 retries;
 
+	/* Enable LTSSM */
 	rcar_gen5_pcie_ltssm_enable(rcar_pcie4, true);
+	msleep(10);
+
+	/* Wait for link to come up at Gen1 first */
+	for (retries = 0; retries < 100; retries++) {
+		if (dw_pcie_link_up(pci)) {
+			dev_info(pci->dev, "PCIe Link up\n");
+			break;
+		}
+		usleep_range(1000, 2000);
+	}
+
+	if (pci->max_link_speed > 1) {
+		dev_info(pci->dev, "Changing link speed to Gen%d...\n", pci->max_link_speed);
+		rcar_gen5_pcie_retrain_link(&pci->pp);
+	}
 
 	return 0;
 }
@@ -164,9 +181,9 @@ static int rcar_gen5_pcie_set_device_type(struct rcar_pcie4 *rcar_pcie4, bool rc
 	/* Note: Assume the reset is asserted here */
 	val = readl(rcar_pcie4->base + PCIEMSR0);
 	if (rc)
-		val |= DEVICE_TYPE_RC | 0x1;
+		val |= DEVICE_TYPE_RC | BIT(6) | BIT(4);
 	else
-		val |= DEVICE_TYPE_EP | 0x1;
+		val |= DEVICE_TYPE_EP | BIT(6);
 	writel(val, rcar_pcie4->base + PCIEMSR0);
 
 	return 0;
@@ -203,6 +220,20 @@ static int rcar_gen5_pcie_host_init(struct dw_pcie_rp *pp)
 		return ret;
 	}
 
+	val = readl(rcar_pcie4->base + PCIERSTCTRL1);
+	val &= ~BIT(16);
+	writel(val, rcar_pcie4->base + PCIERSTCTRL1);
+
+	ret = phy_power_on(rcar_pcie4->phy);
+	if (ret) {
+		dev_err(pci->dev, "Failed to power on PHY: %d\n", ret);
+		phy_exit(rcar_pcie4->phy);
+		return ret;
+	}
+
+	/* Wait for PHY to stabilize */
+	msleep(10);
+
 	pci->ops = &dw_pcie_ops;
 
 	/* Set device type */
@@ -215,6 +246,7 @@ static int rcar_gen5_pcie_host_init(struct dw_pcie_rp *pp)
 	/* PCIe Lane Skew off */
 	if (pci->num_lanes < 8) {
 		val = dw_pcie_readl_dbi(pci, 0x714);
+		val &= ~GENMASK(7, 0);
 		val |= 0x40;
 		dw_pcie_writel_dbi(pci, 0x714, val);
 	}
@@ -226,11 +258,13 @@ static int rcar_gen5_pcie_host_init(struct dw_pcie_rp *pp)
 		writel(val, rcar_pcie4->base + PCIEINTSTS0EN);
 	}
 
-	val = dw_pcie_readl_dbi(pci, 0x40);
-	val |= BIT(19);
-	dw_pcie_writel_dbi(pci, 0x40, val);
+	val = dw_pcie_readl_dbi(pci, 0x708);
+	val |= BIT(23);
+	dw_pcie_writel_dbi(pci, 0x708, val);
 
-	dw_pcie_writel_dbi(pci, EXPCAP(PCI_EXP_LNKCTL2), 0x30100004);
+	val = dw_pcie_readl_dbi(pci, 0x80);
+	val &= ~BIT(6);
+	dw_pcie_writel_dbi(pci, 0x80, val);
 
 	dw_pcie_dbi_ro_wr_dis(pci);
 
@@ -241,7 +275,7 @@ static int rcar_gen5_pcie_host_init(struct dw_pcie_rp *pp)
 
 	msleep(100);
 	if (reset_control_deassert(rcar_pcie4->perst))
-		dev_err(pci->dev, "Failed to deassert PERST#");
+		dev_err(pci->dev, "Failed to deassert PERST#\n");
 
 	return 0;
 }
