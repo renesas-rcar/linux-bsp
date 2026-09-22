@@ -5388,8 +5388,8 @@
 			resets = <&scmi_reset X5H_RESET_DOMAIN_ID_U266_PCIE4>,
 					<&scmi_reset X5H_RESET_DOMAIN_ID_PCI401>;
 			reset-names = "perst", "rst";
-			num-lanes = <1>;
-			max-link-speed = <1>;
+			num-lanes = <4>;
+			max-link-speed = <4>;
 			status = "disabled";
 		};
 
