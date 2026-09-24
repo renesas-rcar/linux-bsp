@@ -221,6 +221,9 @@ static int mp_phy_exit(struct phy *phy)
 
 static int mp_phy_init_ethernet(struct mp_phy_priv *priv, u32 channel_id)
 {
+	/* Release this phy's PCS reset (kept asserted in mp_phy_pre_init()) */
+	mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, MPPHY_PCS0REG5_CH(channel_id), 0x0);
+
 	mp_phy_update_firmware(priv, channel_id);
 
 	mp_phy_write(priv->base, MPPHY_PXRXCNT(channel_id), MPPHY_PXRXCNT_RESET_VAL);
@@ -271,20 +274,16 @@ static int mp_phy_init_pcie4(struct mp_phy_priv *priv, u32 channel_id)
 		if (channel_id == 0) {
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT1(0), 0x2010002, 0x2010002);
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT2(0), 0x2020201, 0x2020201);
-			mp_phy_update_bits(priv->base, MPPHY_PXTXREQ(0), 0x8, 0x8);
+			mp_phy_update_bits(priv->base, MPPHY_PXTXREQ(0), 0x80008, 0x80008);
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT1(1), 0x2010002, 0x2010002);
-			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT2(1), 0x2020201, 0x2020202);
-			mp_phy_update_bits(priv->base, MPPHY_PXTXREQ(1), 0x8, 0x8);
+			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT2(1), 0x2020201, 0x2020201);
+			mp_phy_update_bits(priv->base, MPPHY_PXTXREQ(1), 0x80008, 0x80008);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(0), 0x1, 0x1);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(1), 0x30, 0x30);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(1), 0x4, 0x4);
 			mp_phy_update_bits(priv->base, MPPHY_PXREFCLK(1), 0x1, 0x1);
-			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x202);
-			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(1), 0x202, 0x202);
-			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(0), 0x202, 0x0);
-			mp_phy_update_bits(priv->base, MPPHY_PXRXCNT(1), 0x202, 0x0);
 		}
 		if (channel_id == 1) {
 			mp_phy_update_bits(priv->base, MPPHY_PXCNTXT1(2), 0x2010002, 0x2010002);
@@ -345,6 +344,10 @@ static int mp_phy_init_usb(struct mp_phy_priv *priv, u32 channel_id)
 	u32 data;
 
 	dev_info(priv->dev, "USB PHY initialization requested on channel %d\n", channel_id);
+
+	/* Release this phy's PCS reset (kept asserted in mp_phy_pre_init()) */
+	mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, MPPHY_PCS0REG5_CH(channel_id), 0x0);
+
 	data = mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(channel_id), 0x00000020, 0x00000020);
 	if (data) {
 		dev_err(priv->dev, "Timeout waiting for MPPHY_PXSRAMCNT(%d) configuration\n",
@@ -424,6 +427,19 @@ static int mp_phy_init(struct phy *phy)
 	return ret;
 }
 
+/*
+ * Wait for the SRAM initialization, load the firmware and tell the PHY that
+ * the external SRAM load is done.
+ */
+static void mp_phy_pcie_load_fw(struct mp_phy_priv *priv, u32 ch)
+{
+	if (mp_phy_reg_wait(priv->base, MPPHY_PXSRAMCNT(ch), SRAM_INIT_DONE, SRAM_INIT_DONE))
+		dev_err(priv->dev, "Timeout waiting for PXSRAMCNT(%d) init done\n", ch);
+
+	mp_phy_update_firmware(priv, ch);
+	mp_phy_update_bits(priv->base, MPPHY_PXSRAMCNT(ch), SRAM_EXT_LD_DONE, SRAM_EXT_LD_DONE);
+}
+
 static int mp_phy_late_init(struct phy *phy)
 {
 	struct mp_phy_priv *priv = phy_get_drvdata(phy);
@@ -447,27 +463,27 @@ static int mp_phy_late_init(struct phy *phy)
 
 		if (channel_id == 0) {
 			switch (link_width) {
+			case 8:
+				mp_phy_pcie_load_fw(priv, 3);
+				mp_phy_pcie_load_fw(priv, 2);
+				fallthrough;
+			case 4:
+				mp_phy_pcie_load_fw(priv, 1);
+				fallthrough;
 			case 1:
 			case 2:
-				mp_phy_update_firmware(priv, 0);
-				break;
-			case 4:
-				mp_phy_update_firmware(priv, 1);
-				break;
-			case 8:
-				mp_phy_update_firmware(priv, 2);
-				mp_phy_update_firmware(priv, 3);
+				mp_phy_pcie_load_fw(priv, 0);
 				break;
 			}
 
 		} else if (channel_id == 1) {
 			switch (link_width) {
+			case 4:
+				mp_phy_pcie_load_fw(priv, 3);
+				fallthrough;
 			case 1:
 			case 2:
-				mp_phy_update_firmware(priv, 2);
-				break;
-			case 4:
-				mp_phy_update_firmware(priv, 3);
+				mp_phy_pcie_load_fw(priv, 2);
 				break;
 			}
 		}
@@ -573,6 +589,67 @@ static int mp_phy_late_init(struct phy *phy)
 			return data;
 		}
 	}
+
+	if (chan->protocol_id == PHY_MODE_PCIE) {
+		u32 tx_ack, rx_ack;
+		int retries = 0;
+
+		dev_info(priv->dev, "Waiting for TX/RX ack: ch=%d link_width=%d\n",
+			 channel_id, link_width);
+
+		do {
+			switch (link_width) {
+			case 8:
+				tx_ack = readl(priv->base + MPPHY_PXTXREQ(0))
+					& readl(priv->base + MPPHY_PXTXREQ(1))
+					& readl(priv->base + MPPHY_PXTXREQ(2))
+					& readl(priv->base + MPPHY_PXTXREQ(3));
+				rx_ack = readl(priv->base + MPPHY_PXRXREQ1(0))
+					& readl(priv->base + MPPHY_PXRXREQ1(1))
+					& readl(priv->base + MPPHY_PXRXREQ1(2))
+					& readl(priv->base + MPPHY_PXRXREQ1(3));
+				break;
+			case 4:
+				if (channel_id == 0) {
+					tx_ack = readl(priv->base + MPPHY_PXTXREQ(0))
+						& readl(priv->base + MPPHY_PXTXREQ(1));
+					rx_ack = readl(priv->base + MPPHY_PXRXREQ1(0))
+						& readl(priv->base + MPPHY_PXRXREQ1(1));
+				} else {
+					tx_ack = readl(priv->base + MPPHY_PXTXREQ(2))
+						& readl(priv->base + MPPHY_PXTXREQ(3));
+					rx_ack = readl(priv->base + MPPHY_PXRXREQ1(2))
+						& readl(priv->base + MPPHY_PXRXREQ1(3));
+				}
+				break;
+			case 1:
+			case 2:
+			default:
+				if (channel_id == 0) {
+					tx_ack = readl(priv->base + MPPHY_PXTXREQ(0));
+					rx_ack = readl(priv->base + MPPHY_PXRXREQ1(0));
+				} else {
+					tx_ack = readl(priv->base + MPPHY_PXTXREQ(2));
+					rx_ack = readl(priv->base + MPPHY_PXRXREQ1(2));
+				}
+				break;
+			}
+
+			if (!(tx_ack & BIT(9)) && !(rx_ack & BIT(1)))
+				break;
+
+			usleep_range(10, 20);
+		} while (++retries < 100000);
+
+		if (retries >= 100000)
+			dev_err(priv->dev,
+				"TX/RX ack timeout: tx_ack=0x%x rx_ack=0x%x\n",
+				tx_ack, rx_ack);
+		else
+			dev_info(priv->dev,
+				 "TX/RX ack done after %d retries\n", retries);
+	}
+
 	return 0;
 }
 
@@ -640,7 +717,6 @@ static int mp_phy_config_usb(struct phy *phy, int speed)
 {
 	struct mp_phy_priv *priv = phy_get_drvdata(phy);
 	struct mp_phy_chan_priv *chan = &priv->chan[phy->id];
-	u32 channel_id = phy->id;
 	u32 data;
 
 	switch (speed) {
@@ -676,7 +752,7 @@ static int mp_phy_config_usb(struct phy *phy, int speed)
 				chan->lane_id);
 			return data;
 		}
-		mp_phy_update_bits(priv->base, TCA_INTR_STS_OFFSET(channel_id), 0x1503, 0x1503);
+		mp_phy_update_bits(priv->base, TCA_INTR_STS_OFFSET(chan->lane_id), 0x1503, 0x1503);
 		break;
 	}
 
@@ -748,6 +824,7 @@ static int mp_phy_pre_init(struct mp_phy_priv *priv)
 	u32 sramcnt[MPPHY_NUM_CHANNELS];
 	u32 cmncnt2 = 0x33330000;	/* All res_{ack,req}_in_sel are 1 */
 	u32 cmncnt1 = 0;
+	u32 pcs0reg5_mask = 0;
 	int num, i, ret;
 
 	num = of_property_read_string_array(priv->dev->of_node,
@@ -769,9 +846,11 @@ static int mp_phy_pre_init(struct mp_phy_priv *priv)
 
 	for (i = 0; i < MPPHY_NUM_CHANNELS; i++) {
 		if (!strcmp(interface_names[i], "pci.0")) {
-			sramcnt[i] = 0x0f;
+			sramcnt[i] = BOOTLOAD_BYPASS_MODE;
+			pcs0reg5_mask |= MPPHY_PCS0REG5_CH(i);
 		} else if (!strcmp(interface_names[i], "pci.1")) {
-			sramcnt[i] = 0x0f;
+			sramcnt[i] = BOOTLOAD_BYPASS_MODE;
+			pcs0reg5_mask |= MPPHY_PCS0REG5_CH(i);
 			cmncnt1 |= 0x02 << (i * 8);
 		} else if (!strcmp(interface_names[i], "ethernet")) {
 			sramcnt[i] = 0x00;
@@ -805,7 +884,15 @@ static int mp_phy_pre_init(struct mp_phy_priv *priv)
 	}
 
 	mp_phy_update_bits(priv->base, MPPHY_PCS0REG1, MPPHY_PCS0REG1_VAL, 0x0);
-	mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, 0xff000000, 0x0);
+
+	/*
+	 * PCS0REG5[31:24]: per-phy PCS reset (phy0 [25:24] ... phy3 [31:30]).
+	 * Release only the PCIe phys here, like the board team bare metal code.
+	 * Ethernet/USB release their own field in mp_phy_init_ethernet() /
+	 * mp_phy_init_usb(). An ether PCS released while its phy is still not
+	 * initialized blocks the PCIe40 rate change (link stuck at Gen1).
+	 */
+	mp_phy_update_bits(priv->base, MPPHY_PCS0REG5, pcs0reg5_mask, 0x0);
 
 	return 0;
 }
