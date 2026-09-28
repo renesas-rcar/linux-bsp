@@ -383,29 +383,6 @@
 	clock-frequency = <26000000>;
 };
 
-&gpio10 {
-	pcie0_clkreq {
-		gpio-hog;
-		gpios = <12 1>;
-		output-high;
-	};
-};
-
-&gpio4 {
-	pcie60_clkreq {
-		gpio-hog;
-		gpios = <14 1>;
-		output-high;
-	};
-
-	pcie61_clkreq {
-		gpio-hog;
-		gpios = <15 1>;
-		output-high;
-	};
-
-};
-
 &i2c0 {
 	pinctrl-0 = <&i2c0_pins>;
 	pinctrl-names = "default";
@@ -1281,22 +1258,29 @@
 &pciec40 {
 	status = "okay";
 	phys = <&mp_phy 0 1>;
+	clkreq-gpios = <&gpio10 12 GPIO_ACTIVE_LOW>;
 };
 
 &pciec60 {
 	status = "okay";
+	clkreq-gpios = <&gpio4 14 GPIO_ACTIVE_LOW>;
 };
 
 &pciec60_ep {
 	status = "disabled";
+	clkreq-gpios = <&gpio4 14 GPIO_ACTIVE_LOW>;
 };
 
 &pciec61 {
 	status = "disabled";
+	clkreq-gpios = <&gpio4 14 GPIO_ACTIVE_LOW>,
+		       <&gpio4 15 GPIO_ACTIVE_LOW>;
 };
 
 &pciec61_ep {
 	status = "disabled";
+	clkreq-gpios = <&gpio4 14 GPIO_ACTIVE_LOW>,
+		       <&gpio4 15 GPIO_ACTIVE_LOW>;
 };
 
 &rcar_sound {
