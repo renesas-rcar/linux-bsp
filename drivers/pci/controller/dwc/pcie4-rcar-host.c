@@ -80,7 +80,30 @@ struct rcar_pcie4 {
 	struct clk				*bus_clk;
 	struct reset_control	*perst;
 	struct reset_control	*rst;
+	struct gpio_descs	*clkreq;
 };
+
+/*
+ * CLKREQ# gates the reference clock. The GPIO state is lost in deep stop and
+ * gpio-rcar restores it too late for the noirq resume, so set it here.
+ */
+static int rcar_gen5_pcie_clkreq_enable(struct rcar_pcie4 *rcar_pcie4)
+{
+	int ret;
+
+	if (!rcar_pcie4->clkreq)
+		return 0;
+
+	for (int i = 0; i < rcar_pcie4->clkreq->ndescs; i++) {
+		ret = gpiod_direction_output(rcar_pcie4->clkreq->desc[i], 1);
+		if (ret)
+			return ret;
+	}
+
+	usleep_range(1000, 2000);
+
+	return 0;
+}
 
 static void rcar_gen5_pcie_ltssm_enable(struct rcar_pcie4 *rcar_pcie4,
 				      bool enable)
@@ -196,6 +219,17 @@ static int rcar_gen5_pcie_host_init(struct dw_pcie_rp *pp)
 	int ret;
 	u32 val;
 
+	/*
+	 * Enable CLKREQ# first to gate reference clock before asserting PERST#.
+	 * Endpoint needs stable refclk before PERST# is asserted.
+	 */
+	ret = rcar_gen5_pcie_clkreq_enable(rcar_pcie4);
+	if (ret) {
+		dev_err(pci->dev, "Failed to enable CLKREQ#: %d\n", ret);
+		return ret;
+	}
+
+	/* Assert PERST# to hold endpoint in reset during initialization */
 	if (reset_control_assert(rcar_pcie4->perst))
 		dev_err(pci->dev, "Failed to assert PERST#");
 
@@ -300,6 +334,12 @@ static int rcar_gen5_pcie_devm_reset_get(struct rcar_pcie4 *rcar_pcie4,
 			dev_err(dev, "Failed to get PCIe4 reset#\n");
 		return PTR_ERR(rcar_pcie4->rst);
 	}
+
+	rcar_pcie4->clkreq = devm_gpiod_get_array_optional(dev, "clkreq",
+							   GPIOD_OUT_HIGH);
+	if (IS_ERR(rcar_pcie4->clkreq))
+		return dev_err_probe(dev, PTR_ERR(rcar_pcie4->clkreq),
+				     "Failed to get CLKREQ# gpios\n");
 
 	rcar_pcie4->bus_clk = devm_clk_get(dev, NULL);
 	if (IS_ERR(rcar_pcie4->bus_clk)) {
