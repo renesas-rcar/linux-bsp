@@ -27,6 +27,16 @@ static void rcar_gen5_pcie6_ep_pre_init(struct dw_pcie6_ep *ep)
 	u32 val;
 	int ret;
 
+	/*
+	 * Enable CLKREQ# first to gate reference clock before
+	 * deasserting module resets
+	 */
+	ret = rcar_gen5_pcie6_clkreq_enable(rcar_pcie6);
+	if (ret) {
+		dev_err(pci->dev, "Failed to enable CLKREQ#: %d\n", ret);
+		return;
+	}
+
 	for (int i = 0; i < PCIE6_RCAR_NUM_RSTS; i++) {
 		ret = reset_control_deassert(rcar_pcie6->rsts[i].rstc);
 		if (ret) {

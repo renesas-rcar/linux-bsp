@@ -27,6 +27,17 @@ static int rcar_gen5_pcie6_host_init(struct dw_pcie6_rp *pp)
 	u32 val;
 	int ret;
 
+	/*
+	 * Enable CLKREQ# first to gate reference clock before asserting PERST#.
+	 * Endpoint needs stable refclk before PERST# is asserted.
+	 */
+	ret = rcar_gen5_pcie6_clkreq_enable(rcar_pcie6);
+	if (ret) {
+		dev_err(pci->dev, "Failed to enable CLKREQ#: %d\n", ret);
+		return ret;
+	}
+
+	/* Assert PERST# to hold endpoint in reset during initialization */
 	if (reset_control_assert(rcar_pcie6->perst))
 		dev_err(pci->dev, "Failed to assert PERST#");
 
@@ -38,9 +49,6 @@ static int rcar_gen5_pcie6_host_init(struct dw_pcie6_rp *pp)
 			return ret;
 		}
 	}
-
-	if (reset_control_assert(rcar_pcie6->perst))
-		dev_err(pci->dev, "Failed to assert PERST#");
 
 	/* 2. Set device type - RootComplex */
 	rcar_gen5_pcie6_set_device_type(rcar_pcie6, true);

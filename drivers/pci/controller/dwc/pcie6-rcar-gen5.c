@@ -601,6 +601,28 @@ void rcar_gen5_pcie6_set_device_type(struct rcar_pcie6 *rcar_pcie6, bool rc)
 	writel(val, rcar_pcie6->base + PCIEMSR0);
 }
 
+/*
+ * CLKREQ# gates the reference clock. The GPIO state is lost in deep stop and
+ * gpio-rcar restores it too late for the noirq resume, so set it here.
+ */
+int rcar_gen5_pcie6_clkreq_enable(struct rcar_pcie6 *rcar_pcie6)
+{
+	int ret;
+
+	if (!rcar_pcie6->clkreq)
+		return 0;
+
+	for (int i = 0; i < rcar_pcie6->clkreq->ndescs; i++) {
+		ret = gpiod_direction_output(rcar_pcie6->clkreq->desc[i], 1);
+		if (ret)
+			return ret;
+	}
+
+	usleep_range(1000, 2000);
+
+	return 0;
+}
+
 int rcar_gen5_pcie6_get_resources(struct rcar_pcie6 *rcar_pcie6,
 					struct platform_device *pdev)
 {
@@ -629,6 +651,12 @@ int rcar_gen5_pcie6_get_resources(struct rcar_pcie6 *rcar_pcie6,
 	}
 
 	pci->max_link_speed = rcar_gen5_pcie6_get_link_speed(np);
+
+	rcar_pcie6->clkreq = devm_gpiod_get_array_optional(&pdev->dev, "clkreq",
+							   GPIOD_OUT_HIGH);
+	if (IS_ERR(rcar_pcie6->clkreq))
+		return dev_err_probe(&pdev->dev, PTR_ERR(rcar_pcie6->clkreq),
+				     "Failed to get CLKREQ# gpios\n");
 
 	/* eDMA region can be mapped to a custom base address */
 	if (!pci->edma.reg_base) {

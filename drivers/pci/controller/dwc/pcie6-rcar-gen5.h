@@ -152,6 +152,7 @@ struct rcar_pcie6 {
 	struct reset_control_bulk_data	rsts[PCIE6_RCAR_NUM_RSTS];
 	const struct firmware	*fw_iccm;
 	const struct firmware	*fw_dccm;
+	struct gpio_descs	*clkreq;
 };
 
 #define to_rcar_gen5_pcie6(x)	dev_get_drvdata((x)->dev)
@@ -159,6 +160,7 @@ struct rcar_pcie6 {
 void rcar_gen5_pcie6_set_device_type(struct rcar_pcie6 *rcar_pcie6, bool rc);
 void rcar_gen5_pcie6_channel_aggregation(struct rcar_pcie6 *rcar_pcie6, int num_lanes, int channel);
 int rcar_gen5_pcie6_get_resources(struct rcar_pcie6 *rcar_pcie6, struct platform_device *pdev);
+int rcar_gen5_pcie6_clkreq_enable(struct rcar_pcie6 *rcar_pcie6);
 int rcar_gen5_pcie6_get_link_speed(struct device_node *node);
 void rcar_gen5_pcie6_set_max_link_width(struct rcar_pcie6 *rcar_pcie6, int num_lanes);
 void rcar_gen5_pcie6_refclk_phy1(struct rcar_pcie6 *rcar_pcie6, int channel);
