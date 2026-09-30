@@ -1038,7 +1038,6 @@ static const struct pci_endpoint_test_data default_data = {
 	.test_reg_bar = BAR_0,
 	.alignment = SZ_4K,
 	.irq_type = IRQ_TYPE_MSI,
-	.use_polling = true,
 };
 
 static const struct pci_endpoint_test_data am654_data = {
