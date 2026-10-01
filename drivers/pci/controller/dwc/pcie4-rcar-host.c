@@ -29,44 +29,27 @@
 #define	PCI_EXP_LNKCAP_MLW_X2	0x00000020 /* Maximum Link Width x2 */
 #define	PCI_EXP_LNKCAP_MLW_X4	0x00000040 /* Maximum Link Width x4 */
 
+#define	PRTLGC2			0x708
+#define	DO_DESKEW_FOR_SRIS	BIT(23)
+#define	LANE_SKEW_OFF		0x714
+#define	CCLKCFG			BIT(6)
+
 /* Renesas-specific */
 #define	PCIEMSR0		0x200
 #define	BIFUR_MOD_SET_ON	BIT(0)
 #define	DEVICE_TYPE_EP		0
 #define	DEVICE_TYPE_RC		BIT(4)
+#define	APP_SRIS_MODE		BIT(6)
 
 #define PCIERSTCTRL1		0x214
+#define	APP_HOLD_PHY_RST	BIT(16)
+#define	APP_LTSSM_EN		BIT(0)
+
 #define	PCIEPWRMNGCTRL		0x270
 #define	PCIEINTSTS0		0x284
 
 #define	PCIEINTSTS0EN		0x0510
 #define	MSI_CTRL_INT		BIT(26)
-
-#define MDLC_HSCN_BASE		0xC9C90000UL
-#define MDLC_HSCN_SIZE		0x1000
-
-#define STANDBY			0x0
-#define RESET			0x1
-#define STOP			0x2
-#define RUN			0x3
-
-#define MDLC_PKCPROT0_OFFSET		0x0CF0
-#define MDLC_PKCPROT1_OFFSET		0x0CF4
-#define MDLC_MPDG_OFFSET(pdid)		(0x0200 + (pdid)*4)
-#define MDLC_MPDGS_OFFSET(pdid)		(0x0300 + (pdid)*4)
-#define MDLC_MSRES_OFFSET(regno)	(0x0900 + (regno)*4)
-#define MDLC_MSRESS_OFFSET(regno)	(0x0960 + (regno)*4)
-
-#define PDID_PCI4		0
-
-#define PCIE401_REG_NO		6
-#define PCIE402_REG_NO		6
-#define PCIE411_REG_NO		6
-#define PCIE412_REG_NO		6
-#define PCIE401_BIT_NO		18
-#define PCIE402_BIT_NO		22
-#define PCIE411_BIT_NO		20
-#define PCIE412_BIT_NO		24
 
 #define to_rcar_gen5_pcie(x)	dev_get_drvdata((x)->dev)
 
@@ -112,11 +95,11 @@ static void rcar_gen5_pcie_ltssm_enable(struct rcar_pcie4 *rcar_pcie4,
 
 	val = readl(rcar_pcie4->base + PCIERSTCTRL1);
 	if (enable) {
-		val |= BIT(0);   /* Enable LTSSM */
-		val &= ~BIT(16); /* Clear reset bit! */
+		val |= APP_LTSSM_EN;   /* Enable LTSSM */
+		val &= ~APP_HOLD_PHY_RST; /* Clear reset bit! */
 	} else {
-		val &= ~BIT(0);
-		val |= BIT(16);
+		val &= ~APP_LTSSM_EN;
+		val |= APP_HOLD_PHY_RST;
 	}
 	writel(val, rcar_pcie4->base + PCIERSTCTRL1);
 
@@ -203,10 +186,11 @@ static int rcar_gen5_pcie_set_device_type(struct rcar_pcie4 *rcar_pcie4, bool rc
 
 	/* Note: Assume the reset is asserted here */
 	val = readl(rcar_pcie4->base + PCIEMSR0);
+	val |= APP_SRIS_MODE; /* Separate clkreq */
 	if (rc)
-		val |= DEVICE_TYPE_RC | BIT(6) | BIT(4);
+		val |= DEVICE_TYPE_RC;
 	else
-		val |= DEVICE_TYPE_EP | BIT(6);
+		val |= DEVICE_TYPE_EP;
 	writel(val, rcar_pcie4->base + PCIEMSR0);
 
 	return 0;
@@ -255,7 +239,7 @@ static int rcar_gen5_pcie_host_init(struct dw_pcie_rp *pp)
 	}
 
 	val = readl(rcar_pcie4->base + PCIERSTCTRL1);
-	val &= ~BIT(16);
+	val &= ~APP_HOLD_PHY_RST;
 	writel(val, rcar_pcie4->base + PCIERSTCTRL1);
 
 	ret = phy_power_on(rcar_pcie4->phy);
@@ -279,10 +263,10 @@ static int rcar_gen5_pcie_host_init(struct dw_pcie_rp *pp)
 
 	/* PCIe Lane Skew off */
 	if (pci->num_lanes < 8) {
-		val = dw_pcie_readl_dbi(pci, 0x714);
+		val = dw_pcie_readl_dbi(pci, LANE_SKEW_OFF);
 		val &= ~GENMASK(7, 0);
 		val |= 0x40;
-		dw_pcie_writel_dbi(pci, 0x714, val);
+		dw_pcie_writel_dbi(pci, LANE_SKEW_OFF, val);
 	}
 
 	if (IS_ENABLED(CONFIG_PCI_MSI)) {
@@ -292,13 +276,13 @@ static int rcar_gen5_pcie_host_init(struct dw_pcie_rp *pp)
 		writel(val, rcar_pcie4->base + PCIEINTSTS0EN);
 	}
 
-	val = dw_pcie_readl_dbi(pci, 0x708);
-	val |= BIT(23);
-	dw_pcie_writel_dbi(pci, 0x708, val);
+	val = dw_pcie_readl_dbi(pci, PRTLGC2);
+	val |= DO_DESKEW_FOR_SRIS;
+	dw_pcie_writel_dbi(pci, PRTLGC2, val);
 
-	val = dw_pcie_readl_dbi(pci, 0x80);
-	val &= ~BIT(6);
-	dw_pcie_writel_dbi(pci, 0x80, val);
+	val = dw_pcie_readl_dbi(pci, EXPCAP(PCI_EXP_LNKCTL));
+	val &= ~CCLKCFG;
+	dw_pcie_writel_dbi(pci, EXPCAP(PCI_EXP_LNKCTL), val);
 
 	dw_pcie_dbi_ro_wr_dis(pci);
 
