@@ -1773,7 +1773,13 @@ static int rcsi2_calc_mbps(struct rcar_csi2 *priv, unsigned int bpp,
 #ifndef CONFIG_VIDEO_RCAR_VIN_VDK
 	source = priv->remote;
 
-	freq = v4l2_get_link_freq(source->ctrl_handler, bpp, 2 * lanes);
+	/*
+	 * The pixel rate based estimate only exists for D-PHY
+	 * (mul/div = 0 otherwise).
+	 */
+	freq = v4l2_get_link_freq(source->ctrl_handler,
+				  priv->cphy ? 0 : bpp,
+				  priv->cphy ? 0 : 2 * lanes);
 	if (freq < 0) {
 		int ret = (int)freq;
 
@@ -1783,7 +1789,14 @@ static int rcsi2_calc_mbps(struct rcar_csi2 *priv, unsigned int bpp,
 		return ret;
 	}
 
-	mbps = div_u64(freq * 2, MEGA);
+	/*
+	 * D-PHY: LINK_FREQ is the DDR clock, bit rate is twice that.
+	 * C-PHY: LINK_FREQ is the symbol rate, which is what the PHY tables
+	 * expect.
+	 */
+	mbps = div_u64(priv->cphy ? freq : freq * 2, MEGA);
+	dev_dbg(priv->dev, "bpp %u lanes %u link freq %lld Hz -> %llu Mbps\n",
+		bpp, lanes, freq, mbps);
 #endif
 
 	return mbps;
