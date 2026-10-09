@@ -100,7 +100,7 @@
 #define VNMC_INF_YUV16		(5 << 16)
 #define VNMC_INF_RGB888		(6 << 16)
 #define VNMC_INF_RGB666		(7 << 16)
-#define VNMC_EXINF_RAW8		(1 << 12) /* Gen4 specific */
+#define VNMC_EXINF_RAW8		(1 << 12) /* Gen4 and Gen5 */
 #define VNMC_VUP		(1 << 10)
 #define VNMC_IM_ODD		(0 << 3)
 #define VNMC_IM_ODD_EVEN	(1 << 3)
@@ -725,6 +725,30 @@ static void rvin_crop_scale_comp(struct rvin_dev *vin)
 
 	fmt = rvin_format_from_pixel(vin, vin->format.pixelformat);
 	stride = vin->format.bytesperline / fmt->bpp;
+
+	/*
+	 * RAW8 is the exception on Gen5: the DMA writes it in 2-byte units
+	 * (two pixels per word) and generates a word address from VNIS, so
+	 * VNIS counts words. This additional setting for RAW8 is used
+	 * because its bpp value is only 1-byte.
+	 */
+	if (vin->info->model == RCAR_GEN4 ||
+	    vin->info->model == RCAR_GEN5) {
+		switch (vin->format.pixelformat) {
+		case V4L2_PIX_FMT_SBGGR8:
+		case V4L2_PIX_FMT_SGBRG8:
+		case V4L2_PIX_FMT_SGRBG8:
+		case V4L2_PIX_FMT_SRGGB8:
+			stride /= 2;
+			break;
+		case V4L2_PIX_FMT_GREY:
+			/* GREY extracted from YUV input uses another mode. */
+			if (vin->mbus_code == MEDIA_BUS_FMT_Y8_1X8)
+				stride /= 2;
+			break;
+		}
+	}
+
 	rvin_write(vin, stride, VNIS_REG);
 }
 
@@ -824,7 +848,8 @@ static int rvin_setup(struct rvin_dev *vin)
 	case MEDIA_BUS_FMT_SRGGB8_1X8:
 	case MEDIA_BUS_FMT_Y8_1X8:
 		vnmc |= VNMC_INF_RAW8;
-		if (vin->info->model == RCAR_GEN4)
+		if (vin->info->model == RCAR_GEN4 ||
+		    vin->info->model == RCAR_GEN5)
 			vnmc |= VNMC_EXINF_RAW8;
 		break;
 	case MEDIA_BUS_FMT_SBGGR10_1X10:
