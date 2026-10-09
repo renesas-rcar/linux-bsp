@@ -238,6 +238,127 @@ static struct clk * __init cpg_z_clk_register(const char *name,
 }
 
 /*
+ * ZG Clock
+ */
+#define CPG_FRQCRB_ZGFC		GENMASK(28, 24)
+
+struct cpg_zg_clk {
+	struct clk_hw hw;
+	void __iomem *reg;
+};
+
+#define to_zg_clk(_hw)	container_of(_hw, struct cpg_zg_clk, hw)
+
+static unsigned long cpg_zg_clk_recalc_rate(struct clk_hw *hw,
+					    unsigned long parent_rate)
+{
+	struct cpg_zg_clk *zg = to_zg_clk(hw);
+	u32 setting = FIELD_GET(CPG_FRQCRB_ZGFC, readl(zg->reg));
+
+	return DIV_ROUND_CLOSEST_ULL((u64)parent_rate * (32 - setting), 32);
+}
+
+static int cpg_zg_clk_determine_rate(struct clk_hw *hw,
+				     struct clk_rate_request *req)
+{
+	unsigned int setting, best_setting = 0;
+	unsigned long best_rate = 0, diff_min = ULONG_MAX;
+
+	if (!req->best_parent_rate)
+		return -EINVAL;
+
+	for (setting = 0; setting < 32; setting++) {
+		unsigned long rate;
+		unsigned long diff;
+
+		rate = DIV_ROUND_CLOSEST_ULL((u64)req->best_parent_rate *
+					     (32 - setting), 32);
+		if (rate < req->min_rate || rate > req->max_rate)
+			continue;
+
+		diff = rate > req->rate ? rate - req->rate : req->rate - rate;
+		if (diff < diff_min) {
+			diff_min = diff;
+			best_rate = rate;
+			best_setting = setting;
+		}
+	}
+
+	if (diff_min == ULONG_MAX)
+		return -EINVAL;
+
+	(void)best_setting;
+	req->rate = best_rate;
+	return 0;
+}
+
+static int cpg_zg_clk_set_rate(struct clk_hw *hw, unsigned long rate,
+			       unsigned long parent_rate)
+{
+	struct cpg_zg_clk *zg = to_zg_clk(hw);
+	unsigned int setting;
+	unsigned int i;
+
+	if (!rate || !parent_rate || rate > parent_rate)
+		return -EINVAL;
+
+	for (setting = 0; setting < 32; setting++)
+		if (rate == DIV_ROUND_CLOSEST_ULL((u64)parent_rate *
+						(32 - setting), 32))
+			break;
+
+	if (setting == 32)
+		return -EINVAL;
+
+	if (readl(zg->reg) & CPG_FRQCRB_KICK)
+		return -EBUSY;
+
+	cpg_reg_modify(zg->reg, CPG_FRQCRB_ZGFC,
+		       FIELD_PREP(CPG_FRQCRB_ZGFC, setting));
+	cpg_reg_modify(zg->reg, 0, CPG_FRQCRB_KICK);
+
+	for (i = 1000; i; i--) {
+		if (!(readl(zg->reg) & CPG_FRQCRB_KICK))
+			return 0;
+		cpu_relax();
+	}
+
+	return -ETIMEDOUT;
+}
+
+static const struct clk_ops cpg_zg_clk_ops = {
+	.recalc_rate = cpg_zg_clk_recalc_rate,
+	.determine_rate = cpg_zg_clk_determine_rate,
+	.set_rate = cpg_zg_clk_set_rate,
+};
+
+static struct clk * __init cpg_zg_clk_register(const char *name,
+					       const char *parent_name,
+					       void __iomem *base)
+{
+	struct clk_init_data init = {};
+	struct cpg_zg_clk *zg;
+	struct clk *clk;
+
+	zg = kzalloc(sizeof(*zg), GFP_KERNEL);
+	if (!zg)
+		return ERR_PTR(-ENOMEM);
+
+	init.name = name;
+	init.ops = &cpg_zg_clk_ops;
+	init.parent_names = &parent_name;
+	init.num_parents = 1;
+	zg->reg = base + CPG_FRQCRB;
+	zg->hw.init = &init;
+
+	clk = clk_register(NULL, &zg->hw);
+	if (IS_ERR(clk))
+		kfree(zg);
+
+	return clk;
+}
+
+/*
  * RPC Clocks
  */
 static const struct clk_div_table cpg_rpcsrc_div_table[] = {
@@ -299,6 +420,8 @@ struct clk * __init rcar_gen4_cpg_clk_register(struct device *dev,
 	case CLK_TYPE_GEN4_Z:
 		return cpg_z_clk_register(core->name, __clk_get_name(parent),
 					  base, core->div, core->offset);
+	case CLK_TYPE_GEN4_ZG:
+		return cpg_zg_clk_register(core->name, __clk_get_name(parent), base);
 
 	case CLK_TYPE_GEN4_SDSRC:
 		div = ((readl(base + SD0CKCR1) >> 29) & 0x03) + 4;

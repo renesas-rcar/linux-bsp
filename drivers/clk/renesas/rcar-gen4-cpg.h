@@ -23,6 +23,7 @@ enum rcar_gen4_clk_types {
 	CLK_TYPE_GEN4_SD,
 	CLK_TYPE_GEN4_MDSEL,	/* Select parent/divider using mode pin */
 	CLK_TYPE_GEN4_Z,
+	CLK_TYPE_GEN4_ZG,
 	CLK_TYPE_GEN4_OSC,	/* OSC EXTAL predivider and fixed divider */
 	CLK_TYPE_GEN4_RPCSRC,
 	CLK_TYPE_GEN4_RPC,
@@ -48,6 +49,8 @@ enum rcar_gen4_clk_types {
 
 #define DEF_GEN4_Z(_name, _id, _type, _parent, _div, _offset)	\
 	DEF_BASE(_name, _id, _type, _parent, .div = _div, .offset = _offset)
+#define DEF_GEN4_ZG(_name, _id, _parent)	\
+	DEF_BASE(_name, _id, CLK_TYPE_GEN4_ZG, _parent)
 
 struct rcar_gen4_cpg_pll_config {
 	u8 extal_div;
