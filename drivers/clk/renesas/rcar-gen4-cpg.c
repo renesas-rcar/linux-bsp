@@ -33,6 +33,69 @@ static u32 cpg_mode __initdata;
 #define CPG_FRQCRB			0x00000804
 #define CPG_FRQCRB_KICK			BIT(31)
 #define CPG_FRQCRC			0x00000808
+#define CPG_PLL4CR0			0x00000844
+#define CPG_PLL4CR1			0x000008c8
+#define CPG_PLL4CR0_NI		GENMASK(27, 20)
+#define CPG_PLL4CR0_SSMODE		GENMASK(18, 16)
+#define CPG_PLL4CR1_NF		GENMASK(24, 0)
+
+struct cpg_pll4_clk {
+	struct clk_hw hw;
+	void __iomem *base;
+};
+
+#define to_pll4_clk(_hw)	container_of(_hw, struct cpg_pll4_clk, hw)
+
+static unsigned long cpg_pll4_clk_recalc_rate(struct clk_hw *hw,
+					      unsigned long parent_rate)
+{
+	struct cpg_pll4_clk *pll4 = to_pll4_clk(hw);
+	u32 cr0 = readl(pll4->base + CPG_PLL4CR0);
+	u32 mode = FIELD_GET(CPG_PLL4CR0_SSMODE, cr0);
+	u64 mult = (FIELD_GET(CPG_PLL4CR0_NI, cr0) + 1ULL) * 2;
+
+	switch (mode) {
+	case 0:
+		return parent_rate * mult;
+	case 4:
+	case 6:
+		mult = (mult << 24) +
+			FIELD_GET(CPG_PLL4CR1_NF, readl(pll4->base + CPG_PLL4CR1));
+		return DIV_ROUND_CLOSEST_ULL((u64)parent_rate * mult, BIT_ULL(24));
+	default:
+		return 0;
+	}
+}
+
+static const struct clk_ops cpg_pll4_clk_ops = {
+	.recalc_rate = cpg_pll4_clk_recalc_rate,
+};
+
+static struct clk * __init cpg_pll4_clk_register(const char *name,
+						 const char *parent_name,
+						 void __iomem *base)
+{
+	struct clk_init_data init = {};
+	struct cpg_pll4_clk *pll4;
+	struct clk *clk;
+
+	pll4 = kzalloc(sizeof(*pll4), GFP_KERNEL);
+	if (!pll4)
+		return ERR_PTR(-ENOMEM);
+
+	init.name = name;
+	init.ops = &cpg_pll4_clk_ops;
+	init.parent_names = &parent_name;
+	init.num_parents = 1;
+	pll4->base = base;
+	pll4->hw.init = &init;
+
+	clk = clk_register(NULL, &pll4->hw);
+	if (IS_ERR(clk))
+		kfree(pll4);
+
+	return clk;
+}
 
 struct cpg_z_clk {
 	struct clk_hw hw;
@@ -216,9 +279,7 @@ struct clk * __init rcar_gen4_cpg_clk_register(struct device *dev,
 		break;
 
 	case CLK_TYPE_GEN4_PLL4:
-		mult = cpg_pll_config->pll4_mult;
-		div = cpg_pll_config->pll4_div;
-		break;
+		return cpg_pll4_clk_register(core->name, __clk_get_name(parent), base);
 
 	case CLK_TYPE_GEN4_PLL5:
 		mult = cpg_pll_config->pll5_mult;
