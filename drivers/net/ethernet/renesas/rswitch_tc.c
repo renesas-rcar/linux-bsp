@@ -85,6 +85,12 @@ static int tc_setup_cbs(struct rswitch_device *rdev,
 		return -EINVAL;
 	}
 
+	if (!civ) {
+		netdev_err(ndev, "CBS: values out of bounds\n");
+
+		return -EINVAL;
+	}
+
 	value = (s64)qopt->hicredit * clk_rate;
 	tmp_val = (s64)qopt->idleslope * 1000;
 	x = div_s64(value, tmp_val);
