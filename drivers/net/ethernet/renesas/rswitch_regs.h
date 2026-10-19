@@ -866,6 +866,10 @@ enum rswitch_lsc_mode {
 #define ARIOG			BIT(0)
 #define ARR			BIT(1)
 
+/* bit field definitions for GWAC */
+#define GWAC_AMPR		BIT(0)
+#define GWAC_AMP		BIT(1)
+
 /* bit field definitions for GWMDNC */
 #define TSDMN			GENMASK(17, 16)
 #define TXDMN			GENMASK(12, 8)

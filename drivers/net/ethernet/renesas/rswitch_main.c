@@ -1879,6 +1879,33 @@ static int rswitch_etha_hw_init_tsn_internal(struct rswitch_private *priv,
 	return 0;
 }
 
+static int rswitch_phy_less_port_init(struct rswitch_private *priv, unsigned int i)
+{
+	struct rswitch_etha *etha = &priv->etha[i];
+	int err;
+
+	if (!rswitch_agent_clock_is_enabled(priv->addr_gwca, i))
+		rswitch_agent_clock_ctrl(priv->addr_gwca, i, 1);
+
+	err = rswitch_etha_hw_init_tsn_internal(priv, i, etha->mac_addr);
+	if (err)
+		return err;
+
+	/*
+	 * Only TSN-ES0..2 need selector.
+	 * MIOC[3] = 0: connect RSwitch3 port 5..7 to TSN-ES0..2.
+	 * MIOC[3] = 1: connect RSwitch3 port 5..7 to external PHY/XPCS.
+	 */
+	if (i >= 5 && i <= 7) {
+		if (!etha->addr)
+			return -ENODEV;
+
+		rswitch_modify(etha->addr, MIOC, BIT(3), 0);
+	}
+
+	return 0;
+}
+
 static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac,
 				struct rswitch_private *priv)
 {
@@ -1917,6 +1944,32 @@ static int rswitch_etha_fixed_link(struct rswitch_etha *etha)
 	rswitch_modify(etha->addr, MIOC, BIT(5), etha->fixed_link ? BIT(5) : 0);
 
 	return rswitch_etha_change_mode(etha, OPC_OPERATION);
+}
+
+static int rswitch_etha_mii_hw_init(struct rswitch_etha *etha, struct rswitch_private *priv)
+{
+	int err;
+
+	if (etha->operated)
+		return 0;
+
+	err = rswitch_etha_change_mode(etha, OPC_DISABLE);
+	if (err < 0)
+		return err;
+
+	err = rswitch_etha_change_mode(etha, OPC_CONFIG);
+	if (err < 0)
+		return err;
+
+	priv->info->rswitch_etha_enable_mii(etha);
+
+	err = rswitch_etha_change_mode(etha, OPC_DISABLE);
+	if (err < 0)
+		return err;
+
+	etha->operated = true;
+
+	return 0;
 }
 
 static int rswitch_etha_mii_hw_start(struct rswitch_etha *etha)
@@ -2165,6 +2218,197 @@ static void rswitch_mii_unregister(struct rswitch_device *rdev)
 	}
 }
 
+static int rswitch_axi_emergency_stop(struct rswitch_private *priv)
+{
+	u32 val;
+	u32 reg = priv->info->rswitch_version == RSW20 ? GWAC : GWAC_RSW3;
+
+	rswitch_modify(priv->addr_gwca, reg, GWAC_AMPR, GWAC_AMPR);
+
+	return readl_poll_timeout_atomic(priv->addr_gwca + reg, val,
+					 (val & GWAC_AMP) == GWAC_AMP, 1, 50000);
+}
+
+static void rswitch_datapath_port_stop(struct rswitch_device *rdev)
+{
+	struct rswitch_private *priv = rdev->priv;
+	unsigned long flags;
+	int i;
+
+	netif_tx_stop_all_queues(rdev->ndev);
+
+	spin_lock_irqsave(&priv->lock, flags);
+	for (i = 0; i < priv->info->num_tx_queues; i++)
+		rswitch_enadis_data_irq(priv, rdev->tx_queue[i]->index, false);
+	for (i = 0; i < priv->info->num_rx_queues; i++)
+		rswitch_enadis_data_irq(priv, rdev->rx_queue[i]->index, false);
+	spin_unlock_irqrestore(&priv->lock, flags);
+
+	for (i = 0; i < priv->info->num_tx_queues; i++)
+		napi_disable(&rdev->tx_queue[i]->napi);
+	for (i = 0; i < priv->info->num_rx_queues; i++)
+		napi_disable(&rdev->rx_queue[i]->napi);
+}
+
+static void rswitch_datapath_port_start(struct rswitch_device *rdev)
+{
+	struct rswitch_private *priv = rdev->priv;
+	unsigned long flags;
+	int i;
+
+	for (i = 0; i < priv->info->num_tx_queues; i++)
+		napi_enable(&rdev->tx_queue[i]->napi);
+	for (i = 0; i < priv->info->num_rx_queues; i++)
+		napi_enable(&rdev->rx_queue[i]->napi);
+
+	spin_lock_irqsave(&priv->lock, flags);
+	for (i = 0; i < priv->info->num_tx_queues; i++)
+		rswitch_enadis_data_irq(priv, rdev->tx_queue[i]->index, true);
+	for (i = 0; i < priv->info->num_rx_queues; i++)
+		rswitch_enadis_data_irq(priv, rdev->rx_queue[i]->index, true);
+	spin_unlock_irqrestore(&priv->lock, flags);
+
+	netif_tx_start_all_queues(rdev->ndev);
+}
+
+static int rswitch_speed_reconfigure(struct rswitch_device *target, int new_speed)
+{
+	struct rswitch_private *priv = target->priv;
+	struct rswitch_device *rdev;
+	int old_speed = target->etha->speed;
+	unsigned int i;
+	int err;
+
+	rswitch_for_each_enabled_port(priv, i) {
+		rdev = priv->rdev[i];
+		if (netif_running(rdev->ndev))
+			rswitch_datapath_port_stop(rdev);
+	}
+
+	err = rswitch_axi_emergency_stop(priv);
+	if (err < 0)
+		goto reconfigure_failed;
+
+	rswitch_reset(priv);
+	rswitch_modify(priv->addr_gwca,
+		       priv->info->rswitch_version == RSW20 ? GWAC : GWAC_RSW3,
+		       GWAC_AMPR, 0);
+	rswitch_clock_enable(priv);
+	err = priv->info->bpool_config(priv);
+	if (err < 0)
+		goto reconfigure_failed;
+
+	rswitch_coma_init(priv);
+
+	err = priv->info->rswitch_fwd_init(priv);
+	if (err < 0)
+		goto reconfigure_failed;
+
+	rswitch_for_each_enabled_port(priv, i) {
+		rswitch_txdmac_free(priv->rdev[i]->ndev);
+		rswitch_rxdmac_free(priv->rdev[i]->ndev);
+	}
+
+	rswitch_for_each_enabled_port(priv, i) {
+		err = rswitch_rxdmac_alloc(priv->rdev[i]->ndev);
+		if (err < 0)
+			goto out_dmac;
+
+		err = rswitch_txdmac_alloc(priv->rdev[i]->ndev);
+		if (err < 0)
+			goto out_dmac;
+	}
+
+	rswitch_top_init(priv);
+
+	if (priv->info->rswitch_version != RSW20) {
+		for (i = 0; i < priv->num_ports; i++)
+			priv->etha_mii[i].operated = false;
+	}
+
+	err = rswitch_gwca_hw_init(priv);
+	if (err < 0)
+		goto reconfigure_failed;
+
+	target->etha->speed = new_speed;
+
+	rswitch_for_each_enabled_port(priv, i) {
+		rdev = priv->rdev[i];
+
+		if (rdev->phy_less) {
+			err = rswitch_phy_less_port_init(priv, i);
+			if (err < 0)
+				goto reconfigure_failed;
+			continue;
+		}
+
+		if (priv->info->rswitch_version != RSW20) {
+			err = rswitch_etha_mii_hw_init(rdev->etha_mii, priv);
+			if (err < 0)
+				goto reconfigure_failed;
+		}
+
+		err = rswitch_etha_hw_init(rdev->etha, rdev->ndev->dev_addr, priv);
+		if (err < 0)
+			goto reconfigure_failed;
+
+		if (priv->info->rswitch_version != RSW20) {
+			err = rswitch_etha_mii_hw_start(rdev->etha_mii);
+			if (err < 0)
+				goto reconfigure_failed;
+		}
+	}
+
+	if (priv->info->rswitch_version != RSW20) {
+		mutex_lock(&priv->tsnes_lock);
+		for (i = 0; i < RSWITCH3_NUM_TSNES; i++) {
+			u32 rsw_port;
+
+			if (!test_bit(i, priv->tsnes_attached))
+				continue;
+
+			rsw_port = RSWITCH3_TSNES_PORT_BASE + i;
+			rswitch_etha_hw_init_tsn_internal(priv, rsw_port, NULL);
+		}
+		mutex_unlock(&priv->tsnes_lock);
+	}
+
+	rcar_gen4_ptp_reinit_hw(priv->ptp_priv);
+
+	err = phy_set_speed(target->serdes, new_speed);
+	if (err < 0)
+		goto reconfigure_failed;
+
+	goto restart_datapath;
+
+reconfigure_failed:
+	netdev_err(target->ndev,
+		   "speed reset failed (%d), reverting to %d Mbps\n",
+		   err, old_speed);
+	target->etha->speed = old_speed;
+
+restart_datapath:
+	rswitch_for_each_enabled_port(priv, i) {
+		rdev = priv->rdev[i];
+		if (netif_running(rdev->ndev))
+			rswitch_datapath_port_start(rdev);
+	}
+
+	return err;
+
+out_dmac:
+	netdev_err(target->ndev,
+		   "Failed to allocate DMAC rings (%d)\n", err);
+	target->etha->speed = old_speed;
+
+	rswitch_for_each_enabled_port(priv, i) {
+		rswitch_txdmac_free(priv->rdev[i]->ndev);
+		rswitch_rxdmac_free(priv->rdev[i]->ndev);
+	}
+
+	return err;
+}
+
 static void rswitch_adjust_link(struct net_device *ndev)
 {
 	struct rswitch_device *rdev = netdev_priv(ndev);
@@ -2173,29 +2417,41 @@ static void rswitch_adjust_link(struct net_device *ndev)
 
 	if (phydev->link != rdev->etha->link) {
 		phy_print_status(phydev);
+
 		if (phydev->link) {
+			if (!parallel_mode && phydev->speed != rdev->etha->speed &&
+			    !rdev->etha->connect_to_xpcs)
+				phy_set_speed(rdev->serdes, phydev->speed);
+
 			if (!rdev->serdes->power_count) {
 				phy_power_on(rdev->serdes);
 			} else {
 				phy_power_off(rdev->serdes);
 				phy_power_on(rdev->serdes);
 			}
-			if (phydev->link && !parallel_mode &&
-			    phydev->speed != rdev->etha->speed) {
-				rdev->etha->speed = phydev->speed;
-				err = rswitch_etha_hw_init(rdev->etha,
-							   rdev->ndev->dev_addr,
-							   rdev->priv);
-				if (err < 0) {
-					netdev_err(ndev, "ETHA hw_init failed: %d\n", err);
-					netif_carrier_off(ndev);
-					rdev->etha->link = phydev->link;
-
-					return;
+			if (!parallel_mode && phydev->speed != rdev->etha->speed) {
+				if (rdev->etha->connect_to_xpcs) {
+					err = rswitch_speed_reconfigure(rdev, phydev->speed);
+					if (err < 0) {
+						netdev_err(ndev, "speed reconfigure failed: %d\n",
+							   err);
+						rdev->etha->link = phydev->link;
+						return;
+					}
+				} else {
+					rdev->etha->speed = phydev->speed;
+					err = rswitch_etha_hw_init(rdev->etha,
+								   rdev->ndev->dev_addr,
+								   rdev->priv);
+					if (err < 0) {
+						netdev_err(ndev, "ETHA hw_init failed: %d\n", err);
+						rdev->etha->link = phydev->link;
+						return;
+					}
 				}
-				phy_set_speed(rdev->serdes, rdev->etha->speed);
 			}
 		}
+		rdev->etha->link = phydev->link;
 	}
 }
 
@@ -2207,13 +2463,11 @@ static void rswitch_phy_remove_link_mode(struct rswitch_device *rdev,
 
 	switch (rdev->etha->speed) {
 	case SPEED_100:
-		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_1000baseT_Full_BIT);
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_2500baseX_Full_BIT);
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_5000baseT_Full_BIT);
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_10000baseT_Full_BIT);
 		break;
 	case SPEED_1000:
-		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_100baseT_Full_BIT);
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_2500baseX_Full_BIT);
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_5000baseT_Full_BIT);
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_10000baseT_Full_BIT);
@@ -2221,20 +2475,14 @@ static void rswitch_phy_remove_link_mode(struct rswitch_device *rdev,
 	case SPEED_2500:
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_100baseT_Full_BIT);
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_1000baseT_Full_BIT);
-		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_5000baseT_Full_BIT);
-		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_10000baseT_Full_BIT);
 		break;
 	case SPEED_5000:
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_100baseT_Full_BIT);
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_1000baseT_Full_BIT);
-		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_2500baseX_Full_BIT);
-		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_10000baseT_Full_BIT);
 		break;
 	case SPEED_10000:
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_100baseT_Full_BIT);
 		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_1000baseT_Full_BIT);
-		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_2500baseX_Full_BIT);
-		phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_5000baseT_Full_BIT);
 		break;
 	default:
 		break;
@@ -2384,7 +2632,6 @@ static void rswitch_ether_port_deinit_one(struct rswitch_device *rdev)
 
 static int rswitch_ether_port_init_all(struct rswitch_private *priv)
 {
-	struct rswitch_etha *etha;
 	unsigned int i;
 	int err;
 
@@ -2401,28 +2648,9 @@ static int rswitch_ether_port_init_all(struct rswitch_private *priv)
 			continue;
 
 		if (priv->rdev[i]->phy_less) {
-			if (!rswitch_agent_clock_is_enabled(priv->addr_gwca, i))
-				rswitch_agent_clock_ctrl(priv->addr_gwca, i, 1);
-
-			err = rswitch_etha_hw_init_tsn_internal(priv, i, priv->etha[i].mac_addr);
+			err = rswitch_phy_less_port_init(priv, i);
 			if (err)
 				return err;
-
-			/*
-			 * Only TSN-ES0..2 need selector.
-			 * MIOC[3] = 0: connect RSwitch3 port 5..7 to TSN-ES0..2.
-			 * MIOC[3] = 1: connect RSwitch3 port 5..7 to external PHY/XPCS.
-			 */
-			if (i >= 5 && i <= 7) {
-				etha = &priv->etha[i];
-
-				if (!etha->addr) {
-					err = -ENODEV;
-					return err;
-				}
-
-				rswitch_modify(etha->addr, MIOC, BIT(3), 0);
-			}
 			continue;
 		}
 
@@ -3213,6 +3441,7 @@ static void rswitch_etha_init(struct rswitch_private *priv, unsigned int index)
 		etha_mii->index = index;
 		etha_mii->addr = priv->addr_etha + index * RSWITCH_ETHA_SIZE;
 		etha_mii->coma_addr = priv->addr_coma;
+		etha_mii->priv = priv;
 		etha_mii->psmcs = rswitch_calc_psmcs(priv);
 	}
 }
