@@ -1124,6 +1124,10 @@ static int rswitch_gwca_hw_init(struct rswitch_private *priv)
 	if (err < 0)
 		return err;
 
+	if (priv->info->rswitch_version != RSW20)
+		iowrite32(GWCKSC_USMFSPE | GWCKSC_ICMPCKSE | GWCKSC_TCPCKSE | GWCKSC_UDPCKSE |
+			  GWCKSC_IP4CKSE, priv->addr_gwca + GWCKSC_RSW3);
+
 	return rswitch_gwca_change_mode(priv, OPC_OPERATION);
 }
 
@@ -1199,6 +1203,12 @@ static struct sk_buff *rswitch_rx_handle_desc(struct net_device *ndev,
 			skb_reserve(skb, RSWITCH_HEADROOM);
 			skb_put(skb, pkt_len);
 			gq->pkt_len = pkt_len;
+			if (ndev->features & NETIF_F_RXCSUM) {
+				u64 info1 = le64_to_cpu(desc->info1);
+
+				if (!(info1 & RSW3_RX_INFO1_CKSE))
+					skb->ip_summed = CHECKSUM_UNNECESSARY;
+			}
 			if (die_dt == DT_FSTART) {
 				gq->skb_fstart = skb;
 				skb = NULL;
@@ -3311,6 +3321,10 @@ static int rswitch_device_alloc(struct rswitch_private *priv, unsigned int index
 	rswitch_set_ethtool_ops(ndev);
 	ndev->max_mtu = RSWITCH_MAX_MTU;
 	ndev->min_mtu = ETH_MIN_MTU;
+	if (priv->info->rswitch_version != RSW20) {
+		ndev->hw_features |= NETIF_F_RXCSUM;
+		ndev->features |= NETIF_F_RXCSUM;
+	}
 
 	rdev->np_port = rswitch_get_port_node(rdev);
 	rdev->disabled = !rdev->np_port;

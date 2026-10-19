@@ -159,6 +159,7 @@ enum DIE_DT {
 /* For reception */
 #define SPN			GENMASK_U64(38, 36)
 #define SPN_X5H			GENMASK_U64(39, 36)
+#define RSW3_RX_INFO1_CKSE	BIT_ULL(17)
 
 /* For timestamp descriptor in dptrl (Byte 4 to 7) */
 #define TS_DESC_TSUN(dptrl)	((dptrl) & GENMASK(7, 0))

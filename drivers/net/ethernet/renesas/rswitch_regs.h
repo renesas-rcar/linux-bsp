@@ -739,6 +739,13 @@ enum vlan_egress_mode {
 #define DQD			GENMASK(10, 0)
 #define DES_RAM_DP		0x400
 
+/* bit field definitions for GWCKSC */
+#define GWCKSC_USMFSPE		BIT(31)
+#define GWCKSC_ICMPCKSE		BIT(3)
+#define GWCKSC_TCPCKSE		BIT(2)
+#define GWCKSC_UDPCKSE		BIT(1)
+#define GWCKSC_IP4CKSE		BIT(0)
+
 /* bit field definitions for EATMFSCq */
 #define EATMFSC(q)		(EATMFSC0 + (q) * 0x4)
 #define MFS			GENMASK(15, 0)
