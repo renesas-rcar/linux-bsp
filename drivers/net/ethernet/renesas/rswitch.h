@@ -235,6 +235,7 @@ struct rswitch_gwca_queue {
 	bool dir_tx;
 	struct net_device *ndev;	/* queue to ndev for irq */
 	struct napi_struct napi;
+	int napi_idx;
 
 	union {
 		/* For TX */
@@ -249,6 +250,14 @@ struct rswitch_gwca_queue {
 			u16 pkt_len;
 		};
 	};
+};
+
+#define napi_to_gwca_queue(n)	container_of(n, struct rswitch_gwca_queue, napi)
+
+struct rsw3_dst_mac_search_result {
+	bool found;
+	unsigned int entry;
+	unsigned int qidx;
 };
 
 #define RSWITCH_NUM_IRQ_REGS	(RSWITCH_MAX_NUM_QUEUES / BITS_PER_TYPE(u32))
@@ -356,15 +365,17 @@ struct rswitch_etha_hw_stats {
 	u32 eadqoecnct;
 };
 
-#define NUM_QUEUES_PER_NDEV	2
+#define NUM_QUEUES_TX_PER_NDEV	4
+#define NUM_QUEUES_RX_PER_NDEV	4
+#define NUM_QUEUES_PER_NDEV		(NUM_QUEUES_TX_PER_NDEV + NUM_QUEUES_RX_PER_NDEV)
 #define TS_TAGS_PER_PORT	256
 
 struct rswitch_device {
 	struct rswitch_private *priv;
 	struct net_device *ndev;
 	void __iomem *addr;
-	struct rswitch_gwca_queue *tx_queue;
-	struct rswitch_gwca_queue *rx_queue;
+	struct rswitch_gwca_queue *tx_queue[NUM_QUEUES_TX_PER_NDEV];
+	struct rswitch_gwca_queue *rx_queue[NUM_QUEUES_RX_PER_NDEV];
 	struct rswitch_gwca_queue *rx_old_queue;
 	struct sk_buff *ts_skb[TS_TAGS_PER_PORT];
 	DECLARE_BITMAP(ts_skb_used, TS_TAGS_PER_PORT);
@@ -443,6 +454,7 @@ struct rswitch_private {
 
 	struct rswitch_switchdev_event_work *switchdev_work;
 
+	struct mutex m_lock; /* Protects MAC table */
 	struct mutex tsnes_lock; /* Protects TSN-ES */
 	DECLARE_BITMAP(tsnes_attached, RSWITCH3_NUM_TSNES);
 	u32 tsnes_fwd_mask[RSWITCH3_NUM_TSNES];
@@ -458,6 +470,8 @@ struct rswitch_hw_info {
 	u8 rswitch_num_agents;
 	u8 agent_index_gwca;
 	u8 gwca_index;
+	u8 num_tx_queues;
+	u8 num_rx_queues;
 	u8 rswitch_version;
 };
 

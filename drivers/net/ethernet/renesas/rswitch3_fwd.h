@@ -468,10 +468,31 @@ enum rswitch3_reg {
 #define RSW3_MACAGOG			BIT(28)
 #define RSW3_MACDESOG			BIT(29)
 
+#define RSW3_MAX_MAC_ENTRY		1024
+
 /* bit field definitions for FWMACTLn */
 #define RSW3_MACED			BIT(31)
 #define RSW3_MACCSDL			GENMASK(15, 0)
 #define RSW3_MACDVL			GENMASK(15, 0)
+
+#define RSW3_FWMACTL1_MACED		BIT(31)
+#define RSW3_FWMACTL4_MACDSLVL(p)	(BIT(p) << 16)
+#define RSW3_FWMACTL8_MACDVL(p)		BIT(p)
+#define RSW3_FWMACTLR_MACTL		BIT(31)
+
+#define RSW3_FWMACTEM_MACTUEN(val)	FIELD_GET(GENMASK(26, 16), (val))
+#define RSW3_FWMACTEM_MACTEN(val)	FIELD_GET(GENMASK(10, 0),  (val))
+
+#define RSW3_FWMACTS2_MACTSEA(val)	((val) << 16)
+#define RSW3_FWMACTS3_MAC_SEARCH	(0)
+
+#define RSW3_FWMACTSR0_MACSNF		BIT(1)
+#define RSW3_FWMACTSR0_MACSNF_FOUND	(0)
+#define RSW3_FWMACTSR0_MACSNF_NFOUND	BIT(1)
+#define RSW3_FWMACTSR0_MACTS		BIT(31)
+
+#define RSW3_FWMACTIM_MACTIOG		BIT(0)
+#define RSW3_FWMACTIM_MACTR		BIT(1)
 
 /* bit field definitions for FWMACHWLC0 */
 #define RSW3_MACTHWLFC3			BIT(31)
