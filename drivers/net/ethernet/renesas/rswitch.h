@@ -199,6 +199,7 @@ struct rswitch_etha {
 	struct rswitch_private *priv;
 	bool external_phy;
 	struct mii_bus *mii;
+	struct mutex mdio_lock;	/* serializes MPSM (MII) transactions */
 	phy_interface_t phy_interface;
 	u32 psmcs;
 	u8 mac_addr[MAX_ADDR_LEN];

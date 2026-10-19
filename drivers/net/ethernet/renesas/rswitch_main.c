@@ -1969,13 +1969,16 @@ static int rswitch_etha_mii_read_c45(struct mii_bus *bus, int addr, int devad,
 	struct rswitch_etha *etha = bus->priv;
 	int ret;
 
+	mutex_lock(&etha->mdio_lock);
+
 	ret = rswitch_etha_mpsm_op(etha, false, MMF_C45, addr, devad,
 				   POP_ADDRESS, regad);
-	if (ret)
-		return ret;
+	if (!ret)
+		ret = rswitch_etha_mpsm_op(etha, true, MMF_C45, addr, devad,
+					   POP_READ_C45, 0);
+	mutex_unlock(&etha->mdio_lock);
 
-	return rswitch_etha_mpsm_op(etha, true, MMF_C45, addr, devad,
-				    POP_READ_C45, 0);
+	return ret;
 }
 
 static int rswitch_etha_mii_write_c45(struct mii_bus *bus, int addr, int devad,
@@ -1984,30 +1987,43 @@ static int rswitch_etha_mii_write_c45(struct mii_bus *bus, int addr, int devad,
 	struct rswitch_etha *etha = bus->priv;
 	int ret;
 
+	mutex_lock(&etha->mdio_lock);
+
 	ret = rswitch_etha_mpsm_op(etha, false, MMF_C45, addr, devad,
 				   POP_ADDRESS, regad);
-	if (ret)
-		return ret;
+	if (!ret)
+		ret = rswitch_etha_mpsm_op(etha, false, MMF_C45, addr, devad,
+					   POP_WRITE, val);
+	mutex_unlock(&etha->mdio_lock);
 
-	return rswitch_etha_mpsm_op(etha, false, MMF_C45, addr, devad,
-				    POP_WRITE, val);
+	return ret;
 }
 
 static int rswitch_etha_mii_read_c22(struct mii_bus *bus, int phyad, int regad)
 {
 	struct rswitch_etha *etha = bus->priv;
+	int ret;
 
-	return rswitch_etha_mpsm_op(etha, true, MMF_C22, phyad, regad,
-				    POP_READ_C22, 0);
+	mutex_lock(&etha->mdio_lock);
+	ret = rswitch_etha_mpsm_op(etha, true, MMF_C22, phyad, regad,
+				   POP_READ_C22, 0);
+	mutex_unlock(&etha->mdio_lock);
+
+	return ret;
 }
 
 static int rswitch_etha_mii_write_c22(struct mii_bus *bus, int phyad,
 				      int regad, u16 val)
 {
 	struct rswitch_etha *etha = bus->priv;
+	int ret;
 
-	return rswitch_etha_mpsm_op(etha, false, MMF_C22, phyad, regad,
-				    POP_WRITE, val);
+	mutex_lock(&etha->mdio_lock);
+	ret = rswitch_etha_mpsm_op(etha, false, MMF_C22, phyad, regad,
+				   POP_WRITE, val);
+	mutex_unlock(&etha->mdio_lock);
+
+	return ret;
 }
 
 /* Call of_node_put(port) after done */
@@ -3179,6 +3195,7 @@ static void rswitch_etha_init(struct rswitch_private *priv, unsigned int index)
 	struct rswitch_etha *etha_mii = &priv->etha_mii[index];
 
 	memset(etha, 0, sizeof(*etha));
+	mutex_init(&etha->mdio_lock);
 	etha->index = index;
 	etha->addr = priv->addr_etha  + index * RSWITCH_ETHA_SIZE;
 	etha->coma_addr = priv->addr_coma;
@@ -3192,6 +3209,7 @@ static void rswitch_etha_init(struct rswitch_private *priv, unsigned int index)
 
 	if (priv->info->rswitch_version != RSW20) {
 		memset(etha_mii, 0, sizeof(*etha));
+		mutex_init(&etha_mii->mdio_lock);
 		etha_mii->index = index;
 		etha_mii->addr = priv->addr_etha + index * RSWITCH_ETHA_SIZE;
 		etha_mii->coma_addr = priv->addr_coma;
