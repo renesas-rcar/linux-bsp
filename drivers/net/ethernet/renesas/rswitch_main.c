@@ -35,6 +35,8 @@ static bool parallel_mode;
 
 static u8 cached_mac_addresses[RSWITCH_MAX_NUM_PORTS][ETH_ALEN];
 static bool mac_cache_valid[RSWITCH_MAX_NUM_PORTS];
+static int rswitch_rx_poll(struct napi_struct *napi, int budget);
+static int rswitch_tx_poll(struct napi_struct *napi, int budget);
 
 int rswitch_reg_wait(void __iomem *addr, u32 offs, u32 mask, u32 expected)
 {
@@ -886,7 +888,7 @@ static int rswitch_txdmac_alloc(struct net_device *ndev)
 		return err;
 	}
 
-	rdev->tx_queue->napi = &rdev->tx_napi;
+	netif_napi_add_tx(ndev, &rdev->tx_queue->napi, rswitch_tx_poll);
 
 	return 0;
 }
@@ -897,6 +899,7 @@ static void rswitch_txdmac_free(struct net_device *ndev)
 
 	rswitch_gwca_queue_free(ndev->dev.parent, rdev->tx_queue);
 	rswitch_gwca_put(rdev->priv, rdev->tx_queue);
+	netif_napi_del(&rdev->tx_queue->napi);
 }
 
 static int rswitch_txdmac_init(struct rswitch_private *priv, unsigned int index)
@@ -922,7 +925,7 @@ static int rswitch_rxdmac_alloc(struct net_device *ndev)
 		return err;
 	}
 
-	rdev->rx_queue->napi = &rdev->rx_napi;
+	netif_napi_add(ndev, &rdev->rx_queue->napi, rswitch_rx_poll);
 
 	return 0;
 }
@@ -933,6 +936,7 @@ static void rswitch_rxdmac_free(struct net_device *ndev)
 
 	rswitch_gwca_queue_free(ndev->dev.parent, rdev->rx_queue);
 	rswitch_gwca_put(rdev->priv, rdev->rx_queue);
+	netif_napi_del(&rdev->rx_queue->napi);
 }
 
 static int rswitch_rxdmac_init(struct rswitch_private *priv, unsigned int index)
@@ -1176,7 +1180,7 @@ static bool rswitch_rx(struct net_device *ndev, int *quota)
 			shhwtstamps->hwtstamp = timespec64_to_ktime(ts);
 		}
 		skb->protocol = eth_type_trans(skb, ndev);
-		napi_gro_receive(&rdev->rx_napi, skb);
+		napi_gro_receive(&rdev->rx_queue->napi, skb);
 		rdev->ndev->stats.rx_packets++;
 		rdev->ndev->stats.rx_bytes += gq->pkt_len;
 
@@ -1335,7 +1339,7 @@ static void rswitch_queue_interrupt(struct rswitch_private *priv,
 		rdev->rx_old_queue = rdev->rx_queue;
 		rdev->rx_queue = gq;
 		spin_unlock_irqrestore(&priv->lock, flags);
-		napi = &rdev->rx_napi;
+		napi = &rdev->rx_queue->napi;
 	} else {
 		rdev = netdev_priv(gq->ndev);
 	}
@@ -1368,9 +1372,9 @@ static irqreturn_t rswitch_data_irq(struct rswitch_private *priv, u32 *dis)
 		rswitch_ack_data_irq(priv, gq->index);
 
 		if (gq->dir_tx)
-			rswitch_queue_interrupt(priv, gq, gq->napi, true);
+			rswitch_queue_interrupt(priv, gq, &gq->napi, true);
 		else
-			rswitch_queue_interrupt(priv, gq, gq->napi, false);
+			rswitch_queue_interrupt(priv, gq, &gq->napi, false);
 	}
 
 	return IRQ_HANDLED;
@@ -2361,8 +2365,8 @@ static int rswitch_open(struct net_device *ndev)
 	if (bitmap_empty(rdev->priv->opened_ports, rdev->priv->num_ports))
 		iowrite32(TS, rdev->priv->addr_gwca + GWTSDIE);
 
-	napi_enable(&rdev->tx_napi);
-	napi_enable(&rdev->rx_napi);
+	napi_enable(&rdev->tx_queue->napi);
+	napi_enable(&rdev->rx_queue->napi);
 
 	spin_lock_irqsave(&rdev->priv->lock, flags);
 	set_bit(rdev->port, rdev->priv->opened_ports);
@@ -2405,8 +2409,8 @@ static int rswitch_stop(struct net_device *ndev)
 
 	spin_unlock_irqrestore(&rdev->priv->lock, flags);
 
-	napi_disable(&rdev->tx_napi);
-	napi_disable(&rdev->rx_napi);
+	napi_disable(&rdev->tx_queue->napi);
+	napi_disable(&rdev->rx_queue->napi);
 
 	if (rdev->brdev)
 		rswitch_update_l2_offload(rdev->priv);
@@ -3080,9 +3084,6 @@ static int rswitch_device_alloc(struct rswitch_private *priv, unsigned int index
 	ndev->max_mtu = RSWITCH_MAX_MTU;
 	ndev->min_mtu = ETH_MIN_MTU;
 
-	netif_napi_add_tx(ndev, &rdev->tx_napi, rswitch_tx_poll);
-	netif_napi_add(ndev, &rdev->rx_napi, rswitch_rx_poll);
-
 	rdev->np_port = rswitch_get_port_node(rdev);
 	rdev->disabled = !rdev->np_port;
 	err = of_get_ethdev_address(rdev->np_port, ndev);
@@ -3118,8 +3119,6 @@ out_txdmac:
 out_rxdmac:
 out_get_params:
 	of_node_put(rdev->np_port);
-	netif_napi_del(&rdev->tx_napi);
-	netif_napi_del(&rdev->rx_napi);
 
 	return err;
 }
@@ -3135,8 +3134,6 @@ static void rswitch_device_free(struct rswitch_private *priv, unsigned int index
 		rswitch_rxdmac_free(ndev);
 	}
 	of_node_put(rdev->np_port);
-	netif_napi_del(&rdev->tx_napi);
-	netif_napi_del(&rdev->rx_napi);
 }
 
 static int rswitch_init(struct rswitch_private *priv)

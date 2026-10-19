@@ -234,7 +234,7 @@ struct rswitch_gwca_queue {
 	unsigned int index;
 	bool dir_tx;
 	struct net_device *ndev;	/* queue to ndev for irq */
-	struct napi_struct *napi;	/* queue to tx/rx_napi for irq */
+	struct napi_struct napi;
 
 	union {
 		/* For TX */
@@ -362,8 +362,6 @@ struct rswitch_etha_hw_stats {
 struct rswitch_device {
 	struct rswitch_private *priv;
 	struct net_device *ndev;
-	struct napi_struct tx_napi;
-	struct napi_struct rx_napi;
 	void __iomem *addr;
 	struct rswitch_gwca_queue *tx_queue;
 	struct rswitch_gwca_queue *rx_queue;
