@@ -145,13 +145,47 @@ static void rswitch_coma_init(struct rswitch_private *priv)
 static void rswitch_top_init(struct rswitch_private *priv)
 {
 	u8 gwca_index = priv->info->gwca_index;
-	unsigned int i;
+	unsigned int i, j;
 
-	for (i = 0; i < RSWITCH_MAX_NUM_QUEUES; i++) {
-		if (priv->info->rswitch_version == RSW20)
+	if (priv->info->rswitch_version == RSW20) {
+		for (i = 0; i < RSWITCH_MAX_NUM_QUEUES; i++)
 			iowrite32((i / 16) << (gwca_index * 8), priv->addr_mfab + TPEMIMC7(i));
-		else
-			iowrite32((i / 16) << (gwca_index * 4), priv->addr_mfab + RSW3_TPDEMIMC(i));
+		return;
+	}
+
+	for (i = 0; i < GWCA_NUM_IRQS; i++)
+		memset(priv->irq[i].irq_bits, 0, sizeof(priv->irq[i].irq_bits));
+
+	rswitch_for_each_enabled_port(priv, i) {
+		struct rswitch_device *rdev = priv->rdev[i];
+		unsigned int reg, bit;
+
+		if (rdev->disabled)
+			continue;
+
+		for (j = 0; j < priv->info->num_tx_queues; j++) {
+			struct rswitch_gwca_queue *gq = rdev->tx_queue[j];
+			unsigned int irq_idx = j % GWCA_NUM_IRQS;
+
+			iowrite32(TPDEMIMC_GDICM(gwca_index, irq_idx),
+				  priv->addr_mfab + RSW3_TPDEMIMC(gq->index));
+
+			reg = gq->index / 32;
+			bit = BIT(gq->index % 32);
+			priv->irq[irq_idx].irq_bits[reg] |= bit;
+		}
+
+		for (j = 0; j < priv->info->num_rx_queues; j++) {
+			struct rswitch_gwca_queue *gq = rdev->rx_queue[j];
+			unsigned int irq_idx = (j + priv->info->num_tx_queues) % GWCA_NUM_IRQS;
+
+			iowrite32(TPDEMIMC_GDICM(gwca_index, irq_idx),
+				  priv->addr_mfab + RSW3_TPDEMIMC(gq->index));
+
+			reg = gq->index / 32;
+			bit = BIT(gq->index % 32);
+			priv->irq[irq_idx].irq_bits[reg] |= bit;
+		}
 	}
 }
 
@@ -471,9 +505,8 @@ static int rswitch_gwca_axi_ram_reset(struct rswitch_private *priv)
 	return rswitch_reg_wait(priv->addr_gwca, GWARIRM, ARR, ARR);
 }
 
-static bool rswitch_is_any_data_irq(struct rswitch_private *priv, u32 *dis, bool tx)
+static bool rswitch_is_any_data_irq(struct rswitch_private *priv, u32 *dis, u32 *mask)
 {
-	u32 *mask = tx ? priv->gwca.tx_irq_bits : priv->gwca.rx_irq_bits;
 	unsigned int i;
 
 	for (i = 0; i < RSWITCH_NUM_IRQ_REGS; i++) {
@@ -507,7 +540,9 @@ static void rswitch_ack_data_irq(struct rswitch_private *priv,
 {
 	u32 offs = GWDIS(index / 32);
 
+	spin_lock(&priv->lock);
 	iowrite32(BIT(index % 32), priv->addr_gwca + offs);
+	spin_unlock(&priv->lock);
 }
 
 static unsigned int rswitch_next_queue_index(struct rswitch_gwca_queue *gq,
@@ -645,12 +680,14 @@ static int rswitch_gwca_queue_alloc(struct net_device *ndev,
 	if (!gq->rx_ring && !gq->tx_ring)
 		goto out;
 
-	i = gq->index / 32;
-	bit = BIT(gq->index % 32);
-	if (dir_tx)
-		priv->gwca.tx_irq_bits[i] |= bit;
-	else
-		priv->gwca.rx_irq_bits[i] |= bit;
+	if (priv->info->rswitch_version == RSW20) {
+		i = gq->index / 32;
+		bit = BIT(gq->index % 32);
+		if (dir_tx)
+			priv->gwca.tx_irq_bits[i] |= bit;
+		else
+			priv->gwca.rx_irq_bits[i] |= bit;
+	}
 
 	return 0;
 
@@ -1407,7 +1444,7 @@ static void rswitch_queue_interrupt(struct rswitch_private *priv,
 	}
 }
 
-static irqreturn_t rswitch_data_irq(struct rswitch_private *priv, u32 *dis)
+static irqreturn_t rswitch_data_irq(struct rswitch_private *priv, u32 *dis, u32 *mask)
 {
 	struct rswitch_gwca_queue *gq;
 	unsigned int i, index, bit;
@@ -1416,7 +1453,7 @@ static irqreturn_t rswitch_data_irq(struct rswitch_private *priv, u32 *dis)
 		gq = &priv->gwca.queues[i];
 		index = gq->index / 32;
 		bit = BIT(gq->index % 32);
-		if (!(dis[index] & bit))
+		if (!(dis[index] & bit) || (mask && !(mask[index] & bit)))
 			continue;
 
 		rswitch_ack_data_irq(priv, gq->index);
@@ -1435,12 +1472,30 @@ static irqreturn_t rswitch_gwca_irq(int irq, void *dev_id)
 	struct rswitch_private *priv = dev_id;
 	u32 dis[RSWITCH_NUM_IRQ_REGS];
 	irqreturn_t ret = IRQ_NONE;
+	u32 *mask = NULL;
+	int i;
 
 	rswitch_get_data_irq_status(priv, dis);
 
-	if (rswitch_is_any_data_irq(priv, dis, true) ||
-	    rswitch_is_any_data_irq(priv, dis, false))
-		ret = rswitch_data_irq(priv, dis);
+	if (priv->info->rswitch_version == RSW20) {
+		if (rswitch_is_any_data_irq(priv, dis, priv->gwca.tx_irq_bits) ||
+		    rswitch_is_any_data_irq(priv, dis, priv->gwca.rx_irq_bits))
+			ret = rswitch_data_irq(priv, dis, NULL);
+		return ret;
+	}
+
+	for (i = 0; i < GWCA_NUM_IRQS; i++) {
+		if (irq == priv->irq[i].irq_id) {
+			mask = priv->irq[i].irq_bits;
+			break;
+		}
+	}
+
+	if (!mask)
+		return ret;
+
+	if (rswitch_is_any_data_irq(priv, dis, mask))
+		ret = rswitch_data_irq(priv, dis, mask);
 
 	return ret;
 }
@@ -1475,6 +1530,8 @@ static int rswitch_gwca_request_irqs(struct rswitch_private *priv)
 
 		if (!irq_name)
 			return -ENOMEM;
+
+		priv->irq[i].irq_id = irq;
 
 		ret = devm_request_irq(&priv->pdev->dev, irq, rswitch_gwca_irq,
 				       0, irq_name, priv);
@@ -3327,7 +3384,6 @@ static int rswitch_init(struct rswitch_private *priv)
 	if (!parallel_mode)
 		rswitch_clock_enable(priv);
 
-	rswitch_top_init(priv);
 	if (!parallel_mode) {
 		err = priv->info->bpool_config(priv);
 		if (err < 0)
@@ -3352,6 +3408,8 @@ static int rswitch_init(struct rswitch_private *priv)
 			goto err_device_alloc;
 		}
 	}
+
+	rswitch_top_init(priv);
 
 	if (!parallel_mode) {
 		err = priv->info->rswitch_fwd_init(priv);

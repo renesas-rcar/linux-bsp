@@ -411,6 +411,11 @@ struct rswitch_mfwd {
 	int num_mac_table_entries;
 };
 
+struct rswitch_irq {
+	int irq_id;
+	u32 irq_bits[RSWITCH_NUM_IRQ_REGS];
+};
+
 struct rswitch_private {
 	struct platform_device *pdev;
 	void __iomem *addr_mfwd;
@@ -430,6 +435,7 @@ struct rswitch_private {
 	struct rswitch_etha etha[RSWITCH_MAX_NUM_PORTS];
 	struct rswitch_etha etha_mii[RSWITCH_MAX_NUM_PORTS];
 	struct rswitch_mfwd mfwd;
+	struct rswitch_irq irq[GWCA_NUM_IRQS];
 
 	/* Notifiers */
 	struct notifier_block rswitch_netdevice_nb;

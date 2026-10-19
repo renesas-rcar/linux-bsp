@@ -1077,5 +1077,6 @@ enum switch_vlan_mode {
 /* TOP */
 #define TPEMIMC7(queue)		(TPEMIMC70 + (queue) * 4)
 #define RSW3_TPDEMIMC(queue)    (RSW3_TPDEMIMC0 + (queue) * 4)
+#define TPDEMIMC_GDICM(t, val)	((val) << ((t) * 4))
 
 #endif /* __RENESAS_RSWITCH_REGS_H__ */
