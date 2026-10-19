@@ -2489,7 +2489,7 @@ static int rswitch_open(struct net_device *ndev)
 	if (!rdev->phy_less)
 		phy_start(ndev->phydev);
 
-	netif_start_queue(ndev);
+	netif_tx_start_all_queues(ndev);
 
 	if (rdev->brdev)
 		rswitch_update_l2_offload(rdev->priv);
