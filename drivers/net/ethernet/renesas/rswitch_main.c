@@ -2531,7 +2531,7 @@ static int rswitch_phy_device_init(struct rswitch_device *rdev)
 	if (!phydev)
 		goto out;
 
-	phy_set_max_speed(phydev, SPEED_2500);
+	phy_set_max_speed(phydev, rdev->etha->speed ? rdev->etha->speed : SPEED_2500);
 	phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_10baseT_Half_BIT);
 	phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_10baseT_Full_BIT);
 	phy_remove_link_mode(phydev, ETHTOOL_LINK_MODE_100baseT_Half_BIT);
