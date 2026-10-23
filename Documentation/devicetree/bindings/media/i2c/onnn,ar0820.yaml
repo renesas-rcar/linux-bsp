@@ -1,0 +1,75 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/media/i2c/onnn,ar0820.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: ON Semiconductor AR0820 CMOS Image Sensor
+
+maintainers:
+  - Linh Phung <linh.phung.jy@renesas.com>
+
+description: |
+  The AR0820 is a raw CMOS image sensor. In the boards of this repository it
+  is connected via a Maxim GMSL serializer/deserializer link (e.g.
+  MAX96793/MAX96712/MAX96726) rather than directly to the SoC's CSI-2
+  receiver.
+
+  This binding only describes the devicetree node's compatible/reg/port, as
+  used by the boards in this repository. The v4l2 subdev driver that binds
+  this compatible is not part of this kernel tree: it is maintained
+  out-of-tree in the "gmsl_serdes" project, built and installed as a
+  separate kernel module alongside the deserializer driver.
+
+properties:
+  compatible:
+    const: onnn,ar0820
+
+  reg:
+    maxItems: 1
+
+  maxim,sensor-remote-i2c-addr:
+    description:
+      7-bit I2C address of the remote image sensor before GMSL address
+      translation.
+    $ref: /schemas/types.yaml#/definitions/uint32
+    minimum: 8
+    maximum: 119
+
+  port:
+    $ref: /schemas/graph.yaml#/$defs/port-base
+    unevaluatedProperties: false
+
+    properties:
+      endpoint:
+        $ref: /schemas/media/video-interfaces.yaml#
+        unevaluatedProperties: false
+
+    required:
+      - endpoint
+
+required:
+  - compatible
+  - reg
+  - port
+
+additionalProperties: false
+
+examples:
+  - |
+    i2c {
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        camera@49 {
+            compatible = "onnn,ar0820";
+            reg = <0x49>;
+            maxim,sensor-remote-i2c-addr = <0x10>;
+
+            port {
+                endpoint {
+                    remote-endpoint = <&max96726_in0>;
+                };
+            };
+        };
+    };

@@ -27,6 +27,14 @@ properties:
   reg:
     maxItems: 1
 
+  maxim,sensor-remote-i2c-addr:
+    description:
+      7-bit I2C address of the remote image sensor before GMSL address
+      translation.
+    $ref: /schemas/types.yaml#/definitions/uint32
+    minimum: 8
+    maximum: 119
+
   port:
     $ref: /schemas/graph.yaml#/$defs/port-base
     unevaluatedProperties: false
@@ -51,6 +59,7 @@ examples:
     camera@49 {
         compatible = "sony,imx728";
         reg = <0x49>;
+        maxim,sensor-remote-i2c-addr = <0x1a>;
 
         port {
             endpoint {
