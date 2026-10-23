@@ -764,6 +764,10 @@ enum vlan_egress_mode {
 #define TDQP			GENMASK(23, 16)
 #define TDQD			GENMASK(7, 0)
 
+/* bit field definitions for EATPEC */
+#define EATPEC_AFS		GENMASK(17, 16)
+#define EATPEC_TTQ		GENMASK(7, 0)
+
 /* bit field definitions for EACAEC/EACOEM */
 #define	CE			GENMASK(7, 0)
 
@@ -829,6 +833,11 @@ enum rswitch_lsc_mode {
 #define PLV			BIT(16)
 #define PASE			BIT(8)
 #define LVT			GENMASK(6, 0)
+
+/* bit field definitions for MMIS0 */
+#define MMIS0_VFRS		BIT(4)
+#define MMIS0_LVFS		BIT(3)
+#define MMIS0_LVSS		BIT(2)
 
 /* bit field definitions for MIOC */
 #define FORCE_PHY_LINK		BIT(5)

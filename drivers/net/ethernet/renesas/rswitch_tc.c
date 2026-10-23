@@ -159,12 +159,28 @@ static int rswitch_tc_mqprio_del(struct net_device *ndev)
 static int rswitch_tc_setup_qdisc_mqprio(struct net_device *ndev,
 					 struct tc_mqprio_qopt_offload *m)
 {
+	struct rswitch_device *rdev = netdev_priv(ndev);
+	struct rswitch_etha *etha = rdev->etha;
+	u8 num_tc = m->qopt.num_tc;
+	int err;
+
 	m->qopt.hw = TC_MQPRIO_HW_OFFLOAD_TCS;
 
-	if (m->qopt.num_tc == 0)
-		return rswitch_tc_mqprio_del(ndev);
+	if (num_tc == 0)
+		err = rswitch_tc_mqprio_del(ndev);
 	else
-		return rswitch_tc_mqprio_add(ndev, m->qopt.num_tc);
+		err = rswitch_tc_mqprio_add(ndev, num_tc);
+	if (err)
+		return err;
+
+	etha->mm_tc_offload = num_tc > 0;
+	etha->mm_preemptible_tcs = 0;
+	if (num_tc)
+		etha->mm_preemptible_tcs = m->preemptible_tcs &
+					   GENMASK(num_tc - 1, 0);
+	rswitch_mm_update(rdev);
+
+	return 0;
 }
 
 int rswitch_setup_tc(struct net_device *ndev, enum tc_setup_type type,

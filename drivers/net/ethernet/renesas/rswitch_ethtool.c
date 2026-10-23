@@ -188,6 +188,89 @@ static int rswitch_get_sset_count(struct net_device *netdev, int sset)
 	}
 }
 
+static int rswitch_get_mm(struct net_device *ndev, struct ethtool_mm_state *state)
+{
+	struct rswitch_device *rdev = netdev_priv(ndev);
+	struct rswitch_etha *etha = rdev->etha;
+	u32 eatpec;
+
+	if (!rswitch_mm_supported(rdev))
+		return -EOPNOTSUPP;
+
+	state->pmac_enabled = etha->mm_pmac_enabled;
+	state->tx_enabled = etha->mm_tx_enabled;
+	state->verify_enabled = etha->mm_verify_enabled;
+	state->verify_time = etha->mm_verify_time ?: RSW3_MM_DEFAULT_VERIFY_TIME_MS;
+	state->max_verify_time = RSW3_MM_MAX_VERIFY_TIME_MS;
+	state->tx_min_frag_size =
+		ethtool_mm_frag_size_add_to_min(etha->mm_tx_min_frag_add);
+	state->rx_min_frag_size = ETH_ZLEN;
+
+	if (!rswitch_etha_is_operating(etha)) {
+		state->verify_status = etha->mm_verify_enabled ?
+			ETHTOOL_MM_VERIFY_STATUS_INITIAL :
+			ETHTOOL_MM_VERIFY_STATUS_DISABLED;
+		state->tx_active = false;
+		return 0;
+	}
+
+	eatpec = ioread32(etha->addr + EATPEC);
+
+	if (!etha->mm_verify_enabled)
+		state->verify_status = ETHTOOL_MM_VERIFY_STATUS_DISABLED;
+	else
+		state->verify_status = etha->mm_verify_status ?:
+						ETHTOOL_MM_VERIFY_STATUS_INITIAL;
+
+	state->tx_active = !!(eatpec & EATPEC_TTQ);
+
+	return 0;
+}
+
+static int rswitch_set_mm(struct net_device *ndev, struct ethtool_mm_cfg *cfg,
+			  struct netlink_ext_ack *extack)
+{
+	struct rswitch_device *rdev = netdev_priv(ndev);
+	struct rswitch_etha *etha = rdev->etha;
+	u32 frag_add;
+	int err;
+
+	if (!rswitch_mm_supported(rdev))
+		return -EOPNOTSUPP;
+
+	err = ethtool_mm_frag_size_min_to_add(cfg->tx_min_frag_size,
+					      &frag_add, extack);
+	if (err)
+		return err;
+
+	etha->mm_pmac_enabled = cfg->pmac_enabled;
+	etha->mm_tx_enabled = cfg->tx_enabled;
+	etha->mm_verify_enabled = cfg->verify_enabled;
+	etha->mm_verify_time = cfg->verify_time;
+	etha->mm_tx_min_frag_add = frag_add;
+	etha->mm_configured = true;
+	etha->mm_verify_status = ETHTOOL_MM_VERIFY_STATUS_INITIAL;
+
+	rswitch_mm_update(rdev);
+
+	return 0;
+}
+
+static void rswitch_get_mm_stats(struct net_device *ndev,
+				 struct ethtool_mm_stats *stats)
+{
+	struct rswitch_device *rdev = netdev_priv(ndev);
+
+	if (!rswitch_mm_supported(rdev) || !rswitch_etha_is_operating(rdev->etha))
+		return;
+
+	rswitch_update_stats(rdev);
+	stats->MACMergeFrameAssErrorCount = rdev->r_stats.mrffmefc +
+					    rdev->r_stats.mrcfcefc +
+					    rdev->r_stats.mrfcefc;
+	stats->MACMergeFrameAssOkCount = rdev->r_stats.mrgfcp;
+}
+
 static const struct ethtool_ops rswitch_ethtool_ops = {
 	.get_ts_info		= rswitch_get_ts_info,
 	.get_channels		= rswitch_get_channels,
@@ -197,6 +280,9 @@ static const struct ethtool_ops rswitch_ethtool_ops = {
 	.get_sset_count		= rswitch_get_sset_count,
 	.get_link_ksettings	= phy_ethtool_get_link_ksettings,
 	.set_link_ksettings	= phy_ethtool_set_link_ksettings,
+	.get_mm				= rswitch_get_mm,
+	.set_mm				= rswitch_set_mm,
+	.get_mm_stats		= rswitch_get_mm_stats,
 };
 
 void rswitch_set_ethtool_ops(struct net_device *netdev)

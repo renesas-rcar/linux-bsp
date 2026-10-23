@@ -5,6 +5,7 @@
  */
 
 #include <linux/clk.h>
+#include <linux/delay.h>
 #include <linux/dma-mapping.h>
 #include <linux/err.h>
 #include <linux/etherdevice.h>
@@ -1875,6 +1876,112 @@ static void rswitch3_etha_enable_mii(struct rswitch_etha *etha)
 		       PSMCS_ENC(etha->psmcs) | FIELD_PREP(RSW3_PSMHT, 0x06));
 }
 
+bool rswitch_mm_supported(struct rswitch_device *rdev)
+{
+	return !parallel_mode && !rdev->phy_less &&
+	       rdev->priv->info->rswitch_version != RSW20;
+}
+
+bool rswitch_etha_is_operating(struct rswitch_etha *etha)
+{
+	return rswitch_agent_clock_is_enabled(etha->coma_addr, etha->index) &&
+	       (ioread32(etha->addr + EAMS) & OPC) == OPC_OPERATION;
+}
+
+static bool rswitch_mm_verify_wanted(const struct rswitch_etha *etha)
+{
+	return etha->mm_configured && etha->mm_pmac_enabled &&
+	       etha->mm_tx_enabled && etha->mm_verify_enabled;
+}
+
+static bool rswitch_mm_tc_mapped(const struct rswitch_etha *etha)
+{
+	return etha->mm_configured && etha->mm_tc_offload;
+}
+
+static u32 rswitch_mm_eatpec_value(const struct rswitch_etha *etha)
+{
+	u8 ttq = rswitch_mm_tc_mapped(etha) ? etha->mm_preemptible_tcs : 0;
+
+	if (!etha->mm_pmac_enabled || !etha->mm_tx_enabled || !ttq)
+		return 0;
+
+	if (etha->mm_verify_enabled &&
+	    etha->mm_verify_status != ETHTOOL_MM_VERIFY_STATUS_SUCCEEDED)
+		return 0;
+
+	return FIELD_PREP(EATPEC_AFS, etha->mm_tx_min_frag_add) |
+	       FIELD_PREP(EATPEC_TTQ, ttq);
+}
+
+static u32 rswitch_mm_eairc_value(const struct rswitch_etha *etha)
+{
+	return rswitch_mm_tc_mapped(etha) ? RSW3_EAIRC_IDENTITY : 0;
+}
+
+static bool rswitch_mm_hw_differs(struct rswitch_etha *etha)
+{
+	return ioread32(etha->addr + EATPEC) != rswitch_mm_eatpec_value(etha) ||
+	       ioread32(etha->addr + EAIRC) != rswitch_mm_eairc_value(etha);
+}
+
+static void rswitch_etha_write_mm_verify(struct rswitch_etha *etha, bool kick)
+{
+	u32 lvt, mlvc;
+
+	if (!etha->mm_configured || !rswitch_etha_is_operating(etha))
+		return;
+
+	mlvc = ioread32(etha->addr + MLVC);
+	if (mlvc & PLV)
+		return;
+
+	lvt = (etha->mm_verify_time ?: RSW3_MM_DEFAULT_VERIFY_TIME_MS) - 1;
+	rswitch_modify(etha->addr, MLVC, LVT | PASE,
+		       FIELD_PREP(LVT, lvt) |
+		       (etha->mm_pmac_enabled ? PASE : 0));
+
+	if (kick && etha->mm_verify_enabled && etha->mm_pmac_enabled) {
+		iowrite32(MMIS0_LVSS | MMIS0_LVFS | MMIS0_VFRS, etha->addr + MMIS0);
+		rswitch_modify(etha->addr, MLVC, PLV, PLV);
+	}
+}
+
+static void rswitch_etha_write_mm_config(struct rswitch_etha *etha)
+{
+	if (!etha->mm_configured)
+		return;
+
+	iowrite32(rswitch_mm_eairc_value(etha), etha->addr + EAIRC);
+	iowrite32(rswitch_mm_eatpec_value(etha), etha->addr + EATPEC);
+	etha->mm_pending = false;
+}
+
+void rswitch_mm_update(struct rswitch_device *rdev)
+{
+	struct rswitch_etha *etha = rdev->etha;
+	bool mapped = rswitch_mm_tc_mapped(etha);
+	int q, tc;
+
+	if (!rswitch_mm_supported(rdev))
+		return;
+
+	for (q = 0; q < NUM_QUEUES_TX_PER_NDEV; q++) {
+		tc = mapped ? netdev_txq_to_tc(rdev->ndev, q) : 0;
+		WRITE_ONCE(rdev->tx_ipv[q], tc < 0 ? GWCA_IPV_NUM : tc);
+	}
+
+	if (!etha->mm_configured)
+		return;
+
+	if (rswitch_etha_is_operating(etha)) {
+		rswitch_etha_write_mm_verify(etha, false);
+		etha->mm_pending = rswitch_mm_hw_differs(etha);
+	} else {
+		etha->mm_pending = true;
+	}
+}
+
 static void rswitch_etha_init_tsn_egress_path(struct rswitch_etha *etha)
 {
 	unsigned int q;
@@ -1977,6 +2084,9 @@ static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac,
 {
 	int err;
 
+	if (etha->mm_configured && rswitch_etha_is_operating(etha))
+		rswitch_update_stats(priv->rdev[etha->index]);
+
 	err = rswitch_etha_change_mode(etha, OPC_CONFIG);
 	if (err < 0)
 		return err;
@@ -1988,6 +2098,8 @@ static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac,
 	/* Drop frames with unknown tags */
 	iowrite32(UT, etha->addr + EARTFC);
 
+	rswitch_etha_write_mm_config(etha);
+
 	priv->info->rswitch_rmac_setting(etha, mac);
 	priv->info->rswitch_etha_enable_mii(etha);
 
@@ -1995,7 +2107,13 @@ static int rswitch_etha_hw_init(struct rswitch_etha *etha, const u8 *mac,
 	if (err < 0)
 		return err;
 
-	return rswitch_etha_change_mode(etha, OPC_OPERATION);
+	err = rswitch_etha_change_mode(etha, OPC_OPERATION);
+	if (err < 0)
+		return err;
+
+	rswitch_etha_write_mm_verify(etha, false);
+
+	return 0;
 }
 
 static int rswitch_etha_fixed_link(struct rswitch_etha *etha)
@@ -2476,16 +2594,69 @@ out_dmac:
 	return err;
 }
 
+static void rswitch_etha_mm_verify_run(struct rswitch_etha *etha)
+{
+	u32 lvt_ms = etha->mm_verify_time ?: RSW3_MM_DEFAULT_VERIFY_TIME_MS;
+	u32 mlvc, mmis0;
+	int ret;
+
+	etha->mm_verify_status = ETHTOOL_MM_VERIFY_STATUS_VERIFYING;
+	rswitch_etha_write_mm_verify(etha, true);
+
+	ret = readl_poll_timeout(etha->addr + MLVC, mlvc, !(mlvc & PLV),
+				 USEC_PER_MSEC,
+				 (3 * lvt_ms + 20) * USEC_PER_MSEC);
+	mmis0 = ioread32(etha->addr + MMIS0);
+
+	etha->mm_verify_status = (!ret && (mmis0 & MMIS0_LVSS)) ?
+		ETHTOOL_MM_VERIFY_STATUS_SUCCEEDED :
+		ETHTOOL_MM_VERIFY_STATUS_FAILED;
+}
+
+static void rswitch_mm_link_up(struct rswitch_device *rdev)
+{
+	struct rswitch_etha *etha = rdev->etha;
+	struct net_device *ndev = rdev->ndev;
+
+	if (!rswitch_mm_verify_wanted(etha) || !rswitch_etha_is_operating(etha))
+		return;
+
+	netif_tx_stop_all_queues(ndev);
+	rswitch_etha_mm_verify_run(etha);
+
+	if (etha->mm_verify_status == ETHTOOL_MM_VERIFY_STATUS_FAILED) {
+		msleep(RSW3_MM_VERIFY_RETRY_MS);
+		rswitch_etha_mm_verify_run(etha);
+	}
+
+	etha->mm_pending = rswitch_mm_hw_differs(etha);
+	if (etha->mm_pending) {
+		if (etha->connect_to_xpcs)
+			rswitch_speed_reconfigure(rdev, etha->speed);
+		else
+			rswitch_etha_hw_init(etha, ndev->dev_addr, rdev->priv);
+	}
+
+	netif_tx_wake_all_queues(ndev);
+}
+
 static void rswitch_adjust_link(struct net_device *ndev)
 {
 	struct rswitch_device *rdev = netdev_priv(ndev);
 	struct phy_device *phydev = ndev->phydev;
+	bool mm_apply;
 	int err;
 
 	if (phydev->link != rdev->etha->link) {
 		phy_print_status(phydev);
 
 		if (phydev->link) {
+			if (rswitch_mm_verify_wanted(rdev->etha))
+				rdev->etha->mm_verify_status =
+					ETHTOOL_MM_VERIFY_STATUS_INITIAL;
+			mm_apply = rdev->etha->mm_pending &&
+					!rswitch_mm_verify_wanted(rdev->etha);
+
 			if (!parallel_mode && phydev->speed != rdev->etha->speed &&
 			    !rdev->etha->connect_to_xpcs)
 				phy_set_speed(rdev->serdes, phydev->speed);
@@ -2496,7 +2667,8 @@ static void rswitch_adjust_link(struct net_device *ndev)
 				phy_power_off(rdev->serdes);
 				phy_power_on(rdev->serdes);
 			}
-			if (!parallel_mode && phydev->speed != rdev->etha->speed) {
+			if (!parallel_mode &&
+			    (phydev->speed != rdev->etha->speed || mm_apply)) {
 				if (rdev->etha->connect_to_xpcs) {
 					err = rswitch_speed_reconfigure(rdev, phydev->speed);
 					if (err < 0) {
@@ -2517,6 +2689,9 @@ static void rswitch_adjust_link(struct net_device *ndev)
 					}
 				}
 			}
+
+			if (!parallel_mode)
+				rswitch_mm_link_up(rdev);
 		}
 		rdev->etha->link = phydev->link;
 	}
@@ -2871,9 +3046,11 @@ static bool rswitch_ext_desc_set_info1(struct rswitch_device *rdev,
 				       struct sk_buff *skb,
 				       struct rswitch_ext_desc *desc)
 {
+	u8 ipv = READ_ONCE(rdev->tx_ipv[skb_get_queue_mapping(skb)]);
+
 	if (!parallel_mode)
 		desc->info1 = cpu_to_le64(INFO1_DV(BIT(rdev->etha->index)) |
-					  INFO1_IPV(GWCA_IPV_NUM) | INFO1_FMT);
+					  INFO1_IPV(ipv) | INFO1_FMT);
 	else
 		desc->info1 = cpu_to_le64(INFO1_IPV(GWCA_IPV_NUM));
 

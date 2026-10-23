@@ -48,6 +48,11 @@
 					 RSWITCH3_NUM_PRIOS)
 #define PBR_PRIO_TSNA			0xf
 
+#define RSW3_EAIRC_IDENTITY		0x76543210
+#define RSW3_MM_MAX_VERIFY_TIME_MS	128
+#define RSW3_MM_DEFAULT_VERIFY_TIME_MS	10
+#define RSW3_MM_VERIFY_RETRY_MS		300
+
 #define RSWITCH_ETHA_SIZE		0x00002000
 #define RSWITCH_GWCA_SIZE		0x00002000
 
@@ -214,6 +219,17 @@ struct rswitch_etha {
 	bool operated;
 	bool connect_to_xpcs;
 	bool fixed_link;
+
+	bool mm_configured;
+	bool mm_pmac_enabled;
+	bool mm_tx_enabled;
+	bool mm_verify_enabled;
+	bool mm_pending;
+	u8 mm_verify_status;
+	u32 mm_verify_time;
+	u32 mm_tx_min_frag_add;
+	bool mm_tc_offload;
+	u8 mm_preemptible_tcs;
 };
 
 /* The datasheet said descriptor "chain" and/or "queue". For consistency of
@@ -378,6 +394,7 @@ struct rswitch_device {
 	void __iomem *addr;
 	struct rswitch_gwca_queue *tx_queue[NUM_QUEUES_TX_PER_NDEV];
 	struct rswitch_gwca_queue *rx_queue[NUM_QUEUES_RX_PER_NDEV];
+	u8 tx_ipv[NUM_QUEUES_TX_PER_NDEV];
 	struct rswitch_gwca_queue *rx_old_queue;
 	struct sk_buff *ts_skb[TS_TAGS_PER_PORT];
 	DECLARE_BITMAP(ts_skb_used, TS_TAGS_PER_PORT);
@@ -515,6 +532,9 @@ int rswitch_reg_wait(void __iomem *addr, u32 offs, u32 mask, u32 expected);
 int rswitch_gwca_change_mode(struct rswitch_private *priv, enum rswitch_port_mode mode);
 int rswitch_etha_change_mode(struct rswitch_etha *etha, enum rswitch_port_mode mode);
 void rswitch_update_stats(struct rswitch_device *rdev);
+bool rswitch_mm_supported(struct rswitch_device *rdev);
+bool rswitch_etha_is_operating(struct rswitch_etha *etha);
+void rswitch_mm_update(struct rswitch_device *rdev);
 int rswitch_attach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port,
 			 u32 fwd_mask, const u8 *mac);
 void rswitch_detach_tsnes(struct device *dev, u32 tsnes_id, u32 rsw_port);
