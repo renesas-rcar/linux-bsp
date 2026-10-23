@@ -7,33 +7,51 @@
  * This overlay allows you to define cameras connected to the FAKRA connectors
  * on the IRONHIDE-X5H (or compatible) board.
  *
- * Enable the cameras by specifying the camera compatible on the appropriate
- * line. Comment out the defines to disconnect the camera from the DTB.
+ * Select each camera model by setting IRONHIDE_CAMERA<n> to AR0820, IMX728,
+ * or IMX623. Comment out a define to disconnect that camera from the DTB.
  *
- * "sony,imx728"/"sony,imx623" have a devicetree binding under
- * Documentation/devicetree/bindings/media/i2c/ for schema validation, but
- * their v4l2 subdev driver is maintained out-of-tree (the "gmsl_serdes"
+ * "onnn,ar0820", "sony,imx728", and "sony,imx623" have a devicetree binding
+ * under Documentation/devicetree/bindings/media/i2c/ for schema validation,
+ * but their v4l2 subdev driver is maintained out-of-tree (the "gmsl_serdes"
  * project) and is not part of this kernel tree.
  */
 
 #include <dt-bindings/gpio/gpio.h>
 
-#define IRONHIDE_CAMERA0  "sony,imx728"
-#define IRONHIDE_CAMERA1  "sony,imx728"
-#define IRONHIDE_CAMERA2  "sony,imx728"
-#define IRONHIDE_CAMERA3  "sony,imx728"
-#define IRONHIDE_CAMERA4  "sony,imx728"
-#define IRONHIDE_CAMERA5  "sony,imx728"
-#define IRONHIDE_CAMERA6  "sony,imx728"
-#define IRONHIDE_CAMERA7  "sony,imx728"
-#define IRONHIDE_CAMERA8  "sony,imx728"
-#define IRONHIDE_CAMERA9  "sony,imx728"
-#define IRONHIDE_CAMERA10  "sony,imx728"
-#define IRONHIDE_CAMERA11  "sony,imx728"
-#define IRONHIDE_CAMERA12  "sony,imx728"
-#define IRONHIDE_CAMERA13  "sony,imx728"
-#define IRONHIDE_CAMERA14  "sony,imx728"
-#define IRONHIDE_CAMERA15  "sony,imx728"
+/* Model selectors also choose the remote sensor address. */
+#define IRONHIDE_SENSOR_COMPATIBLE_AR0820	"onnn,ar0820"
+#define IRONHIDE_SENSOR_COMPATIBLE_IMX728	"sony,imx728"
+#define IRONHIDE_SENSOR_COMPATIBLE_IMX623	"sony,imx623"
+
+#define IRONHIDE_SENSOR_I2C_ADDR_AR0820		0x10
+#define IRONHIDE_SENSOR_I2C_ADDR_IMX728		0x1a
+#define IRONHIDE_SENSOR_I2C_ADDR_IMX623		0x1a
+
+#define IRONHIDE_SENSOR_COMPATIBLE_EXPAND(model) \
+	IRONHIDE_SENSOR_COMPATIBLE_##model
+#define IRONHIDE_SENSOR_COMPATIBLE(model) \
+	IRONHIDE_SENSOR_COMPATIBLE_EXPAND(model)
+#define IRONHIDE_SENSOR_I2C_ADDR_EXPAND(model) \
+	IRONHIDE_SENSOR_I2C_ADDR_##model
+#define IRONHIDE_SENSOR_I2C_ADDR(model) \
+	IRONHIDE_SENSOR_I2C_ADDR_EXPAND(model)
+
+#define IRONHIDE_CAMERA0  IMX728
+#define IRONHIDE_CAMERA1  IMX728
+#define IRONHIDE_CAMERA2  IMX728
+#define IRONHIDE_CAMERA3  IMX728
+#define IRONHIDE_CAMERA4  IMX728
+#define IRONHIDE_CAMERA5  IMX728
+#define IRONHIDE_CAMERA6  IMX728
+#define IRONHIDE_CAMERA7  IMX728
+#define IRONHIDE_CAMERA8  IMX728
+#define IRONHIDE_CAMERA9  IMX728
+#define IRONHIDE_CAMERA10 IMX728
+#define IRONHIDE_CAMERA11 IMX728
+#define IRONHIDE_CAMERA12 IMX728
+#define IRONHIDE_CAMERA13 IMX728
+#define IRONHIDE_CAMERA14 IMX728
+#define IRONHIDE_CAMERA15 IMX728
 
 /* Define the endpoint links */
 #ifdef IRONHIDE_CAMERA0
@@ -131,7 +149,10 @@
 };
 #endif
 
-/* Cameras are 'attached' to the GMSL I2C busses */
+/*
+ * Camera reg values are Linux-side aliases. The remote sensor's native
+ * 7-bit I2C address is configured separately on each camera node.
+ */
 &gmsl0 {
 
 #if defined(IRONHIDE_CAMERA0) || defined(IRONHIDE_CAMERA1) || \
@@ -146,8 +167,11 @@
 			status = "okay";
 
 			camera@49 {
-				compatible = IRONHIDE_CAMERA0;
+				compatible =
+					IRONHIDE_SENSOR_COMPATIBLE(IRONHIDE_CAMERA0);
 				reg = <0x49>;
+				maxim,sensor-remote-i2c-addr =
+					<IRONHIDE_SENSOR_I2C_ADDR(IRONHIDE_CAMERA0)>;
 
 				port {
 					fakra_con0: endpoint {
@@ -163,8 +187,11 @@
 			status = "okay";
 
 			camera@51 {
-				compatible = IRONHIDE_CAMERA1;
+				compatible =
+					IRONHIDE_SENSOR_COMPATIBLE(IRONHIDE_CAMERA1);
 				reg = <0x51>;
+				maxim,sensor-remote-i2c-addr =
+					<IRONHIDE_SENSOR_I2C_ADDR(IRONHIDE_CAMERA1)>;
 
 				port {
 					fakra_con1: endpoint {
@@ -180,8 +207,11 @@
 			status = "okay";
 
 			camera@59 {
-				compatible = IRONHIDE_CAMERA2;
+				compatible =
+					IRONHIDE_SENSOR_COMPATIBLE(IRONHIDE_CAMERA2);
 				reg = <0x59>;
+				maxim,sensor-remote-i2c-addr =
+					<IRONHIDE_SENSOR_I2C_ADDR(IRONHIDE_CAMERA2)>;
 
 				port {
 					fakra_con2: endpoint {
@@ -197,8 +227,11 @@
 			status = "okay";
 
 			camera@61 {
-				compatible = IRONHIDE_CAMERA3;
+				compatible =
+					IRONHIDE_SENSOR_COMPATIBLE(IRONHIDE_CAMERA3);
 				reg = <0x61>;
+				maxim,sensor-remote-i2c-addr =
+					<IRONHIDE_SENSOR_I2C_ADDR(IRONHIDE_CAMERA3)>;
 
 				port {
 					fakra_con3: endpoint {
@@ -225,8 +258,11 @@
 			status = "okay";
 
 			camera@49 {
-				compatible = IRONHIDE_CAMERA4;
+				compatible =
+					IRONHIDE_SENSOR_COMPATIBLE(IRONHIDE_CAMERA4);
 				reg = <0x49>;
+				maxim,sensor-remote-i2c-addr =
+					<IRONHIDE_SENSOR_I2C_ADDR(IRONHIDE_CAMERA4)>;
 
 				port {
 					fakra_con4: endpoint {
@@ -242,8 +278,11 @@
 			status = "okay";
 
 			camera@51 {
-				compatible = IRONHIDE_CAMERA5;
+				compatible =
+					IRONHIDE_SENSOR_COMPATIBLE(IRONHIDE_CAMERA5);
 				reg = <0x51>;
+				maxim,sensor-remote-i2c-addr =
+					<IRONHIDE_SENSOR_I2C_ADDR(IRONHIDE_CAMERA5)>;
 
 				port {
 					fakra_con5: endpoint {
@@ -259,8 +298,11 @@
 			status = "okay";
 
 			camera@59 {
-				compatible = IRONHIDE_CAMERA6;
+				compatible =
+					IRONHIDE_SENSOR_COMPATIBLE(IRONHIDE_CAMERA6);
 				reg = <0x59>;
+				maxim,sensor-remote-i2c-addr =
+					<IRONHIDE_SENSOR_I2C_ADDR(IRONHIDE_CAMERA6)>;
 
 				port {
 					fakra_con6: endpoint {
@@ -276,8 +318,11 @@
 			status = "okay";
 
 			camera@61 {
-				compatible = IRONHIDE_CAMERA7;
+				compatible =
+					IRONHIDE_SENSOR_COMPATIBLE(IRONHIDE_CAMERA7);
 				reg = <0x61>;
+				maxim,sensor-remote-i2c-addr =
+					<IRONHIDE_SENSOR_I2C_ADDR(IRONHIDE_CAMERA7)>;
 
 				port {
 					fakra_con7: endpoint {
@@ -304,8 +349,11 @@
 			status = "okay";
 
 			camera@49 {
-				compatible = IRONHIDE_CAMERA8;
+				compatible =
+					IRONHIDE_SENSOR_COMPATIBLE(IRONHIDE_CAMERA8);
 				reg = <0x49>;
+				maxim,sensor-remote-i2c-addr =
+					<IRONHIDE_SENSOR_I2C_ADDR(IRONHIDE_CAMERA8)>;
 
 				port {
 					fakra_con8: endpoint {
@@ -321,8 +369,11 @@
 			status = "okay";
 
 			camera@51 {
-				compatible = IRONHIDE_CAMERA9;
+				compatible =
+					IRONHIDE_SENSOR_COMPATIBLE(IRONHIDE_CAMERA9);
 				reg = <0x51>;
+				maxim,sensor-remote-i2c-addr =
+					<IRONHIDE_SENSOR_I2C_ADDR(IRONHIDE_CAMERA9)>;
 
 				port {
 					fakra_con9: endpoint {
@@ -338,8 +389,11 @@
 			status = "okay";
 
 			camera@59 {
-				compatible = IRONHIDE_CAMERA10;
+				compatible =
+					IRONHIDE_SENSOR_COMPATIBLE(IRONHIDE_CAMERA10);
 				reg = <0x59>;
+				maxim,sensor-remote-i2c-addr =
+					<IRONHIDE_SENSOR_I2C_ADDR(IRONHIDE_CAMERA10)>;
 
 				port {
 					fakra_con10: endpoint {
@@ -355,8 +409,11 @@
 			status = "okay";
 
 			camera@61 {
-				compatible = IRONHIDE_CAMERA11;
+				compatible =
+					IRONHIDE_SENSOR_COMPATIBLE(IRONHIDE_CAMERA11);
 				reg = <0x61>;
+				maxim,sensor-remote-i2c-addr =
+					<IRONHIDE_SENSOR_I2C_ADDR(IRONHIDE_CAMERA11)>;
 
 				port {
 					fakra_con11: endpoint {
@@ -383,8 +440,11 @@
 			status = "okay";
 
 			camera@49 {
-				compatible = IRONHIDE_CAMERA12;
+				compatible =
+					IRONHIDE_SENSOR_COMPATIBLE(IRONHIDE_CAMERA12);
 				reg = <0x49>;
+				maxim,sensor-remote-i2c-addr =
+					<IRONHIDE_SENSOR_I2C_ADDR(IRONHIDE_CAMERA12)>;
 
 				port {
 					fakra_con12: endpoint {
@@ -400,8 +460,11 @@
 			status = "okay";
 
 			camera@51 {
-				compatible = IRONHIDE_CAMERA13;
+				compatible =
+					IRONHIDE_SENSOR_COMPATIBLE(IRONHIDE_CAMERA13);
 				reg = <0x51>;
+				maxim,sensor-remote-i2c-addr =
+					<IRONHIDE_SENSOR_I2C_ADDR(IRONHIDE_CAMERA13)>;
 
 				port {
 					fakra_con13: endpoint {
@@ -417,8 +480,11 @@
 			status = "okay";
 
 			camera@59 {
-				compatible = IRONHIDE_CAMERA14;
+				compatible =
+					IRONHIDE_SENSOR_COMPATIBLE(IRONHIDE_CAMERA14);
 				reg = <0x59>;
+				maxim,sensor-remote-i2c-addr =
+					<IRONHIDE_SENSOR_I2C_ADDR(IRONHIDE_CAMERA14)>;
 
 				port {
 					fakra_con14: endpoint {
@@ -434,8 +500,11 @@
 			status = "okay";
 
 			camera@61 {
-				compatible = IRONHIDE_CAMERA15;
+				compatible =
+					IRONHIDE_SENSOR_COMPATIBLE(IRONHIDE_CAMERA15);
 				reg = <0x61>;
+				maxim,sensor-remote-i2c-addr =
+					<IRONHIDE_SENSOR_I2C_ADDR(IRONHIDE_CAMERA15)>;
 
 				port {
 					fakra_con15: endpoint {

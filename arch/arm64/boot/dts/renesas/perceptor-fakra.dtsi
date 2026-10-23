@@ -7,34 +7,51 @@
  * This overlay allows you to define cameras connected to the FAKRA
  * connectors on the PERCEPTOR (or compatible) board.
  *
- * Enable the cameras by specifying the camera compatible on the
- * appropriate line. Comment out the defines to disconnect the camera
- * from the DTB.
+ * Select each camera model by setting PERCEPTOR_CAMERA<n> to AR0820, IMX728,
+ * or IMX623. Comment out a define to disconnect that camera from the DTB.
  *
- * "sony,imx728"/"sony,imx623" have a devicetree binding under
- * Documentation/devicetree/bindings/media/i2c/ for schema validation, but
- * their v4l2 subdev driver is maintained out-of-tree (the "gmsl_serdes"
+ * "onnn,ar0820", "sony,imx728", and "sony,imx623" have a devicetree binding
+ * under Documentation/devicetree/bindings/media/i2c/ for schema validation,
+ * but their v4l2 subdev driver is maintained out-of-tree (the "gmsl_serdes"
  * project) and is not part of this kernel tree.
  */
 
 #include <dt-bindings/gpio/gpio.h>
 
-#define PERCEPTOR_CAMERA0  "sony,imx728"
-#define PERCEPTOR_CAMERA1  "sony,imx728"
-#define PERCEPTOR_CAMERA2  "sony,imx728"
-#define PERCEPTOR_CAMERA3  "sony,imx728"
-#define PERCEPTOR_CAMERA4  "sony,imx728"
-#define PERCEPTOR_CAMERA5  "sony,imx728"
-#define PERCEPTOR_CAMERA6  "sony,imx728"
-#define PERCEPTOR_CAMERA7  "sony,imx728"
-#define PERCEPTOR_CAMERA8  "sony,imx728"
-#define PERCEPTOR_CAMERA9  "sony,imx728"
-#define PERCEPTOR_CAMERA10  "sony,imx728"
-#define PERCEPTOR_CAMERA11  "sony,imx728"
-#define PERCEPTOR_CAMERA12  "sony,imx728"
-#define PERCEPTOR_CAMERA13  "sony,imx728"
-#define PERCEPTOR_CAMERA14  "sony,imx728"
-#define PERCEPTOR_CAMERA15  "sony,imx728"
+/* Model selectors also choose the remote sensor address. */
+#define PERCEPTOR_SENSOR_COMPATIBLE_AR0820	"onnn,ar0820"
+#define PERCEPTOR_SENSOR_COMPATIBLE_IMX728	"sony,imx728"
+#define PERCEPTOR_SENSOR_COMPATIBLE_IMX623	"sony,imx623"
+
+#define PERCEPTOR_SENSOR_I2C_ADDR_AR0820		0x10
+#define PERCEPTOR_SENSOR_I2C_ADDR_IMX728		0x1a
+#define PERCEPTOR_SENSOR_I2C_ADDR_IMX623		0x1a
+
+#define PERCEPTOR_SENSOR_COMPATIBLE_EXPAND(model) \
+	PERCEPTOR_SENSOR_COMPATIBLE_##model
+#define PERCEPTOR_SENSOR_COMPATIBLE(model) \
+	PERCEPTOR_SENSOR_COMPATIBLE_EXPAND(model)
+#define PERCEPTOR_SENSOR_I2C_ADDR_EXPAND(model) \
+	PERCEPTOR_SENSOR_I2C_ADDR_##model
+#define PERCEPTOR_SENSOR_I2C_ADDR(model) \
+	PERCEPTOR_SENSOR_I2C_ADDR_EXPAND(model)
+
+#define PERCEPTOR_CAMERA0  IMX728
+#define PERCEPTOR_CAMERA1  IMX728
+#define PERCEPTOR_CAMERA2  IMX728
+#define PERCEPTOR_CAMERA3  IMX728
+#define PERCEPTOR_CAMERA4  IMX728
+#define PERCEPTOR_CAMERA5  IMX728
+#define PERCEPTOR_CAMERA6  IMX728
+#define PERCEPTOR_CAMERA7  IMX728
+#define PERCEPTOR_CAMERA8  IMX728
+#define PERCEPTOR_CAMERA9  IMX728
+#define PERCEPTOR_CAMERA10 IMX728
+#define PERCEPTOR_CAMERA11 IMX728
+#define PERCEPTOR_CAMERA12 IMX728
+#define PERCEPTOR_CAMERA13 IMX728
+#define PERCEPTOR_CAMERA14 IMX728
+#define PERCEPTOR_CAMERA15 IMX728
 
 /* Define the endpoint links */
 #ifdef PERCEPTOR_CAMERA0
@@ -133,7 +150,10 @@
 };
 #endif
 
-/* Cameras are 'attached' to the GMSL I2C busses */
+/*
+ * Camera reg values are Linux-side aliases. The remote sensor's native
+ * 7-bit I2C address is configured separately on each camera node.
+ */
 &gmsl0 {
 
 #if defined(PERCEPTOR_CAMERA0) || defined(PERCEPTOR_CAMERA1) || \
@@ -148,8 +168,11 @@
 			status = "okay";
 
 			camera@49 {
-				compatible = PERCEPTOR_CAMERA0;
+				compatible =
+					PERCEPTOR_SENSOR_COMPATIBLE(PERCEPTOR_CAMERA0);
 				reg = <0x49>;
+				maxim,sensor-remote-i2c-addr =
+					<PERCEPTOR_SENSOR_I2C_ADDR(PERCEPTOR_CAMERA0)>;
 
 				port {
 					fakra_con0: endpoint {
@@ -165,8 +188,11 @@
 			status = "okay";
 
 			camera@51 {
-				compatible = PERCEPTOR_CAMERA1;
+				compatible =
+					PERCEPTOR_SENSOR_COMPATIBLE(PERCEPTOR_CAMERA1);
 				reg = <0x51>;
+				maxim,sensor-remote-i2c-addr =
+					<PERCEPTOR_SENSOR_I2C_ADDR(PERCEPTOR_CAMERA1)>;
 
 				port {
 					fakra_con1: endpoint {
@@ -182,8 +208,11 @@
 			status = "okay";
 
 			camera@59 {
-				compatible = PERCEPTOR_CAMERA2;
+				compatible =
+					PERCEPTOR_SENSOR_COMPATIBLE(PERCEPTOR_CAMERA2);
 				reg = <0x59>;
+				maxim,sensor-remote-i2c-addr =
+					<PERCEPTOR_SENSOR_I2C_ADDR(PERCEPTOR_CAMERA2)>;
 
 				port {
 					fakra_con2: endpoint {
@@ -199,8 +228,11 @@
 			status = "okay";
 
 			camera@61 {
-				compatible = PERCEPTOR_CAMERA3;
+				compatible =
+					PERCEPTOR_SENSOR_COMPATIBLE(PERCEPTOR_CAMERA3);
 				reg = <0x61>;
+				maxim,sensor-remote-i2c-addr =
+					<PERCEPTOR_SENSOR_I2C_ADDR(PERCEPTOR_CAMERA3)>;
 
 				port {
 					fakra_con3: endpoint {
@@ -227,8 +259,11 @@
 			status = "okay";
 
 			camera@49 {
-				compatible = PERCEPTOR_CAMERA4;
+				compatible =
+					PERCEPTOR_SENSOR_COMPATIBLE(PERCEPTOR_CAMERA4);
 				reg = <0x49>;
+				maxim,sensor-remote-i2c-addr =
+					<PERCEPTOR_SENSOR_I2C_ADDR(PERCEPTOR_CAMERA4)>;
 
 				port {
 					fakra_con4: endpoint {
@@ -244,8 +279,11 @@
 			status = "okay";
 
 			camera@51 {
-				compatible = PERCEPTOR_CAMERA5;
+				compatible =
+					PERCEPTOR_SENSOR_COMPATIBLE(PERCEPTOR_CAMERA5);
 				reg = <0x51>;
+				maxim,sensor-remote-i2c-addr =
+					<PERCEPTOR_SENSOR_I2C_ADDR(PERCEPTOR_CAMERA5)>;
 
 				port {
 					fakra_con5: endpoint {
@@ -261,8 +299,11 @@
 			status = "okay";
 
 			camera@59 {
-				compatible = PERCEPTOR_CAMERA6;
+				compatible =
+					PERCEPTOR_SENSOR_COMPATIBLE(PERCEPTOR_CAMERA6);
 				reg = <0x59>;
+				maxim,sensor-remote-i2c-addr =
+					<PERCEPTOR_SENSOR_I2C_ADDR(PERCEPTOR_CAMERA6)>;
 
 				port {
 					fakra_con6: endpoint {
@@ -278,8 +319,11 @@
 			status = "okay";
 
 			camera@61 {
-				compatible = PERCEPTOR_CAMERA7;
+				compatible =
+					PERCEPTOR_SENSOR_COMPATIBLE(PERCEPTOR_CAMERA7);
 				reg = <0x61>;
+				maxim,sensor-remote-i2c-addr =
+					<PERCEPTOR_SENSOR_I2C_ADDR(PERCEPTOR_CAMERA7)>;
 
 				port {
 					fakra_con7: endpoint {
@@ -306,8 +350,11 @@
 			status = "okay";
 
 			camera@49 {
-				compatible = PERCEPTOR_CAMERA8;
+				compatible =
+					PERCEPTOR_SENSOR_COMPATIBLE(PERCEPTOR_CAMERA8);
 				reg = <0x49>;
+				maxim,sensor-remote-i2c-addr =
+					<PERCEPTOR_SENSOR_I2C_ADDR(PERCEPTOR_CAMERA8)>;
 
 				port {
 					fakra_con8: endpoint {
@@ -323,8 +370,11 @@
 			status = "okay";
 
 			camera@51 {
-				compatible = PERCEPTOR_CAMERA9;
+				compatible =
+					PERCEPTOR_SENSOR_COMPATIBLE(PERCEPTOR_CAMERA9);
 				reg = <0x51>;
+				maxim,sensor-remote-i2c-addr =
+					<PERCEPTOR_SENSOR_I2C_ADDR(PERCEPTOR_CAMERA9)>;
 
 				port {
 					fakra_con9: endpoint {
@@ -340,8 +390,11 @@
 			status = "okay";
 
 			camera@59 {
-				compatible = PERCEPTOR_CAMERA10;
+				compatible =
+					PERCEPTOR_SENSOR_COMPATIBLE(PERCEPTOR_CAMERA10);
 				reg = <0x59>;
+				maxim,sensor-remote-i2c-addr =
+					<PERCEPTOR_SENSOR_I2C_ADDR(PERCEPTOR_CAMERA10)>;
 
 				port {
 					fakra_con10: endpoint {
@@ -357,8 +410,11 @@
 			status = "okay";
 
 			camera@61 {
-				compatible = PERCEPTOR_CAMERA11;
+				compatible =
+					PERCEPTOR_SENSOR_COMPATIBLE(PERCEPTOR_CAMERA11);
 				reg = <0x61>;
+				maxim,sensor-remote-i2c-addr =
+					<PERCEPTOR_SENSOR_I2C_ADDR(PERCEPTOR_CAMERA11)>;
 
 				port {
 					fakra_con11: endpoint {
@@ -385,8 +441,11 @@
 			status = "okay";
 
 			camera@49 {
-				compatible = PERCEPTOR_CAMERA12;
+				compatible =
+					PERCEPTOR_SENSOR_COMPATIBLE(PERCEPTOR_CAMERA12);
 				reg = <0x49>;
+				maxim,sensor-remote-i2c-addr =
+					<PERCEPTOR_SENSOR_I2C_ADDR(PERCEPTOR_CAMERA12)>;
 
 				port {
 					fakra_con12: endpoint {
@@ -402,8 +461,11 @@
 			status = "okay";
 
 			camera@51 {
-				compatible = PERCEPTOR_CAMERA13;
+				compatible =
+					PERCEPTOR_SENSOR_COMPATIBLE(PERCEPTOR_CAMERA13);
 				reg = <0x51>;
+				maxim,sensor-remote-i2c-addr =
+					<PERCEPTOR_SENSOR_I2C_ADDR(PERCEPTOR_CAMERA13)>;
 
 				port {
 					fakra_con13: endpoint {
@@ -419,8 +481,11 @@
 			status = "okay";
 
 			camera@59 {
-				compatible = PERCEPTOR_CAMERA14;
+				compatible =
+					PERCEPTOR_SENSOR_COMPATIBLE(PERCEPTOR_CAMERA14);
 				reg = <0x59>;
+				maxim,sensor-remote-i2c-addr =
+					<PERCEPTOR_SENSOR_I2C_ADDR(PERCEPTOR_CAMERA14)>;
 
 				port {
 					fakra_con14: endpoint {
@@ -436,8 +501,11 @@
 			status = "okay";
 
 			camera@61 {
-				compatible = PERCEPTOR_CAMERA15;
+				compatible =
+					PERCEPTOR_SENSOR_COMPATIBLE(PERCEPTOR_CAMERA15);
 				reg = <0x61>;
+				maxim,sensor-remote-i2c-addr =
+					<PERCEPTOR_SENSOR_I2C_ADDR(PERCEPTOR_CAMERA15)>;
 
 				port {
 					fakra_con15: endpoint {
