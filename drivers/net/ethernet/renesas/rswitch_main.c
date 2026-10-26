@@ -1032,8 +1032,12 @@ static void rswitch_shared_rx_queue_free(struct rswitch_private *priv)
 {
 	struct rswitch_gwca *gwca = &priv->gwca;
 
+	if (!gwca->l2_shared_rx_queue)
+		return;
+
 	rswitch_gwca_put(priv, gwca->l2_shared_rx_queue);
 	rswitch_gwca_queue_free(&priv->pdev->dev, gwca->l2_shared_rx_queue);
+	gwca->l2_shared_rx_queue = NULL;
 }
 
 static int rswitch_shared_rx_queue_alloc(struct rswitch_private *priv)
@@ -2568,10 +2572,12 @@ static int rswitch_serdes_set_params(struct rswitch_device *rdev)
 
 static void rswitch_etha_set_exception_path(struct rswitch_private *priv)
 {
+	u32 index = priv->gwca.l2_shared_rx_queue ? priv->gwca.l2_shared_rx_queue->index : 0;
+
 	iowrite32(FDMACUFEF, priv->addr_mfwd + FWCEPRC2);
 	/* RSW3 has more AXI chains, if needed EPCSD can be extended for this device */
 	iowrite32(FIELD_PREP(EPCS, priv->info->gwca_index) |
-		  FIELD_PREP(EPCSD, priv->gwca.l2_shared_rx_queue->index),
+		  FIELD_PREP(EPCSD, index),
 		  priv->addr_mfwd + FWCEPTC);
 }
 
@@ -3908,7 +3914,8 @@ static int renesas_eth_sw_suspend(struct device *dev)
 			netif_device_detach(ndev);
 			rswitch_stop(ndev);
 		}
-		if (priv->rdev[i]->serdes->init_count) {
+		if (!priv->rdev[i]->phy_less && priv->rdev[i]->serdes &&
+		    priv->rdev[i]->serdes->init_count) {
 			phy_exit(priv->rdev[i]->serdes);
 			priv->rdev[i]->serdes->init_count = 0;
 		}
@@ -3916,6 +3923,8 @@ static int renesas_eth_sw_suspend(struct device *dev)
 		rswitch_txdmac_free(ndev);
 		rswitch_rxdmac_free(ndev);
 	}
+
+	rswitch_shared_rx_queue_free(priv);
 
 	if (priv->info->rswitch_version != RSW20) {
 		for (i = 0; i < priv->num_ports; i++) {
@@ -3935,6 +3944,7 @@ static int renesas_eth_sw_resume(struct device *dev)
 	struct rswitch_private *priv = dev_get_drvdata(dev);
 	struct net_device *ndev;
 	unsigned int i;
+	int err;
 
 	if (clk_prepare_enable(priv->clk)) {
 		dev_warn(dev, "Failed to enable clock, will use fallback frequency\n");
@@ -3965,8 +3975,14 @@ static int renesas_eth_sw_resume(struct device *dev)
 	}
 
 	rswitch_top_init(priv);
-	rswitch_gwca_hw_init(priv);
-	rswitch_ether_port_init_all(priv);
+	err = rswitch_gwca_hw_init(priv);
+	if (err < 0)
+		return err;
+
+	err = rswitch_ether_port_init_all(priv);
+	if (err < 0)
+		return err;
+
 	rcar_gen4_ptp_reinit_hw(priv->ptp_priv);
 
 	rswitch_for_each_enabled_port(priv, i) {
