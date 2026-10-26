@@ -156,6 +156,17 @@ static void rswitch_top_init(struct rswitch_private *priv)
 	for (i = 0; i < GWCA_NUM_IRQS; i++)
 		memset(priv->irq[i].irq_bits, 0, sizeof(priv->irq[i].irq_bits));
 
+	if (priv->gwca.l2_shared_rx_queue) {
+		struct rswitch_gwca_queue *gq = priv->gwca.l2_shared_rx_queue;
+		unsigned int irq_idx = 0;
+		unsigned int reg = gq->index / 32;
+		unsigned int bit = BIT(gq->index % 32);
+
+		iowrite32(TPDEMIMC_GDICM(gwca_index, irq_idx),
+			  priv->addr_mfab + RSW3_TPDEMIMC(gq->index));
+		priv->irq[irq_idx].irq_bits[reg] |= bit;
+	}
+
 	rswitch_for_each_enabled_port(priv, i) {
 		struct rswitch_device *rdev = priv->rdev[i];
 		unsigned int reg, bit;
@@ -1035,6 +1046,14 @@ static void rswitch_shared_rx_queue_free(struct rswitch_private *priv)
 	if (!gwca->l2_shared_rx_queue)
 		return;
 
+	if (priv->info->rswitch_version != RSW20) {
+		unsigned int irq_idx = 0;
+		unsigned int reg = gwca->l2_shared_rx_queue->index / 32;
+		unsigned int bit = BIT(gwca->l2_shared_rx_queue->index % 32);
+
+		priv->irq[irq_idx].irq_bits[reg] &= ~bit;
+	}
+
 	rswitch_gwca_put(priv, gwca->l2_shared_rx_queue);
 	rswitch_gwca_queue_free(&priv->pdev->dev, gwca->l2_shared_rx_queue);
 	gwca->l2_shared_rx_queue = NULL;
@@ -1044,8 +1063,10 @@ static int rswitch_shared_rx_queue_alloc(struct rswitch_private *priv)
 {
 	struct rswitch_gwca *gwca = &priv->gwca;
 	struct device *dev = &priv->pdev->dev;
-
 	int err;
+
+	if (gwca->l2_shared_rx_queue)
+		rswitch_shared_rx_queue_free(priv);
 
 	gwca->l2_shared_rx_queue = rswitch_gwca_get(priv);
 	if (!gwca->l2_shared_rx_queue)
@@ -1054,14 +1075,27 @@ static int rswitch_shared_rx_queue_alloc(struct rswitch_private *priv)
 	err = rswitch_gwca_queue_alloc(NULL, priv, gwca->l2_shared_rx_queue, false, RX_RING_SIZE);
 	if (err < 0) {
 		rswitch_gwca_put(priv, gwca->l2_shared_rx_queue);
+		gwca->l2_shared_rx_queue = NULL;
 		return err;
 	}
 
 	err = rswitch_gwca_queue_ext_ts_format(dev, priv, gwca->l2_shared_rx_queue);
-
-	if (err < 0)
+	if (err < 0) {
 		rswitch_shared_rx_queue_free(priv);
-	return err;
+		return err;
+	}
+
+	if (priv->info->rswitch_version != RSW20) {
+		unsigned int irq_idx = 0;
+		unsigned int reg = gwca->l2_shared_rx_queue->index / 32;
+		unsigned int bit = BIT(gwca->l2_shared_rx_queue->index % 32);
+
+		iowrite32(TPDEMIMC_GDICM(priv->info->gwca_index, irq_idx),
+			  priv->addr_mfab + RSW3_TPDEMIMC(gwca->l2_shared_rx_queue->index));
+		priv->irq[irq_idx].irq_bits[reg] |= bit;
+	}
+
+	return 0;
 }
 
 static int rswitch_gwca_hw_init(struct rswitch_private *priv)
@@ -1262,6 +1296,21 @@ static bool rswitch_rx(struct net_device *ndev, struct rswitch_gwca_queue *gq, i
 		if (!skb)
 			goto out;
 
+		if (gq == rdev->priv->gwca.l2_shared_rx_queue) {
+			u32 spn;
+
+			if (rdev->priv->info->rswitch_version == RSW30)
+				spn = FIELD_GET(SPN_X5H, le64_to_cpu(desc->info1));
+			else
+				spn = FIELD_GET(SPN, le64_to_cpu(desc->info1));
+
+			if (spn < rdev->priv->num_ports && rdev->priv->rdev[spn] &&
+			    !rdev->priv->rdev[spn]->disabled) {
+				ndev = rdev->priv->rdev[spn]->ndev;
+				rdev = rdev->priv->rdev[spn];
+			}
+		}
+
 		get_ts = rdev->priv->tstamp_rx_ctrl != HWTSTAMP_FILTER_NONE;
 		if (get_ts) {
 			struct skb_shared_hwtstamps *shhwtstamps;
@@ -1275,7 +1324,8 @@ static bool rswitch_rx(struct net_device *ndev, struct rswitch_gwca_queue *gq, i
 		}
 		skb->protocol = eth_type_trans(skb, ndev);
 		skb_record_rx_queue(skb, gq->napi_idx);
-		napi_gro_receive(&rdev->rx_queue[gq->napi_idx]->napi, skb);
+		napi_gro_receive(rdev->rx_old_queue ? &rdev->rx_old_queue->napi :
+				 &rdev->rx_queue[gq->napi_idx]->napi, skb);
 		rdev->ndev->stats.rx_packets++;
 		rdev->ndev->stats.rx_bytes += gq->pkt_len;
 
@@ -1379,6 +1429,11 @@ static int rswitch_rx_poll(struct napi_struct *napi, int budget)
 	rdev = netdev_priv(ndev);
 	priv = rdev->priv;
 
+	if (rdev->rx_old_queue) {
+		gq = rdev->rx_queue[0];
+		qidx = 0;
+	}
+
 retry:
 	if (rswitch_rx(ndev, gq, &quota))
 		goto out;
@@ -1431,15 +1486,22 @@ static void rswitch_queue_interrupt(struct rswitch_private *priv,
 			spn = FIELD_GET(SPN_X5H, le64_to_cpu(desc->info1));
 		else
 			spn = FIELD_GET(SPN, le64_to_cpu(desc->info1));
+
+		if (unlikely(spn >= priv->num_ports || !priv->rdev[spn] || !priv->rdev[spn]->ndev ||
+			     priv->rdev[spn]->disabled))
+			return;
+
 		ndev = priv->rdev[spn]->ndev;
 		rdev = netdev_priv(ndev);
 		gq->ndev = ndev;
 		/* store original rx_queue */
 		spin_lock_irqsave(&priv->lock, flags);
-		rdev->rx_old_queue = rdev->rx_queue[0];
-		rdev->rx_queue[0] = gq;
+		if (!rdev->rx_old_queue) {
+			rdev->rx_old_queue = rdev->rx_queue[0];
+			rdev->rx_queue[0] = gq;
+		}
+		napi = &rdev->rx_old_queue->napi;
 		spin_unlock_irqrestore(&priv->lock, flags);
-		napi = &rdev->rx_queue[0]->napi;
 		qidx = 0;
 	} else {
 		rdev = netdev_priv(gq->ndev);
@@ -2312,6 +2374,7 @@ static int rswitch_speed_reconfigure(struct rswitch_device *target, int new_spee
 		rswitch_txdmac_free(priv->rdev[i]->ndev);
 		rswitch_rxdmac_free(priv->rdev[i]->ndev);
 	}
+	rswitch_shared_rx_queue_free(priv);
 
 	rswitch_for_each_enabled_port(priv, i) {
 		err = rswitch_rxdmac_alloc(priv->rdev[i]->ndev);
@@ -2776,7 +2839,7 @@ static int rswitch_stop(struct net_device *ndev)
 	for (i = 0; i < rdev->priv->info->num_rx_queues; i++)
 		rswitch_enadis_data_irq(rdev->priv, rdev->rx_queue[i]->index, false);
 	clear_bit(rdev->port, rdev->priv->opened_ports);
-	if (bitmap_empty(rdev->priv->opened_ports, 1))
+	if (bitmap_empty(rdev->priv->opened_ports, rdev->priv->num_ports))
 		rswitch_enadis_data_irq(rdev->priv,
 					rdev->priv->gwca.l2_shared_rx_queue->index,
 					false);
