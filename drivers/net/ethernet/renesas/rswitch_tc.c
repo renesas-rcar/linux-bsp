@@ -55,21 +55,27 @@ static int tc_setup_cbs(struct rswitch_device *rdev,
 
 	port_transmit_rate_kbps = qopt->idleslope - qopt->sendslope;
 
-	if (qopt->enable) {
-		/* Port Transmit Rate and Speed Divider */
-		switch (div_s64(port_transmit_rate_kbps, 1000)) {
-		case SPEED_10000:
-		case SPEED_5000:
-		case SPEED_2500:
-		case SPEED_1000:
-		case SPEED_100:
-			break;
-		default:
-			netdev_err(ndev,
-				   "Invalid portTransmitRate %lld (idleSlope - sendSlope)\n",
-				   port_transmit_rate_kbps);
-			return -EINVAL;
-		}
+	if (!qopt->enable) {
+		x = FIELD_GET(CE, ioread32(rdev->etha->addr + EACOEM));
+		x = x & ~BIT(queue);
+		iowrite32(FIELD_PREP(CE, x), rdev->etha->addr + EACAEC);
+		iowrite32(FIELD_PREP(CC, BIT(queue)), rdev->etha->addr + EACC);
+		return 0;
+	}
+
+	/* Port Transmit Rate and Speed Divider */
+	switch (div_s64(port_transmit_rate_kbps, 1000)) {
+	case SPEED_10000:
+	case SPEED_5000:
+	case SPEED_2500:
+	case SPEED_1000:
+	case SPEED_100:
+		break;
+	default:
+		netdev_err(ndev,
+			   "Invalid portTransmitRate %lld (idleSlope - sendSlope)\n",
+			   port_transmit_rate_kbps);
+		return -EINVAL;
 	}
 
 	bandwidth_fraction = div_s64(qopt->idleslope * 100, port_transmit_rate_kbps);
@@ -108,12 +114,10 @@ static int tc_setup_cbs(struct rswitch_device *rdev,
 	iowrite32(FIELD_PREP(CE, x), rdev->etha->addr + EACAEC);
 	iowrite32(FIELD_PREP(CC, BIT(queue)), rdev->etha->addr + EACC);
 
-	if (qopt->enable) {
-		iowrite32(FIELD_PREP(CIV, civ), rdev->etha->addr + EACAIVC(queue));
-		iowrite32(FIELD_PREP(CUL, cul), rdev->etha->addr + EACAULC(queue));
-		iowrite32(FIELD_PREP(CE, BIT(queue)), rdev->etha->addr + EACAEC);
-		iowrite32(FIELD_PREP(CC, BIT(queue)), rdev->etha->addr + EACC);
-	}
+	iowrite32(FIELD_PREP(CIV, civ), rdev->etha->addr + EACAIVC(queue));
+	iowrite32(FIELD_PREP(CUL, cul), rdev->etha->addr + EACAULC(queue));
+	iowrite32(FIELD_PREP(CE, BIT(queue)), rdev->etha->addr + EACAEC);
+	iowrite32(FIELD_PREP(CC, BIT(queue)), rdev->etha->addr + EACC);
 
 	netdev_info(ndev, "CBS queue %d: send %d, idle %d, hi %d, lo %d\n",
 		    queue, qopt->sendslope, qopt->idleslope,
@@ -125,9 +129,9 @@ static int rswitch_tc_mqprio_add(struct net_device *ndev, u8 num_tc)
 {
 	int i;
 
-	if (num_tc != RSWITCH_PRIOS) {
+	if (num_tc != ndev->real_num_tx_queues) {
 		netdev_err(ndev, "Only %d traffic classes supported\n",
-			   RSWITCH_PRIOS);
+			   ndev->real_num_tx_queues);
 		return -EINVAL;
 	}
 
