@@ -109,6 +109,8 @@
 
 #define GWCA_TS_IRQ_RESOURCE_NAME	"gwca0_rxts0"
 #define GWCA_TS_IRQ_NAME		"rswitch: gwca0_rxts0"
+#define GWCA_TS_IRQ_RESOURCE_NAME_RSW3	"race_wrap_gwca1_gwtsdis_int0"
+#define GWCA_TS_IRQ_NAME_RSW3		"rswitch: gwca1_gwtsdis0"
 #define GWCA_TS_IRQ_BIT			BIT(0)
 
 /* Descriptors */
@@ -170,6 +172,7 @@ enum DIE_DT {
 #define TS_DESC_TSUN(dptrl)	((dptrl) & GENMASK(7, 0))
 #define TS_DESC_SPN(dptrl)	(((dptrl) & GENMASK(10, 8)) >> 8)
 #define TS_DESC_DPN(dptrl)	(((dptrl) & GENMASK(17, 16)) >> 16)
+#define TS_DESC_DPN_RSW3(dptrl)	(((dptrl) & GENMASK(19, 16)) >> 16)
 #define TS_DESC_TN(dptrl)	((dptrl) & BIT(24))
 
 struct rswitch_desc {

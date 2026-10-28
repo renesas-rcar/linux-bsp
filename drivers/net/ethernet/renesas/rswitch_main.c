@@ -1634,7 +1634,10 @@ static void rswitch_ts(struct rswitch_private *priv)
 	while ((desc->desc.die_dt & DT_MASK) != DT_FEMPTY_ND) {
 		dma_rmb();
 
-		port = TS_DESC_DPN(__le32_to_cpu(desc->desc.dptrl));
+		if (priv->info->rswitch_version == RSW30)
+			port = TS_DESC_DPN_RSW3(__le32_to_cpu(desc->desc.dptrl));
+		else
+			port = TS_DESC_DPN(__le32_to_cpu(desc->desc.dptrl));
 		if (unlikely(port >= priv->num_ports))
 			goto next;
 		rdev = priv->rdev[port];
@@ -1682,14 +1685,23 @@ static irqreturn_t rswitch_gwca_ts_irq(int irq, void *dev_id)
 
 static int rswitch_gwca_ts_request_irqs(struct rswitch_private *priv)
 {
+	const char *resource_name, *irq_name;
 	int irq;
 
-	irq = platform_get_irq_byname(priv->pdev, GWCA_TS_IRQ_RESOURCE_NAME);
+	if (priv->info->rswitch_version == RSW20) {
+		resource_name = GWCA_TS_IRQ_RESOURCE_NAME;
+		irq_name = GWCA_TS_IRQ_NAME;
+	} else {
+		resource_name = GWCA_TS_IRQ_RESOURCE_NAME_RSW3;
+		irq_name = GWCA_TS_IRQ_NAME_RSW3;
+	}
+
+	irq = platform_get_irq_byname(priv->pdev, resource_name);
 	if (irq < 0)
 		return irq;
 
 	return devm_request_irq(&priv->pdev->dev, irq, rswitch_gwca_ts_irq,
-				0, GWCA_TS_IRQ_NAME, priv);
+				0, irq_name, priv);
 }
 
 /* Ethernet TSN Agent block (ETHA) and Ethernet MAC IP block (RMAC) */
@@ -3565,7 +3577,7 @@ static int rswitch3_map_addr(struct platform_device *pdev, struct rswitch_privat
 		return -EINVAL;
 	}
 
-	res_ptp = platform_get_resource_byname(pdev, IORESOURCE_MEM, "secure_ptp");
+	res_ptp = platform_get_resource_byname(pdev, IORESOURCE_MEM, "gptp_base");
 	if (!res_ptp) {
 		dev_err(&pdev->dev, "invalid resource\n");
 		return -EINVAL;
@@ -3924,8 +3936,9 @@ static int rswitch_init(struct rswitch_private *priv)
 			goto err_fwd_init;
 	}
 
-	err = rcar_gen4_ptp_register(priv->ptp_priv,
-				     RCAR_GEN4_PTP_REG_LAYOUT, clk_get_rate(priv->clk));
+	err = rcar_gen4_ptp_register(priv->ptp_priv, RCAR_GEN4_PTP_REG_LAYOUT,
+				     priv->info->rswitch_version == RSW30 ?
+				     RCAR_GEN5_PTP_CLOCK_X5H : RCAR_GEN4_PTP_CLOCK_S4);
 	if (err < 0)
 		goto err_ptp_register;
 
@@ -3933,11 +3946,9 @@ static int rswitch_init(struct rswitch_private *priv)
 	if (err < 0)
 		goto err_gwca_request_irq;
 
-	if (priv->info->rswitch_version == RSW20) {
-		err = rswitch_gwca_ts_request_irqs(priv);
-		if (err < 0)
-			goto err_gwca_ts_request_irq;
-	}
+	err = rswitch_gwca_ts_request_irqs(priv);
+	if (err < 0)
+		goto err_gwca_ts_request_irq;
 
 	err = rswitch_gwca_hw_init(priv);
 	if (err < 0)
