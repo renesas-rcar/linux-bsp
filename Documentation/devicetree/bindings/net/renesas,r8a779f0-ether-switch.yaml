@@ -11,7 +11,9 @@ maintainers:
 
 properties:
   compatible:
-    const: renesas,r8a779f0-ether-switch
+    enum:
+      - renesas,r8a779f0-ether-switch # R-Car S4-10
+      - renesas,r8a78000-ether-switch # R-Car X5H
 
   reg:
     maxItems: 2
