@@ -581,35 +581,25 @@ static void rcar_wcrc_dma_rx_in_callback(void *data)
 static irqreturn_t rcar_wcrc_irq(int irq_num, void *ptr)
 {
 	struct wcrc_device *priv = ptr;
+	irqreturn_t ret = IRQ_NONE;
+	int module;
 	u32 reg_val;
 
-	reg_val = wcrc_read(priv->base, WCRC_XXXX_STS(priv->module));
-
-	//Clear trans_done in WCRC_XXXX_STS.
-	if ((TRANS_DONE & reg_val)) {
-		wcrc_write(priv->base, WCRC_XXXX_STS(priv->module), TRANS_DONE);
-		goto return_irq;
+	/*
+	 * Check both CRC and KCRC: priv->module may already be switched to
+	 * the next run while the stop_done of the previous one is pending.
+	 * Clear all done bits at once (write-1-to-clear).
+	 */
+	for (module = CRC_M; module <= KCRC_M; module++) {
+		reg_val = wcrc_read(priv->base, WCRC_XXXX_STS(module)) &
+			  (STOP_DONE | CMD_DONE | RES_DONE | TRANS_DONE);
+		if (reg_val) {
+			wcrc_write(priv->base, WCRC_XXXX_STS(module), reg_val);
+			ret = IRQ_HANDLED;
+		}
 	}
 
-	//Clear res_done in WCRC_XXXX_STS.
-	if ((RES_DONE & reg_val)) {
-		wcrc_write(priv->base, WCRC_XXXX_STS(priv->module), RES_DONE);
-		goto return_irq;
-	}
-
-	//Clear cmd_done in WCRC_XXXX_STS.
-	if ((CMD_DONE & reg_val)) {
-		wcrc_write(priv->base, WCRC_XXXX_STS(priv->module), CMD_DONE);
-		goto return_irq;
-	}
-
-	//Clear stop_done in WCRC_XXXX_STS.
-	if ((STOP_DONE & reg_val)) {
-		wcrc_write(priv->base, WCRC_XXXX_STS(priv->module), STOP_DONE);
-	}
-
-return_irq:
-	return IRQ_HANDLED;
+	return ret;
 }
 
 static void rcar_wcrc_release_dma(struct wcrc_device *priv)
