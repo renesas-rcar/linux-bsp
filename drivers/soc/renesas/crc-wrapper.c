@@ -368,7 +368,11 @@ static bool rcar_wcrc_dma_tx(struct wcrc_device *priv,
 	priv->buf_tx = data;
 	//pr_info("priv->buf_tx points to block mem %zu bytes\n", ksize(priv->buf_tx));
 	buf = priv->buf_tx;
-	num_desc = len / priv->tx_bus_width;
+	/*
+	 * Map the buffer as one contiguous chunk: the DMAC then does len/bus_width
+	 * transfers in a single run instead of one descriptor stage per transfer.
+	 */
+	num_desc = 1;
 	priv->num_desc_tx = num_desc;
 	priv->dma_data_dir = DMA_TO_DEVICE;
 	data_dir = priv->dma_data_dir;
@@ -427,7 +431,11 @@ static bool rcar_wcrc_dma_rx(struct wcrc_device *priv,
 	//pr_info("priv->buf_rx points to block mem %zu bytes\n", ksize(priv->buf_rx));
 	buf = priv->buf_rx;
 	priv->len_rx = len;
-	num_desc = len / priv->rx_bus_width;
+	/*
+	 * Map the buffer as one contiguous chunk: the DMAC then does len/bus_width
+	 * transfers in a single run instead of one descriptor stage per transfer.
+	 */
+	num_desc = 1;
 	priv->num_desc_rx = num_desc;
 	data_dir = DMA_FROM_DEVICE;
 	trans_dir = DMA_DEV_TO_MEM;
@@ -486,7 +494,11 @@ static bool rcar_wcrc_dma_rx_in(struct wcrc_device *priv,
 	buf = priv->buf_rx_in;
 	priv->len_rx_in = len;
 	//pr_info("priv->len_rx_in = %d\n", priv->len_rx_in);
-	num_desc = len / priv->rx_in_bus_width;
+	/*
+	 * Map the buffer as one contiguous chunk: the DMAC then does len/bus_width
+	 * transfers in a single run instead of one descriptor stage per transfer.
+	 */
+	num_desc = 1;
 	//pr_info("num_desc = %d\n", num_desc);
 	priv->num_desc_rx_in = num_desc;
 	data_dir = DMA_FROM_DEVICE;
