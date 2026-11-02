@@ -3096,6 +3096,8 @@
 			power-domains = <&sysc R8A779G0_PD_ALWAYS_ON>;
 			resets = <&cpg 507>;
 			linux,uio-name = "fcpc_00";
+			ipmmu-id = <RCAR_IPMMU_VC 12>;
+			iommus = <&ipmmu_vc 12>;
 		};
 
 		fbc0: fbc@ff830000 {
