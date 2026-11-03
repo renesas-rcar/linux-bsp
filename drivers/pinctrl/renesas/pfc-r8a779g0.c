@@ -3893,7 +3893,6 @@ enum ioctrl_regs {
 	POC6,
 	POC7,
 	POC8,
-	TD0SEL3,
 };
 
 static const struct pinmux_ioctrl_reg pinmux_ioctrl_regs[] = {
@@ -3906,7 +3905,6 @@ static const struct pinmux_ioctrl_reg pinmux_ioctrl_regs[] = {
 	[POC6] = { 0xE60610A0, },
 	[POC7] = { 0xE60618A0, },
 	[POC8] = { 0xE60680A0, },
-	[TD0SEL3] = { 0xE60589C0, },
 	{ /* sentinel */ },
 };
 
