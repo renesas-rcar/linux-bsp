@@ -82,6 +82,11 @@
 		#size-cells = <2>;
 		ranges;
 
+		memory_reserved_region@2060000000 {
+			no-map;
+			reg = <0x20 0x60000000 0x0 0x40000000>;
+		};
+
 		vdsp0_region: linux,vdsp0_region@205d000000 {
 			compatible = "shared-dma-pool";
 			reusable;
