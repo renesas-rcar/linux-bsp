@@ -316,262 +316,7 @@
 			next-level-cache = <&L2_0>;
 		};
 
-		cpu1: cpu@1 {
-			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x1>;
-			device_type = "cpu";
-			enable-method = "psci";
-			numa-node-id = <0>;
-			clocks = <&cpu_clk>;
-			operating-points-v2 = <&cluster_opp>;
-			i-cache-size = <0x8000>;
-			i-cache-line-size = <64>;
-			i-cache-sets = <256>;
-			d-cache-size = <0x8000>;
-			d-cache-line-size = <64>;
-			d-cache-sets = <128>;
-			next-level-cache = <&L2_0>;
-		};
-
-		cpu2: cpu@2 {
-			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x2>;
-			device_type = "cpu";
-			enable-method = "psci";
-			numa-node-id = <0>;
-			clocks = <&cpu_clk>;
-			operating-points-v2 = <&cluster_opp>;
-			i-cache-size = <0x8000>;
-			i-cache-line-size = <64>;
-			i-cache-sets = <256>;
-			d-cache-size = <0x8000>;
-			d-cache-line-size = <64>;
-			d-cache-sets = <128>;
-			next-level-cache = <&L2_0>;
-		};
-
-		cpu3: cpu@3 {
-			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x3>;
-			device_type = "cpu";
-			enable-method = "psci";
-			numa-node-id = <0>;
-			clocks = <&cpu_clk>;
-			operating-points-v2 = <&cluster_opp>;
-			i-cache-size = <0x8000>;
-			i-cache-line-size = <64>;
-			i-cache-sets = <256>;
-			d-cache-size = <0x8000>;
-			d-cache-line-size = <64>;
-			d-cache-sets = <128>;
-			next-level-cache = <&L2_0>;
-		};
-
-		cpu4: cpu@4 {
-			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x4>;
-			device_type = "cpu";
-			enable-method = "psci";
-			numa-node-id = <0>;
-			clocks = <&cpu_clk>;
-			operating-points-v2 = <&cluster_opp>;
-			i-cache-size = <0x8000>;
-			i-cache-line-size = <64>;
-			i-cache-sets = <256>;
-			d-cache-size = <0x8000>;
-			d-cache-line-size = <64>;
-			d-cache-sets = <128>;
-			next-level-cache = <&L2_1>;
-		};
-
-		cpu5: cpu@5 {
-			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x5>;
-			device_type = "cpu";
-			enable-method = "psci";
-			numa-node-id = <0>;
-			clocks = <&cpu_clk>;
-			operating-points-v2 = <&cluster_opp>;
-			i-cache-size = <0x8000>;
-			i-cache-line-size = <64>;
-			i-cache-sets = <256>;
-			d-cache-size = <0x8000>;
-			d-cache-line-size = <64>;
-			d-cache-sets = <128>;
-			next-level-cache = <&L2_1>;
-		};
-
-		cpu6: cpu@6 {
-			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x6>;
-			device_type = "cpu";
-			enable-method = "psci";
-			numa-node-id = <0>;
-			clocks = <&cpu_clk>;
-			operating-points-v2 = <&cluster_opp>;
-			i-cache-size = <0x8000>;
-			i-cache-line-size = <64>;
-			i-cache-sets = <256>;
-			d-cache-size = <0x8000>;
-			d-cache-line-size = <64>;
-			d-cache-sets = <128>;
-			next-level-cache = <&L2_1>;
-		};
-
-		cpu7: cpu@7 {
-			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x7>;
-			device_type = "cpu";
-			enable-method = "psci";
-			numa-node-id = <0>;
-			clocks = <&cpu_clk>;
-			operating-points-v2 = <&cluster_opp>;
-			i-cache-size = <0x8000>;
-			i-cache-line-size = <64>;
-			i-cache-sets = <256>;
-			d-cache-size = <0x8000>;
-			d-cache-line-size = <64>;
-			d-cache-sets = <128>;
-			next-level-cache = <&L2_1>;
-		};
-
-		cpu8: cpu@8 {
-			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x8>;
-			device_type = "cpu";
-			enable-method = "psci";
-			numa-node-id = <0>;
-			clocks = <&cpu_clk>;
-			operating-points-v2 = <&cluster_opp>;
-			i-cache-size = <0x8000>;
-			i-cache-line-size = <64>;
-			i-cache-sets = <256>;
-			d-cache-size = <0x8000>;
-			d-cache-line-size = <64>;
-			d-cache-sets = <128>;
-			next-level-cache = <&L2_2>;
-		};
-
-		cpu9: cpu@9 {
-			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x9>;
-			device_type = "cpu";
-			enable-method = "psci";
-			numa-node-id = <0>;
-			clocks = <&cpu_clk>;
-			operating-points-v2 = <&cluster_opp>;
-			i-cache-size = <0x8000>;
-			i-cache-line-size = <64>;
-			i-cache-sets = <256>;
-			d-cache-size = <0x8000>;
-			d-cache-line-size = <64>;
-			d-cache-sets = <128>;
-			next-level-cache = <&L2_2>;
-		};
-
-		cpu10: cpu@10 {
-			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0xa>;
-			device_type = "cpu";
-			enable-method = "psci";
-			numa-node-id = <0>;
-			clocks = <&cpu_clk>;
-			operating-points-v2 = <&cluster_opp>;
-			i-cache-size = <0x8000>;
-			i-cache-line-size = <64>;
-			i-cache-sets = <256>;
-			d-cache-size = <0x8000>;
-			d-cache-line-size = <64>;
-			d-cache-sets = <128>;
-			next-level-cache = <&L2_2>;
-		};
-
-		cpu11: cpu@11 {
-			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0xb>;
-			device_type = "cpu";
-			enable-method = "psci";
-			numa-node-id = <0>;
-			clocks = <&cpu_clk>;
-			operating-points-v2 = <&cluster_opp>;
-			i-cache-size = <0x8000>;
-			i-cache-line-size = <64>;
-			i-cache-sets = <256>;
-			d-cache-size = <0x8000>;
-			d-cache-line-size = <64>;
-			d-cache-sets = <128>;
-			next-level-cache = <&L2_2>;
-		};
-
-		cpu12: cpu@12 {
-			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0xc>;
-			device_type = "cpu";
-			enable-method = "psci";
-			numa-node-id = <0>;
-			clocks = <&cpu_clk>;
-			operating-points-v2 = <&cluster_opp>;
-			i-cache-size = <0x8000>;
-			i-cache-line-size = <64>;
-			i-cache-sets = <256>;
-			d-cache-size = <0x8000>;
-			d-cache-line-size = <64>;
-			d-cache-sets = <128>;
-			next-level-cache = <&L2_3>;
-		};
-
-		cpu13: cpu@13 {
-			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0xd>;
-			device_type = "cpu";
-			enable-method = "psci";
-			numa-node-id = <0>;
-			clocks = <&cpu_clk>;
-			operating-points-v2 = <&cluster_opp>;
-			i-cache-size = <0x8000>;
-			i-cache-line-size = <64>;
-			i-cache-sets = <256>;
-			d-cache-size = <0x8000>;
-			d-cache-line-size = <64>;
-			d-cache-sets = <128>;
-			next-level-cache = <&L2_3>;
-		};
-
-		cpu14: cpu@14 {
-			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0xe>;
-			device_type = "cpu";
-			enable-method = "psci";
-			numa-node-id = <0>;
-			clocks = <&cpu_clk>;
-			operating-points-v2 = <&cluster_opp>;
-			i-cache-size = <0x8000>;
-			i-cache-line-size = <64>;
-			i-cache-sets = <256>;
-			d-cache-size = <0x8000>;
-			d-cache-line-size = <64>;
-			d-cache-sets = <128>;
-			next-level-cache = <&L2_3>;
-		};
-
-		cpu15: cpu@15 {
-			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0xf>;
-			device_type = "cpu";
-			enable-method = "psci";
-			numa-node-id = <0>;
-			clocks = <&cpu_clk>;
-			operating-points-v2 = <&cluster_opp>;
-			i-cache-size = <0x8000>;
-			i-cache-line-size = <64>;
-			i-cache-sets = <256>;
-			d-cache-size = <0x8000>;
-			d-cache-line-size = <64>;
-			d-cache-sets = <128>;
-			next-level-cache = <&L2_3>;
-		};
-
-		cpu16: cpu@16 {
+		cpu1: cpu@100 {
 			compatible = "arm,armv9", "arm,cortex-a720";
 			reg = <0x100>;
 			device_type = "cpu";
@@ -585,12 +330,250 @@
 			d-cache-size = <0x8000>;
 			d-cache-line-size = <64>;
 			d-cache-sets = <128>;
-			next-level-cache = <&L2_4>;
+			next-level-cache = <&L2_0>;
 		};
 
-		cpu17: cpu@17 {
+		cpu2: cpu@200 {
 			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x101>;
+			reg = <0x200>;
+			device_type = "cpu";
+			enable-method = "psci";
+			numa-node-id = <0>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
+			i-cache-size = <0x8000>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <0x8000>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <128>;
+			next-level-cache = <&L2_0>;
+		};
+
+		cpu3: cpu@300 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x300>;
+			device_type = "cpu";
+			enable-method = "psci";
+			numa-node-id = <0>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
+			i-cache-size = <0x8000>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <0x8000>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <128>;
+			next-level-cache = <&L2_0>;
+		};
+
+		cpu4: cpu@10000 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x10000>;
+			device_type = "cpu";
+			enable-method = "psci";
+			numa-node-id = <0>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
+			i-cache-size = <0x8000>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <0x8000>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <128>;
+			next-level-cache = <&L2_1>;
+		};
+
+		cpu5: cpu@10100 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x10100>;
+			device_type = "cpu";
+			enable-method = "psci";
+			numa-node-id = <0>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
+			i-cache-size = <0x8000>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <0x8000>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <128>;
+			next-level-cache = <&L2_1>;
+		};
+
+		cpu6: cpu@10200 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x10200>;
+			device_type = "cpu";
+			enable-method = "psci";
+			numa-node-id = <0>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
+			i-cache-size = <0x8000>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <0x8000>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <128>;
+			next-level-cache = <&L2_1>;
+		};
+
+		cpu7: cpu@10300 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x10300>;
+			device_type = "cpu";
+			enable-method = "psci";
+			numa-node-id = <0>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
+			i-cache-size = <0x8000>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <0x8000>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <128>;
+			next-level-cache = <&L2_1>;
+		};
+
+		cpu8: cpu@20000 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x20000>;
+			device_type = "cpu";
+			enable-method = "psci";
+			numa-node-id = <0>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
+			i-cache-size = <0x8000>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <0x8000>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <128>;
+			next-level-cache = <&L2_2>;
+		};
+
+		cpu9: cpu@20100 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x20100>;
+			device_type = "cpu";
+			enable-method = "psci";
+			numa-node-id = <0>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
+			i-cache-size = <0x8000>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <0x8000>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <128>;
+			next-level-cache = <&L2_2>;
+		};
+
+		cpu10: cpu@20200 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x20200>;
+			device_type = "cpu";
+			enable-method = "psci";
+			numa-node-id = <0>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
+			i-cache-size = <0x8000>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <0x8000>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <128>;
+			next-level-cache = <&L2_2>;
+		};
+
+		cpu11: cpu@20300 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x20300>;
+			device_type = "cpu";
+			enable-method = "psci";
+			numa-node-id = <0>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
+			i-cache-size = <0x8000>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <0x8000>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <128>;
+			next-level-cache = <&L2_2>;
+		};
+
+		cpu12: cpu@30000 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x30000>;
+			device_type = "cpu";
+			enable-method = "psci";
+			numa-node-id = <0>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
+			i-cache-size = <0x8000>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <0x8000>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <128>;
+			next-level-cache = <&L2_3>;
+		};
+
+		cpu13: cpu@30100 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x30100>;
+			device_type = "cpu";
+			enable-method = "psci";
+			numa-node-id = <0>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
+			i-cache-size = <0x8000>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <0x8000>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <128>;
+			next-level-cache = <&L2_3>;
+		};
+
+		cpu14: cpu@30200 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x30200>;
+			device_type = "cpu";
+			enable-method = "psci";
+			numa-node-id = <0>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
+			i-cache-size = <0x8000>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <0x8000>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <128>;
+			next-level-cache = <&L2_3>;
+		};
+
+		cpu15: cpu@30300 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x30300>;
+			device_type = "cpu";
+			enable-method = "psci";
+			numa-node-id = <0>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
+			i-cache-size = <0x8000>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <0x8000>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <128>;
+			next-level-cache = <&L2_3>;
+		};
+
+		cpu16: cpu@40000 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x40000>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
@@ -605,9 +588,9 @@
 			next-level-cache = <&L2_4>;
 		};
 
-		cpu18: cpu@18 {
+		cpu17: cpu@40100 {
 			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x102>;
+			reg = <0x40100>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
@@ -622,9 +605,9 @@
 			next-level-cache = <&L2_4>;
 		};
 
-		cpu19: cpu@19 {
+		cpu18: cpu@40200 {
 			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x103>;
+			reg = <0x40200>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
@@ -639,9 +622,26 @@
 			next-level-cache = <&L2_4>;
 		};
 
-		cpu20: cpu@20 {
+		cpu19: cpu@40300 {
 			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x104>;
+			reg = <0x40300>;
+			device_type = "cpu";
+			enable-method = "psci";
+			numa-node-id = <0>;
+			clocks = <&cpu_clk>;
+			operating-points-v2 = <&cluster_opp>;
+			i-cache-size = <0x8000>;
+			i-cache-line-size = <64>;
+			i-cache-sets = <256>;
+			d-cache-size = <0x8000>;
+			d-cache-line-size = <64>;
+			d-cache-sets = <128>;
+			next-level-cache = <&L2_4>;
+		};
+
+		cpu20: cpu@50000 {
+			compatible = "arm,armv9", "arm,cortex-a720";
+			reg = <0x50000>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
@@ -656,9 +656,9 @@
 			next-level-cache = <&L2_5>;
 		};
 
-		cpu21: cpu@21 {
+		cpu21: cpu@50100 {
 			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x105>;
+			reg = <0x50100>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
@@ -673,9 +673,9 @@
 			next-level-cache = <&L2_5>;
 		};
 
-		cpu22: cpu@22 {
+		cpu22: cpu@50200 {
 			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x106>;
+			reg = <0x50200>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
@@ -690,9 +690,9 @@
 			next-level-cache = <&L2_5>;
 		};
 
-		cpu23: cpu@23 {
+		cpu23: cpu@50300 {
 			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x107>;
+			reg = <0x50300>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
@@ -707,9 +707,9 @@
 			next-level-cache = <&L2_5>;
 		};
 
-		cpu24: cpu@24 {
+		cpu24: cpu@60000 {
 			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x108>;
+			reg = <0x60000>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
@@ -724,9 +724,9 @@
 			next-level-cache = <&L2_6>;
 		};
 
-		cpu25: cpu@25 {
+		cpu25: cpu@60100 {
 			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x109>;
+			reg = <0x60100>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
@@ -741,9 +741,9 @@
 			next-level-cache = <&L2_6>;
 		};
 
-		cpu26: cpu@26 {
+		cpu26: cpu@60200 {
 			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x10a>;
+			reg = <0x60200>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
@@ -758,9 +758,9 @@
 			next-level-cache = <&L2_6>;
 		};
 
-		cpu27: cpu@27 {
+		cpu27: cpu@60300 {
 			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x10b>;
+			reg = <0x60300>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
@@ -775,9 +775,9 @@
 			next-level-cache = <&L2_6>;
 		};
 
-		cpu28: cpu@28 {
+		cpu28: cpu@70000 {
 			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x10c>;
+			reg = <0x70000>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
@@ -792,9 +792,9 @@
 			next-level-cache = <&L2_7>;
 		};
 
-		cpu29: cpu@29 {
+		cpu29: cpu@70100 {
 			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x10d>;
+			reg = <0x70100>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
@@ -809,9 +809,9 @@
 			next-level-cache = <&L2_7>;
 		};
 
-		cpu30: cpu@30 {
+		cpu30: cpu@70200 {
 			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x10e>;
+			reg = <0x70200>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
@@ -826,9 +826,9 @@
 			next-level-cache = <&L2_7>;
 		};
 
-		cpu31: cpu@31 {
+		cpu31: cpu@70300 {
 			compatible = "arm,armv9", "arm,cortex-a720";
-			reg = <0x10f>;
+			reg = <0x70300>;
 			device_type = "cpu";
 			enable-method = "psci";
 			numa-node-id = <0>;
