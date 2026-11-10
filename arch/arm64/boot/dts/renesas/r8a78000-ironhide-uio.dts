@@ -12,6 +12,64 @@
 / {
 	model = "Renesas Ironhide board based on r8a78000";
 	compatible = "renesas,ironhide", "renesas,r8a78000", "renesas,r8a78000-uio";
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/delete-node/ linux,cma@a2600000;
+
+		linux,cma@a2600000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x0 0xa2600000 0x0 0x4000000>;
+			linux,cma-default;
+		};
+
+		mem_mgr: memory_manager@a6600000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x0 0xa6600000 0x0 0x18000000>;
+		};
+
+		npu_vad_ram0: npu_ram@1400000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x14 0x00000000 0x0 0x80000000>;
+		};
+
+		cam_fwk_ram0: cam_fwk_ram@1270000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x12 0x70000000 0x0 0x5c000000 >;
+		};
+
+		cam_fwk_ram1: cam_fwk_ram@1670000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x16 0x70000000 0x0 0x5c000000 >;
+		};
+
+		cam_fwk_ram2: cam_fwk_ram@1a70000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x1a 0x70000000 0x0 0x5c000000 >;
+		};
+
+		cam_fwk_ram3: cam_fwk_ram@1e70000000 {
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x1e 0x70000000 0x0 0x5c000000 >;
+		};
+	};
+
+	cmem {
+		memory-region = <&npu_vad_ram0>,
+				<&cam_fwk_ram0>, <&cam_fwk_ram1>,
+				<&cam_fwk_ram2>, <&cam_fwk_ram3>,
+				<&mem_mgr>;
+	};
 };
 
 &fcpvd0 {
