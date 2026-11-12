@@ -22,7 +22,13 @@
 		i2c7 = &i2c7;
 		i2c8 = &i2c8;
 		serial0 = &scif0;
-		serial1 = &pl011;
+		serial1 = &scif1;
+		serial2 = &scif3;
+		serial3 = &scif4;
+		serial4 = &hscif0;
+		serial5 = &hscif1;
+		serial6 = &hscif2;
+		serial7 = &hscif3;
 	};
 
 	chosen {

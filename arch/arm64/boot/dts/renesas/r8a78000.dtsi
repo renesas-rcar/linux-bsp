@@ -1039,7 +1039,7 @@
 		};
 
 		scif0: serial@c0700000 {
-			compatible = "renesas,scif-x5h",
+			compatible = "renesas,scif-r8a78000",
 				     "renesas,renesas,rcar-gen5-scif", "renesas,scif";
 			reg = <0 0xc0700000 0 0x40>;
 			interrupts = <GIC_SPI 4074 IRQ_TYPE_LEVEL_HIGH>;
@@ -1049,7 +1049,7 @@
 		};
 
 		scif1: serial@c0704000 {
-			compatible = "renesas,scif-x5h",
+			compatible = "renesas,scif-r8a78000",
 				     "renesas,rcar-gen5-scif", "renesas,scif";
 			reg = <0 0xc0704000 0 0x40>;
 			interrupts = <GIC_SPI 4075 IRQ_TYPE_LEVEL_HIGH>;
@@ -1059,7 +1059,7 @@
 		};
 
 		scif3: serial@c0708000 {
-			compatible = "renesas,scif-x5h",
+			compatible = "renesas,scif-r8a78000",
 				     "renesas,rcar-gen5-scif", "renesas,scif";
 			reg = <0 0xc0708000 0 0x40>;
 			interrupts = <GIC_SPI 4076 IRQ_TYPE_LEVEL_HIGH>;
@@ -1069,7 +1069,7 @@
 		};
 
 		scif4: serial@c070c000 {
-			compatible = "renesas,scif-x5h",
+			compatible = "renesas,scif-r8a78000",
 				     "renesas,rcar-gen5-scif", "renesas,scif";
 			reg = <0 0xc070c000 0 0x40>;
 			interrupts = <GIC_SPI 4077 IRQ_TYPE_LEVEL_HIGH>;
@@ -1079,7 +1079,7 @@
 		};
 
 		hscif0: serial@c0710000 {
-			compatible = "renesas,hscif-x5h",
+			compatible = "renesas,hscif-r8a78000",
 				     "renesas,rcar-gen5-hscif", "renesas,hscif";
 			reg = <0 0xc0710000 0 0x60>;
 			interrupts = <GIC_SPI 4078 IRQ_TYPE_LEVEL_HIGH>;
@@ -1089,7 +1089,7 @@
 		};
 
 		hscif1: serial@c0714000 {
-			compatible = "renesas,hscif-x5h",
+			compatible = "renesas,hscif-r8a78000",
 				     "renesas,rcar-gen5-hscif", "renesas,hscif";
 			reg = <0 0xc0714000 0 0x60>;
 			interrupts = <GIC_SPI 4079 IRQ_TYPE_LEVEL_HIGH>;
@@ -1099,7 +1099,7 @@
 		};
 
 		hscif2: serial@c0718000 {
-			compatible = "renesas,hscif-x5h",
+			compatible = "renesas,hscif-r8a78000",
 				     "renesas,rcar-gen5-hscif", "renesas,hscif";
 			reg = <0 0xc0718000 0 0x60>;
 			interrupts = <GIC_SPI 4080 IRQ_TYPE_LEVEL_HIGH>;
@@ -1109,7 +1109,7 @@
 		};
 
 		hscif3: serial@c071c000 {
-			compatible = "renesas,hscif-x5h",
+			compatible = "renesas,hscif-r8a78000",
 				     "renesas,rcar-gen5-hscif", "renesas,hscif";
 			reg = <0 0xc071c000 0 0x60>;
 			interrupts = <GIC_SPI 4081 IRQ_TYPE_LEVEL_HIGH>;
