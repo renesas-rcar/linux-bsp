@@ -1315,6 +1315,8 @@
 	pinctrl-0 = <&eth25g2_pins>, <&ethes0_pins>;
 	pinctrl-names = "default";
 
+	renesas,mdc-relaxed;
+
 	ethernet-ports {
 		#address-cells = <1>;
 		#size-cells = <0>;
