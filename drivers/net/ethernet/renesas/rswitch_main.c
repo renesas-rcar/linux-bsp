@@ -3886,6 +3886,7 @@ static void rswitch_device_free(struct rswitch_private *priv, unsigned int index
 static int rswitch_init(struct rswitch_private *priv)
 {
 	struct platform_device *pdev = priv->pdev;
+	u32 ptp_clock = RCAR_GEN5_PTP_CLOCK_X5H;
 	unsigned int i;
 	int err;
 
@@ -3936,9 +3937,14 @@ static int rswitch_init(struct rswitch_private *priv)
 			goto err_fwd_init;
 	}
 
+	/* Board with limited clock runs at 687.5MHz instead of 712.5MHz */
+	if (priv->info->rswitch_version != RSW30)
+		ptp_clock = RCAR_GEN4_PTP_CLOCK_S4;
+	else if (of_property_read_bool(pdev->dev.of_node, "renesas,mdc-relaxed"))
+		ptp_clock = PTPTIVC_INIT_687MHZ;
+
 	err = rcar_gen4_ptp_register(priv->ptp_priv, RCAR_GEN4_PTP_REG_LAYOUT,
-				     priv->info->rswitch_version == RSW30 ?
-				     RCAR_GEN5_PTP_CLOCK_X5H : RCAR_GEN4_PTP_CLOCK_S4);
+				     ptp_clock);
 	if (err < 0)
 		goto err_ptp_register;
 
