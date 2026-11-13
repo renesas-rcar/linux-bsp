@@ -14,4 +14,17 @@
 	model = "Renesas White Hawk board based on r8a779g4";
 	compatible = "renesas,whitehawk", "renesas,r8a779g4",
 		     "renesas,r8a779g0";
+
+	gsx_opp_table: gsx-opp-table {
+		compatible = "operating-points-v2";
+
+		opp-500000000 {
+			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <830000>;
+		};
+	};
+};
+
+&gsx {
+	operating-points-v2 = <&gsx_opp_table>;
 };
