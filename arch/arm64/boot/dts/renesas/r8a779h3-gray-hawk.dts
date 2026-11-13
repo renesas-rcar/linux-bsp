@@ -13,4 +13,17 @@
 	model = "Renesas Gray Hawk Single board based on r8a779h3";
 	compatible = "renesas,gray-hawk", "renesas,r8a779h3",
 		     "renesas,r8a779h0";
+
+	gsx_opp_table: gsx-opp-table {
+		compatible = "operating-points-v2";
+
+		opp-750000000 {
+			opp-hz = /bits/ 64 <750000000>;
+			opp-microvolt = <830000>;
+		};
+	};
+};
+
+&gsx {
+	operating-points-v2 = <&gsx_opp_table>;
 };
